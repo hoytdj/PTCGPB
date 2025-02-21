@@ -17,7 +17,7 @@ CoordMode, Pixel, Screen
 DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
-global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
+global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus, triggerTestNeeded
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -122,6 +122,13 @@ if(heartBeat)
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
 firstRun := true
 Loop {
+	if (GPTest) {
+		if (triggerTestNeeded)
+			DJHTestScript()
+		firstRun := true
+		Sleep, 1000
+		Continue
+	}
 	if(heartBeat)
 		IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 	Sleep, %Delay%
@@ -164,11 +171,13 @@ Loop {
 						adbClick(210, 210)
 					}
 				}
+				if (GPTest)
+					break
 				failSafeTime := (A_TickCount - failSafe) // 1000
 				CreateStatusMessage("Failsafe " . failSafeTime "/180 seconds")
 			}
 		}
-		if(done || fullList)
+		if(done || fullList || GPTest)
 			break
 	}
 }
@@ -608,16 +617,16 @@ return
 
 ToggleTestScript()
 {
-	global GPTest
+	global GPTest, triggerTestNeeded
 	if(!GPTest) {
 		GPTest := true
+		triggerTestNeeded := true
 		CreateStatusMessage("In GP Test Mode")
-		DJHTestScript()
 	}
 	else {
 		GPTest := false
+		triggerTestNeeded := false
 		CreateStatusMessage("Exiting GP Test Mode")		
-		MainAddFriendLoop()
 	}
 }
 
@@ -976,6 +985,8 @@ IsLeapYear(year) {
 ; TODO: Test auto updates
 
 DJHTestScript() {
+	Global triggerTestNeeded
+	triggerTestNeeded := false
 	RemoveFriends()
 	;test := GetCurrentFriendCount()
 	;test := GetFriendCode()
