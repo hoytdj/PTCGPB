@@ -122,10 +122,11 @@ if(heartBeat)
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
 firstRun := true
 Loop {
+	; hoytdj Add + 7
 	if (GPTest) {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
-		firstRun := true
+		;firstRun := true
 		Sleep, 1000
 		Continue
 	}
@@ -398,7 +399,7 @@ resetWindows(){
 restartGameInstance(reason, RL := true){
 	global Delay, scriptName, adbShell, adbPath, adbPort
 	initializeAdbShell()
-	; hoytdj Debug
+	; hoytdj DEBUG
 	CreateStatusMessage("Restarting game reason: " reason)
 
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
@@ -994,10 +995,11 @@ HoytdjTestScript() {
 
 GetCurrentFriendCount()
 {
+	global winTitle
 	WinGetPos, x, y, w, h, %winTitle%
     ; Parse friendCount status from screen
     ; Expected output something like "Number of friends 42/99"
-    friendCount := GetTextFromScreen(25 + x, 110 + y, 145, 20, "friendCount")
+    friendCount := GetTextFromScreen(24 + x, 110 + y, 145, 20, "friendCount")
     ; Remove "Number of friends", everything after "/", and trim spaces
     friendCount := RegExReplace(RegExReplace(Trim(friendCount, " `t`r`n"), "^Number of friends\s*"), "\s*/.*$") + 0
     Return friendCount
@@ -1005,6 +1007,7 @@ GetCurrentFriendCount()
 
 GetFriendCode()
 {
+	global winTitle
 	WinGetPos, x, y, w, h, %winTitle%
     ; Parse friendCode status from screen
     ; Expected output something like "1234-5678-1234-5678"

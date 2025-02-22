@@ -1,3 +1,9 @@
 *.bak
 Scripts/temp/friendCode.png
 Scripts/temp/friendCount.png
+Scripts/temp/friendCode.txt
+Scripts/temp/friendCount.txt
+HeartBeat.ini
+Settings.ini
+Sync_Settings.ini
+synchronizer.ahk
