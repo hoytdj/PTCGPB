@@ -7,3 +7,16 @@ HeartBeat.ini
 Settings.ini
 Sync_Settings.ini
 synchronizer.ahk
+json/Packs-backup.json
+Logs/GPlog.txt
+Logs/Restart.txt
+json/total.json
+json/Packs.json
+json/total-backup.json
+temp.csv
+/Accounts/GodPacks
+/Screenshots
+Scripts/3.ahk
+Scripts/2.ahk
+Scripts/temp/friendCode.txt
+Scripts/temp/friendCount.txt
