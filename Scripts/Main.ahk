@@ -124,7 +124,7 @@ firstRun := true
 Loop {
 	if (GPTest) {
 		if (triggerTestNeeded)
-			DJHTestScript()
+			HoytdjTestScript()
 		firstRun := true
 		Sleep, 1000
 		Continue
@@ -979,15 +979,13 @@ IsLeapYear(year) {
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ; ~~~ hoytdj Everying Below ~~~
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; TODO: Fix mode toggles
-; TODO: Improve error handling
-; TODO: Better isolate name spaces
 ; TODO: Test auto updates
+; TODO: Better isolate name spaces
 
-DJHTestScript() {
+HoytdjTestScript() {
 	Global triggerTestNeeded
 	triggerTestNeeded := false
-	RemoveFriends()
+	RemoveNonVipFriends()
 	;test := GetCurrentFriendCount()
 	;test := GetFriendCode()
 	;MsgBox, % """" test """"
@@ -1013,8 +1011,8 @@ GetFriendCode()
 	GUI, Toolbar: Hide
 	GUI, StatusMessage: Hide
     friendCode := GetTextFromScreen(172 + x, 73 + y, 100, 20, "friendCode")
-	GUI, Toolbar: Show
-	GUI, StatusMessage: Show
+	GUI, Toolbar: Show, NoActivate
+	GUI, StatusMessage: Show, NoActivate
     friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
     Return friendCode
 }
@@ -1063,7 +1061,7 @@ ReadIDsFromFile(filePath, ByRef idCount) {
     return ids
 }
 
-RemoveFriends() {
+RemoveNonVipFriends() {
 	global GPTest
 	failSafe := A_TickCount
 	failSafeTime := 0
@@ -1100,17 +1098,32 @@ RemoveFriends() {
 	}
 
 	friendIndex := 0
+	repeatFriendCodes := 0
+	lastFriendCode := ""
 	Loop {
 		; Get GetCurrentFriendCount and compare to target friend count
-		currentFriendCount := GetCurrentFriendCount()
+		failSafe := A_TickCount
+		failSafeTime := 0
+		Loop {
+			currentFriendCount := GetCurrentFriendCount()
+			if (RegExMatch(currentFriendCount, "^\d{1,2}$")) {
+				break
+			}
+			failSafeTime := (A_TickCount - failSafe) // 1000
+			if (failSafeTime > 5) {
+				CreateStatusMessage("Couldn't parse friend count. Abandoning...`nParsed friend count: " . currentFriendCount)
+				return
+			}
+		}
 		if (currentFriendCount <= vipIdCount) {
-			CreateStatusMessage("Done. Current friend count: " . currentFriendCount . " Target friend count: " . vipIdCount)
+			CreateStatusMessage("Current friend count: " . currentFriendCount . "`nTarget friend count: " . vipIdCount . "`nReady to test.")
 			break
 		}
 
 		friendClickY := 195 + (95 * friendIndex)
-		if (FindImageAndClick(75, 400, 105, 420, , "Friend", 138, friendClickY, 500, 6)) {
+		if (FindImageAndClick(75, 400, 105, 420, , "Friend", 138, friendClickY, 500, 3)) {
 			Delay(1)
+			; Get the friend code
 			failSafe := A_TickCount
 			failSafeTime := 0
 			Loop {
@@ -1123,6 +1136,18 @@ RemoveFriends() {
 					CreateStatusMessage("Couldn't parse friend code. Abandoning...`nParsed friend code: " . friendCode)
 					return
 				}
+			}
+			; Check if this is a repeat
+			if (friendCode == lastFriendCode) {
+				repeatFriendCodes++
+			}
+			else {
+				repeatFriendCodes := 0
+				lastFriendCode := friendCode
+			}
+			if (repeatFriendCodes > 2) {
+				CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
+				return
 			}
 			if (IsVipId(friendCode, vipIdsArray, matchedId)) {
 				; If it's a VIP friend, skip removal
@@ -1138,7 +1163,6 @@ RemoveFriends() {
 			}
 			else {
 				; If NOT a VIP remove the friend
-				; TODO: add handling for accounts no longer in use
 				CreateStatusMessage("Parsed friend code: " . friendCode . "`nNo match VIP match found.`nRemoving friend...")
 				Delay(4) ; DEBUG
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
@@ -1147,6 +1171,11 @@ RemoveFriends() {
 				adbClick(143, 503)
 				Delay(2)
 			}
+		}
+		else {
+			; Handling for account not currently in use
+			FindImageAndClick(226, 100, 270, 135, , "Add", 143, 508, 500)
+			Delay(3)
 		}
 		if (!GPTest) {
 			Return
@@ -1173,7 +1202,7 @@ adbSwipeFriend() {
 }
 
 ; DEBUG
-F1::
-	MouseGetPos, mouseX, mouseY  ; Retrieves the mouse cursor's X and Y positions
-	CreateStatusMessage("Mouse coordinates - X: " . mouseX . " Y: " . mouseY )
-return
+; F1::
+; 	MouseGetPos, mouseX, mouseY  ; Retrieves the mouse cursor's X and Y positions
+; 	CreateStatusMessage("Mouse coordinates - X: " . mouseX . " Y: " . mouseY )
+; return
