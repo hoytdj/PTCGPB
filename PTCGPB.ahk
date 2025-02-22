@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v0.1dev"
+localVersion := "v0.3alpha"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -804,14 +804,11 @@ MoveFilesRecursively(srcFolder, destFolder) {
 		}
 		else
 		{
-			if ((relativePath = "ids.txt" && FileExist(destPath)) || (relativePath = "usernames.txt" && FileExist(destPath)) || (relativePath = "discord.txt" && FileExist(destPath))) {
-                continue
-            }
-			if (relativePath = "usernames.txt" && FileExist(destPath)) {
-                continue
-            }
-			if (relativePath = "usernames.txt" && FileExist(destPath)) {
-                continue
+			if ((relativePath = "ids.txt" && FileExist(destPath))
+				|| (relativePath = "usernames.txt" && FileExist(destPath))
+				|| (relativePath = "discord.txt" && FileExist(destPath))
+				|| (relativePath = "vip_ids.txt" && FileExist(destPath))) {
+				continue
             }
 			; If it's a file, move it to the destination folder
 			; Ensure the directory exists before moving the file
