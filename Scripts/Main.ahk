@@ -1198,7 +1198,7 @@ adbSwipeFriend() {
 	X1 := 138
 	Y1 := 380
 	X2 := 138
-	Y2 := 230
+	Y2 := 220
 
 	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . 300)
 	Sleep, 600
