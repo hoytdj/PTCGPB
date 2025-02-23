@@ -126,6 +126,7 @@ Loop {
 	if (GPTest) {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
+		;TODO: if greater than 5min, set firstRun?
 		;firstRun := true
 		Sleep, 1000
 		Continue
@@ -980,7 +981,6 @@ IsLeapYear(year) {
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ; ~~~ hoytdj Everying Below ~~~
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; TODO: Test auto updates
 ; TODO: Better isolate name spaces
 
 HoytdjTestScript() {
@@ -1102,26 +1102,27 @@ RemoveNonVipFriends() {
 
 	friendIndex := 0
 	repeatFriendCodes := 0
-	lastFriendCode := ""
+	recentFriendCodes := []
 	Loop {
-		; Get GetCurrentFriendCount and compare to target friend count
-		failSafe := A_TickCount
-		failSafeTime := 0
-		Loop {
-			currentFriendCount := GetCurrentFriendCount()
-			if (RegExMatch(currentFriendCount, "^\d{1,2}$")) {
-				break
-			}
-			failSafeTime := (A_TickCount - failSafe) // 1000
-			if (failSafeTime > 5) {
-				CreateStatusMessage("Couldn't parse friend count. Abandoning...`nParsed friend count: " . currentFriendCount)
-				return
-			}
-		}
-		if (currentFriendCount <= vipIdCount) {
-			CreateStatusMessage("Current friend count: " . currentFriendCount . "`nTarget friend count: " . vipIdCount . "`nReady to test.")
-			break
-		}
+		; ; Get GetCurrentFriendCount and compare to target friend count
+		; ; Removing all this and relying on duplicate FC parsing.
+		; failSafe := A_TickCount
+		; failSafeTime := 0
+		; Loop {
+		; 	currentFriendCount := GetCurrentFriendCount()
+		; 	if (RegExMatch(currentFriendCount, "^\d{1,2}$")) {
+		; 		break
+		; 	}
+		; 	failSafeTime := (A_TickCount - failSafe) // 1000
+		; 	if (failSafeTime > 5) {
+		; 		CreateStatusMessage("Couldn't parse friend count. Abandoning...`nParsed friend count: " . currentFriendCount)
+		; 		return
+		; 	}
+		; }
+		; if (currentFriendCount <= vipIdCount) {
+		; 	CreateStatusMessage("Current friend count: " . currentFriendCount . "`nTarget friend count: " . vipIdCount . "`nReady to test.")
+		; 	break
+		; }
 
 		friendClickY := 195 + (95 * friendIndex)
 		if (FindImageAndClick(75, 400, 105, 420, , "Friend", 138, friendClickY, 500, 3)) {
@@ -1141,15 +1142,16 @@ RemoveNonVipFriends() {
 				}
 			}
 			; Check if this is a repeat
-			if (friendCode == lastFriendCode) {
+			if (IsRecentlyCheckedId(friendCode, recentFriendCodes)) {
 				repeatFriendCodes++
 			}
 			else {
 				repeatFriendCodes := 0
-				lastFriendCode := friendCode
 			}
-			if (repeatFriendCodes > 2) {
-				CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
+			if (repeatFriendCodes > 1) {
+				;CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
+				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
+				adbClick(143, 507)
 				return
 			}
 			if (IsVipId(friendCode, vipIdsArray, matchedId)) {
@@ -1186,6 +1188,31 @@ RemoveNonVipFriends() {
 	}
 }
 
+; Function to check if ID exists in the list and update it
+; Parameters:
+;   id - The ID to check
+;   IDList - The list of IDs (passed by reference and updated)
+; Returns true if ID is found, false otherwise
+IsRecentlyCheckedId(id, ByRef IDList) {
+    ; Check if the ID is already in the list
+    for index, value in IDList {
+        if (value = id) {
+            return true  ; ID found
+        }
+    }
+
+    ; If the ID is not found, replace the oldest entry
+    if (IDList.MaxIndex() >= 3) {
+        ; Remove the oldest ID (first item)
+        IDList.Remove(1)
+    }
+
+    ; Add the new ID to the end of the list
+    IDList.Push(id)
+
+    return false  ; ID was not found and has been added
+}
+
 Delay(n) {
 	global Delay
 	msTime := Delay * n
@@ -1198,10 +1225,10 @@ adbSwipeFriend() {
 	X1 := 138
 	Y1 := 380
 	X2 := 138
-	Y2 := 230
+	Y2 := 200
 
 	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . 300)
-	Sleep, 600
+	Sleep, 1000
 }
 
 ; DEBUG
