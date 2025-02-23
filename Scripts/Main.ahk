@@ -17,7 +17,8 @@ CoordMode, Pixel, Screen
 DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
-global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus, triggerTestNeeded
+global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
+global triggerTestNeeded, testStartTime, firstRun
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -122,12 +123,10 @@ if(heartBeat)
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
 firstRun := true
 Loop {
-	; hoytdj Add + 7
+	; hoytdj Add + 6
 	if (GPTest) {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
-		;TODO: if greater than 5min, set firstRun?
-		;firstRun := true
 		Sleep, 1000
 		Continue
 	}
@@ -619,15 +618,22 @@ return
 
 ToggleTestScript()
 {
-	global GPTest, triggerTestNeeded
+	global GPTest, triggerTestNeeded, testStartTime, firstRun
 	if(!GPTest) {
 		GPTest := true
 		triggerTestNeeded := true
+		testStartTime := A_TickCount
 		CreateStatusMessage("In GP Test Mode")
 	}
 	else {
 		GPTest := false
 		triggerTestNeeded := false
+		totalTestTime := (A_TickCount - testStartTime) // 1000
+		if (testStartTime != "" && (totalTestTime >= 180))
+		{
+			firstRun := True
+			testStartTime := ""
+		}
 		CreateStatusMessage("Exiting GP Test Mode")		
 	}
 }
@@ -984,13 +990,13 @@ IsLeapYear(year) {
 ; TODO: Better isolate name spaces
 
 HoytdjTestScript() {
-	Global triggerTestNeeded
+	global triggerTestNeeded
 	triggerTestNeeded := false
 	RemoveNonVipFriends()
+
 	;test := GetCurrentFriendCount()
 	;test := GetFriendCode()
 	;MsgBox, % """" test """"
-
 }
 
 GetCurrentFriendCount()
@@ -1148,7 +1154,7 @@ RemoveNonVipFriends() {
 			else {
 				repeatFriendCodes := 0
 			}
-			if (repeatFriendCodes > 1) {
+			if (repeatFriendCodes > 2) {
 				;CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
 				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
 				adbClick(143, 507)
@@ -1159,10 +1165,12 @@ RemoveNonVipFriends() {
 				CreateStatusMessage("Parsed friend code: " . friendCode . "`nMatched friend code: " . matchedId . "`nSkipping VIP...")
 				Delay(4) ; DEBUG
 				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
+				Delay(2)
 				if (friendIndex < 2)
 					friendIndex++
 				else {
 					adbSwipeFriend()
+					;adbGestureFriend()
 					friendIndex := 0
 				}
 			}
@@ -1173,8 +1181,8 @@ RemoveNonVipFriends() {
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
 				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
 				Delay(1)
-				adbClick(143, 503)
-				Delay(2)
+				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
+				Delay(3)
 			}
 		}
 		else {
@@ -1202,7 +1210,7 @@ IsRecentlyCheckedId(id, ByRef IDList) {
     }
 
     ; If the ID is not found, replace the oldest entry
-    if (IDList.MaxIndex() >= 3) {
+    if (IDList.MaxIndex() > 5) {
         ; Remove the oldest ID (first item)
         IDList.Remove(1)
     }
@@ -1229,6 +1237,20 @@ adbSwipeFriend() {
 
 	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . 300)
 	Sleep, 1000
+ }
+
+adbGestureFriend() {
+	; The idea is to drag up and hold, in order to scroll in a controlled way
+	; Unfortunately, touchscreen gesture doesn't seem to be supported
+	global adbShell
+	initializeAdbShell()
+	X := 138
+	Y1 := 380
+	Y2 := 90
+	duration := 2000
+
+	adbShell.StdIn.WriteLine("input touchscreen gesture 0 " . duration . " " . X . " " . Y1 . " " . X . " " . Y2 . " " . X . " " . Y2)
+	Delay(1)
 }
 
 ; DEBUG
