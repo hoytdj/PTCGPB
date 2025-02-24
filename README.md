@@ -5,6 +5,8 @@ This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/A
 A new "GP Test" mode has been added to the Main account script. When toggled on, the bot will automatically remove all non-VIP friends (i.e., friends that may have pulled a live GP). When all non-VIP friends have been removed, the bot will pause, giving you the opportunity to nagivate to Wonder Picks and look for God Packs. When you're ready to continue, simply toggle "GP Test" mode off.
 VIP friends are specified in the `vip_ids.txt` file. List friend codes each on their own line.
 
+[YouTube Demo & Brief Tutorial](https://youtu.be/LOV1Yx08wLg)
+
 **IMPORTANT:** Tesseract is required for this to work.
 * Download/install Tesseract from here: [Tesseract Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
 * For now, Tesseract **must** be installed under `C:\Program Files\Tesseract-OCR`
