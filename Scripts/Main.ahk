@@ -1136,15 +1136,17 @@ RemoveNonVipFriends() {
 			; Get the friend code
 			failSafe := A_TickCount
 			failSafeTime := 0
+			parseFriendCodeResult := False
 			Loop {
 				friendCode := GetFriendCode()
 				if (RegExMatch(friendCode, "^\d{14,17}$")) {
+					parseFriendCodeResult := True
 					break
 				}
 				failSafeTime := (A_TickCount - failSafe) // 1000
 				if (failSafeTime > 5) {
-					CreateStatusMessage("Couldn't parse friend code. Abandoning...`nParsed friend code: " . friendCode)
-					return
+					parseFriendCodeResult := False
+					break
 				}
 			}
 			; Check if this is a repeat
@@ -1155,14 +1157,18 @@ RemoveNonVipFriends() {
 				repeatFriendCodes := 0
 			}
 			if (repeatFriendCodes > 2) {
-				;CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
 				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
 				adbClick(143, 507)
 				return
 			}
-			if (IsVipId(friendCode, vipIdsArray, matchedId)) {
-				; If it's a VIP friend, skip removal
-				CreateStatusMessage("Parsed friend code: " . friendCode . "`nMatched friend code: " . matchedId . "`nSkipping VIP...")
+			isVipIdResult := IsVipId(friendCode, vipIdsArray, matchedId)
+			if (isVipIdResult || !parseFriendCodeResult) {
+				; If we couldn't parse the friend, skip removal
+				if (!parseFriendCodeResult)
+					CreateStatusMessage("Couldn't parse friend code. Skipping friend...`nParsed friend code: " . friendCode)
+				; If it's a VIP friend, skip removal	
+				if (isVipIdResult)
+					CreateStatusMessage("Parsed friend code: " . friendCode . "`nMatched friend code: " . matchedId . "`nSkipping VIP...")
 				Delay(4) ; DEBUG
 				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
 				Delay(2)
