@@ -2,6 +2,7 @@
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
 #Include %A_ScriptDir%\Include\ParseScreen.ahk
 #Include %A_ScriptDir%\Include\StringCompare.ahk
+#Include %A_ScriptDir%\Include\OCR.ahk
 
 #SingleInstance on
 ;SetKeyDelay, -1, -1
@@ -121,7 +122,7 @@ pToken := Gdip_Startup()
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
-firstRun := true
+; firstRun := true ; DEBUG
 Loop {
 	; hoytdj Add + 6
 	if (GPTest) {
@@ -400,19 +401,19 @@ restartGameInstance(reason, RL := true){
 	global Delay, scriptName, adbShell, adbPath, adbPort
 	initializeAdbShell()
 	; hoytdj DEBUG
-	CreateStatusMessage("Restarting game reason: " reason)
+	; CreateStatusMessage("Restarting game reason: " reason)
 
-	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
-	;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
-	Sleep, 3000
-	adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
+	; adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
+	; ;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
+	; Sleep, 3000
+	; adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
 
-	Sleep, 3000
-	if(RL) {
-		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
-		LogToDiscord("Restarted game for instance " scriptName " Reason: " reason, , discordUserId)
-		Reload
-	}
+	; Sleep, 3000
+	; if(RL) {
+	; 	LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+	; 	LogToDiscord("Restarted game for instance " scriptName " Reason: " reason, , discordUserId)
+	; 	Reload
+	; }
 }
 
 LogToFile(message, logFile := "") {
@@ -631,10 +632,10 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			firstRun := True
+			; firstRun := True ; DEBUG
 			testStartTime := ""
 		}
-		CreateStatusMessage("Exiting GP Test Mode")		
+		CreateStatusMessage("Exiting GP Test Mode")
 	}
 }
 
@@ -764,6 +765,7 @@ from_window(ByRef image) {
 ~F7::ExitApp
 ~F8::ToggleStatusMessages()
 ~F9::ToggleTestScript() ; hoytdj Add
+~F10::DJHDebugCode()
 
 ToggleStatusMessages() {
 	if(showStatus)
@@ -1252,6 +1254,78 @@ adbGestureFriend() {
 	adbShell.StdIn.WriteLine("input touchscreen gesture 0 " . duration . " " . X . " " . Y1 . " " . X . " " . Y2 . " " . X . " " . Y2)
 	Delay(1)
 }
+
+DJHDebugCode() {
+	if (ScreenshotRegion(0, 0, 540, 960, capturedScreenshot, "friendCode")) {
+		ocrText := ocr(capturedScreenshot, "en")
+		MsgBox % ocrText
+	}
+	if (ScreenshotRegion(165, 60, 105, 35, capturedScreenshot, "friendCode")) {
+		ocrText := ocr(capturedScreenshot, "en")
+		MsgBox % ocrText
+	}
+	; CreateStatusMessage("Made it to DJHDebugCode")
+}
+
+ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "Valid") {
+	global winTitle
+	
+	; Load bitmap from window
+	pBitmapWindow := from_window(WinExist(winTitle))
+
+	; Create new cropped bitmap
+	pBitmapRegion := Gdip_CreateBitmap(width, height)
+	gRegion := Gdip_GraphicsFromImage(pBitmapRegion)
+	Gdip_SetSmoothingMode(gRegion, 0)  ; High quality
+
+	; Draw cropped region from the original bitmap onto the new one
+	Gdip_DrawImage(gRegion, pBitmapWindow, 0, 0, width, height, x, y, width, height)
+
+	; Increase contrast and convert to grayscale using a color matrix
+	contrast := 25  ; Adjust contrast level (-100 to 100)
+	factor := (100.0 + contrast) / 100.0
+	factor := factor * factor
+
+	; Grayscale conversion with contrast applied
+	redFactor := 0.299 * factor
+	greenFactor := 0.587 * factor
+	blueFactor := 0.114 * factor
+	xFactor := 0.5 * (1 - factor)
+	colorMatrix := redFactor . "|" . redFactor . "|" . redFactor . "|0|0|" . greenFactor . "|" . greenFactor . "|" . greenFactor . "|0|0|" . blueFactor . "|" . blueFactor . "|" . blueFactor . "|0|0|0|0|0|1|0|" . xFactor . "|" . xFactor . "|" . xFactor . "|0|1"
+
+	; Apply the color matrix
+	; pImageAttr := Gdip_CreateImageAttributes()
+	; Gdip_SetImageAttributesColorMatrix(pImageAttr, colorMatrix)
+	; Gdip_DrawImageAttributes(gRegion, pBitmapRegion, pImageAttr, 0, 0, width, height, 0, 0, width, height)
+	Gdip_DrawImage(gRegion, pBitmapRegion, 0, 0, width, height, 0, 0, width, height, colorMatrix)
+
+	; Define folder and file paths
+	screenshotsDir := A_ScriptDir "\..\Screenshots"
+	if !FileExist(screenshotsDir)
+		FileCreateDir, %screenshotsDir%
+
+	; File path for saving the screenshot locally
+	screenshotFile := screenshotsDir "\" . winTitle . "_" . filename . ".png"
+
+	; Save the cropped image
+	saveResult := Gdip_SaveBitmapToFile(pBitmapRegion, screenshotFile, 100)
+	if (saveResult != 0) {
+		CreateStatusMessage("Failed to save " . filename . " screenshot.`nError code: " . saveResult)
+		saveResult := false
+	}
+	else {
+		outputFilename := screenshotFile
+		saveResult := true
+	}
+
+	; Clean up resources
+	Gdip_DeleteGraphics(gRegion)
+	Gdip_DisposeImage(pBitmapWindow)
+	Gdip_DisposeImage(pBitmapRegion)
+
+	return saveResult
+}
+
 
 ; DEBUG
 ; F1::
