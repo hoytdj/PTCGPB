@@ -169,15 +169,15 @@ saveAccount() {
 
 	Loop {
 
+		adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
+
+		Sleep, 500
+
 		adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
 
 		Sleep, 500
 
 		RunWait, % adbPath . " -s 127.0.0.1:" . adbPorts . " pull /sdcard/deviceAccount.xml """ . saveDir,, Hide
-
-		Sleep, 500
-
-		adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
 
 		Sleep, 500
 

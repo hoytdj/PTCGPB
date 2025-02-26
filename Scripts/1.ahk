@@ -674,7 +674,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 331, 50, 449, searchVariation)
 		if (vRet = 1) {
-			adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
+			adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
 			waitadb()
 			CreateStatusMessage("Loaded deleted account. Deleting XML." )
 			if(loadedAccount) {
@@ -818,7 +818,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			; ImageSearch within the region
 			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 331, 50, 449, searchVariation)
 			if (vRet = 1) {
-				adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
+				adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
 				waitadb()
 				CreateStatusMessage("Loaded deleted account. Deleting XML." )
 				if(loadedAccount) {
@@ -843,8 +843,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				firstTime := false
 			}
 			if (ElapsedTime >= skip) {
-				Gdip_DisposeImage(pBitmap)
-				return false
+				confirmed := false
 				ElapsedTime := ElapsedTime/2
 				break
 			}
@@ -853,6 +852,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			break
 		}
 	}
+	Gdip_DisposeImage(pBitmap)
 	return confirmed
 }
 
@@ -954,8 +954,7 @@ restartGameInstance(reason, RL := true){
 		adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 		waitadb()
 		if(!RL)
-			adbShell.StdIn.WriteLine("rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml") ; delete account data
-		;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
+			adbShell.StdIn.WriteLine("su -c 'rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml'") ; delete account data
 		waitadb()
 		adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
 		waitadb()
@@ -1377,7 +1376,7 @@ loadAccount() {
 
 	Sleep, 500
 
-	adbShell.StdIn.WriteLine("cp /sdcard/deviceAccount.xml /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml")
+	adbShell.StdIn.WriteLine("su -c 'cp /sdcard/deviceAccount.xml /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml'")
 
 	waitadb()
 	adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
@@ -1422,15 +1421,11 @@ saveAccount(file := "Valid") {
 	Loop {
 		CreateStatusMessage("Attempting to save account XML. " . count . "/10")
 
-		adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
+		adbShell.StdIn.WriteLine("su -c 'cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml'")adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
 
 		Sleep, 500
 
 		RunWait, % adbPath . " -s 127.0.0.1:" . adbPort . " pull /sdcard/deviceAccount.xml """ . filePath,, Hide
-
-		Sleep, 500
-
-		adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
 
 		Sleep, 500
 
@@ -1867,6 +1862,13 @@ initializeAdbShell() {
 				}
 
 				adbShell.StdIn.WriteLine("su")
+				adbShell.StdIn.WriteLine("whoami")
+				output := adbShell.StdOut.ReadLine()
+				if (output != "root") {
+					MsgBox, "Failed to gain root access. Verify your settings"
+					ExitApp
+				}
+				adbShell.StdIn.WriteLine("exit")
 			}
 
 			; If adbShell is running, break loop
@@ -2738,17 +2740,19 @@ createAccountList(instance) {
 	if FileExist(outputTxt) {
 		FileGetTime, fileTime, %outputTxt%, M  ; Get last modified time
 		timeDiff := A_Now - fileTime  ; Calculate time difference
-
 		if (timeDiff > 86400)  ; 24 hours in seconds (60 * 60 * 24)
 			FileDelete, %outputTxt%
 	}
-	if (!FileExist(outputTxt))
+	if (!FileExist(outputTxt)) {
 		Loop, %saveDir%\*.xml {
-			xml := saveDir . "\" A_LoopFileName . ".xml"
+			xml := saveDir . "\" . A_LoopFileName
 			FileGetTime, fileTime, %xml%, M
-			if (timeDiff > 86400)  ; 24 hours in seconds (60 * 60 * 24)
-				FileAppend, % A_LoopFileName "`n", %outputTxt%  ; Append file path to output.txt
+			timeDiff := A_Now - fileTime  ; Calculate time difference
+			if (timeDiff > 86400) {  ; 24 hours in seconds (60 * 60 * 24) 
+				FileAppend, % A_LoopFileName "`n", %outputTxt%  ; Append file path to output.txt\
+			}
 		}
+	}
 }
 
 DoWonderPick() {
