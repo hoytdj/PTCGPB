@@ -257,6 +257,8 @@ Gui, Add, Button, gCheckForUpdates x275 y360 w120, Check for updates
 Gui, Add, Button, gArrangeWindows x275 y380 w120, Arrange Windows
 Gui, Add, Button, gStart x405 y380 w120, Start
 
+Gui, Add, Text, x130 y180, Scale:
+
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
 	scaleParam := 277
@@ -265,7 +267,7 @@ if (defaultLanguage = "Scale125") {
 	scaleParam := 287
 }
 
-; Gui, Add, DropDownList, x80 y245 w145 vdefaultLanguage choose%defaultLang%, Scale125
+Gui, Add, DropDownList, x161 y178 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License] ;'
 Return

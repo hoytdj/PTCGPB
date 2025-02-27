@@ -166,6 +166,9 @@ Loop {
 					break
 				} else if(clickButton) {
 					StringSplit, pos, clickButton, `,  ; Split at ", "
+					if (scaleParam = 287) {
+						pos2 += 5
+					}
 					Sleep, 1000
 					if(FindImageAndClick(190, 195, 215, 220, , "DeleteFriend", pos1, pos2, 4000)) {
 						Sleep, %Delay%
@@ -208,7 +211,19 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y1 := 220
 			X2 := 230
 			Y2 := 260
-		}
+		} 
+		else if (imageName = "99") { ; 100% full of friend list
+			X1 := 65
+			Y1 := 103
+			X2 := 105
+			Y2 := 118
+		} 
+		else if (imageName = "player") { ; 100% bot got deleted
+			X1 := 85
+			Y1 := 168
+			X2 := 120
+			Y2 := 181
+		} 
 	}
 	;bboxAndPause(X1, Y1, X2, Y2)
 

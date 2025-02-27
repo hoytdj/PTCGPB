@@ -448,6 +448,9 @@ AddFriends(renew := false, getFC := false) {
 					clickButton := FindOrLoseImage(75, 340, 195, 530, 80, "Button", 0)
 					if(clickButton) {
 						StringSplit, pos, clickButton, `,  ; Split at ", "
+						if (scaleParam = 287) {
+							pos2 += 5
+						}
 						adbClick(pos1, pos2)
 					}
 				}
@@ -673,6 +676,9 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		pNeedle := GetNeedle(Path)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 331, 50, 449, searchVariation)
+		if (scaleParam = 287) {
+			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 325, 55, 445, searchVariation)
+		}
 		if (vRet = 1) {
 			adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
 			waitadb()
@@ -731,14 +737,29 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			Y1 := 0
 		}
 
+		clicky += 2 ; clicky offset
 		if (imageName = "Platin") { ; can't do text so purple box
 			X1 := 141
 			Y1 := 189
 			X2 := 208
 			Y2 := 224
 		} else if (imageName = "Opening") { ; Opening click (to skip cards) can't click on the immersive skip with 239, 497
+			X1 := 10
+			Y1 := 80
+			X2 := 50
+			Y2 := 115
 			clickx := 250
 			clicky := 505
+		} else if (imageName = "SelectExpansion") { ; SelectExpansion
+			X1 := 120
+			Y1 := 135
+			X2 := 161
+			Y2 := 145
+		} else if (imageName = "CountrySelect2") { ; SelectExpansion
+			X1 := 120
+			Y1 := 130
+			X2 := 174
+			Y2 := 155
 		}
 	}
 
@@ -817,6 +838,9 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			pNeedle := GetNeedle(Path)
 			; ImageSearch within the region
 			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 331, 50, 449, searchVariation)
+			if (scaleParam = 287) {
+				vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 325, 55, 445, searchVariation)
+			}
 			if (vRet = 1) {
 				adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
 				waitadb()
@@ -861,6 +885,9 @@ LevelUp() {
 	if(Leveled) {
 		clickButton := FindOrLoseImage(75, 340, 195, 530, 80, "Button", 0, failSafeTime)
 		StringSplit, pos, clickButton, `,  ; Split at ", "
+		if (scaleParam = 287) {
+			pos2 += 5
+		}
 		adbClick(pos1, pos2)
 	}
 	Delay(1)
@@ -1010,6 +1037,9 @@ menuDelete() {
 				clickImage := FindOrLoseImage(140, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime)
 				if(clickImage) {
 					StringSplit, pos, clickImage, `,  ; Split at ", "
+					if (scaleParam = 287) {
+						pos2 += 5
+					}
 					adbClick(pos1, pos2)
 				}
 				else {
@@ -1026,6 +1056,9 @@ menuDelete() {
 			Sleep,%Delay%
 		}
 		StringSplit, pos, clickButton, `,  ; Split at ", "
+		if (scaleParam = 287) {
+			pos2 += 5
+		}
 		adbClick(pos1, pos2)
 		break
 		failSafeTime := (A_TickCount - failSafe) // 1000
@@ -1072,6 +1105,9 @@ menuDeleteStart() {
 					clickImage := FindOrLoseImage(140, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime)
 					if(clickImage) {
 						StringSplit, pos, clickImage, `,  ; Split at ", "
+						if (scaleParam = 287) {
+							pos2 += 5
+						}
 						adbClick(pos1, pos2)
 					}
 					else {
@@ -1088,6 +1124,9 @@ menuDeleteStart() {
 				Sleep,%Delay%
 			}
 			StringSplit, pos, clickButton, `,  ; Split at ", "
+			if (scaleParam = 287) {
+				pos2 += 5
+			}
 			adbClick(pos1, pos2)
 			break
 			failSafeTime := (A_TickCount - failSafe) // 1000
@@ -1213,6 +1252,15 @@ FindBorders(prefix) {
 		,[196, 284, 249, 286]
 		,[70, 399, 123, 401]
 		,[155, 399, 208, 401]]
+		
+	; 100% scale changes
+	if (scaleParam = 287) {
+		borderCoords := [[30, 277, 85, 281]
+		,[112, 277, 167, 281]
+		,[195, 277, 250, 281]
+		,[70, 394, 125, 398]
+		,[156, 394, 211, 398]]
+	}
 	pBitmap := from_window(WinExist(winTitle))
 	; imagePath := "C:\Users\Arturo\Desktop\PTCGP\GPs\" . Clipboard . ".png"
 	; pBitmap := Gdip_CreateBitmapFromFile(imagePath)
@@ -1242,6 +1290,13 @@ FindGodPack() {
 	}
 	borderCoords := [[20, 284, 90, 286]
 		,[103, 284, 173, 286]]
+		
+	; Change borderCoords if scaleParam is 287 for 100%
+	if (scaleParam = 287) {
+		borderCoords := [[21, 278, 91, 280]
+			,[105, 278, 175, 280]]
+	}
+		
 	if(packs = 3)
 		packs := 0
 	Loop {
@@ -2630,6 +2685,9 @@ HourglassOpening(HG := false) {
 		clickButton := FindOrLoseImage(145, 440, 258, 480, 80, "Button", 0, failSafeTime)
 		if(clickButton) {
 			StringSplit, pos, clickButton, `,  ; Split at ", "
+			if (scaleParam = 287) {
+				pos2 += 5
+			}
 			adbClick(pos1, pos2)
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
@@ -2766,6 +2824,10 @@ DoWonderPick() {
 			clickButton := FindOrLoseImage(100, 367, 190, 480, 100, "Button", 0, failSafeTime)
 			if(clickButton) {
 				StringSplit, pos, clickButton, `,  ; Split at ", "
+					; Adjust pos2 if scaleParam is 287 for 100%
+					if (scaleParam = 287) {
+						pos2 += 5
+					}
 					adbClick(pos1, pos2)
 				Delay(3)
 			}
