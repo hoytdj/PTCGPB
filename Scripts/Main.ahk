@@ -1028,13 +1028,25 @@ GetCurrentFriendCount()
 
 GetFriendCode()
 {
-	global winTitle
+	global winTitle, scaleParam
 	WinGetPos, x, y, w, h, %winTitle%
+	if (scaleParam = 287) {
+		x := x + 172
+		y := y + 63
+		w := 103
+		h := 20
+	}
+	else {
+		x := x + 172
+		y := y + 73
+		w := 100
+		h := 20
+	}
     ; Parse friendCode status from screen
     ; Expected output something like "1234-5678-1234-5678"
 	GUI, Toolbar: Hide
 	GUI, StatusMessage: Hide
-    friendCode := GetTextFromScreen(172 + x, 73 + y, 100, 20, "friendCode")
+    friendCode := GetTextFromScreen(x, y, w, h, "friendCode")
 	GUI, Toolbar: Show, NoActivate
 	GUI, StatusMessage: Show, NoActivate
     friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
@@ -1168,7 +1180,7 @@ RemoveNonVipFriends() {
 			if (IsRecentlyCheckedId(friendCode, recentFriendCodes)) {
 				repeatFriendCodes++
 			}
-			else {
+			else if (friendCode != "") {
 				repeatFriendCodes := 0
 			}
 			if (repeatFriendCodes > 2) {
@@ -1207,9 +1219,15 @@ RemoveNonVipFriends() {
 			}
 		}
 		else {
-			; Handling for account not currently in use
-			FindImageAndClick(226, 100, 270, 135, , "Add", 143, 508, 500)
-			Delay(3)
+			; If on social screen, we're stuck between friends, micro scroll
+			If (FindOrLoseImage(226, 100, 270, 135, , "Add", 0)) {
+				CreateStatusMessage("Stuck between friends. Tiny scroll and continue.")
+				adbSwipeFriendMicro()
+			}
+			else { ; Handling for account not currently in use
+				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 508, 500)
+				Delay(3)
+			}
 		}
 		if (!GPTest) {
 			Return
@@ -1223,7 +1241,12 @@ RemoveNonVipFriends() {
 ;   IDList - The list of IDs (passed by reference and updated)
 ; Returns true if ID is found, false otherwise
 IsRecentlyCheckedId(id, ByRef IDList) {
-    ; Check if the ID is already in the list
+    if (id == "") {
+		MsgBox, null id
+		return false	
+	}
+	
+	; Check if the ID is already in the list
     for index, value in IDList {
         if (value = id) {
             return true  ; ID found
@@ -1251,13 +1274,23 @@ Delay(n) {
 adbSwipeFriend() {
 	global adbShell
 	initializeAdbShell()
-	X1 := 138
+	X := 138
 	Y1 := 380
-	X2 := 138
 	Y2 := 200
 
-	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . 300)
+	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 300)
 	Sleep, 1000
+ }
+
+ adbSwipeFriendMicro() {
+	global adbShell
+	initializeAdbShell()
+	X := 138
+	Y1 := 380
+	Y2 := 355
+
+	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 200)
+	Sleep, 500
  }
 
 adbGestureFriend() {
