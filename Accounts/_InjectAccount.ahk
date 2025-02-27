@@ -55,10 +55,15 @@ SaveSettings:
 	}
 
 	filePath := A_ScriptDir . "\" . fileName . ".xml"
-
 	if(!FileExist(filePath)) {
-		Msgbox, 16, , Can't find XML file: %filePath% ;'
-		ExitApp
+		filePath := A_ScriptDir . "\GodPacks\" . fileName . ".xml"
+		if(!FileExist(filePath)) {
+			filePath := A_ScriptDir . "\SpecificCards\" . fileName . ".xml"
+			if(!FileExist(filePath)) {
+				Msgbox, 16, , Can't find XML file: %filePath% ;'
+				ExitApp
+			}
+		}
 	}
 	RunWait, %adbPath% connect 127.0.0.1:%adbPorts%,, Hide
 
@@ -170,6 +175,8 @@ loadAccount() {
 	loadDir := A_ScriptDir . "\" . fileName
 	if (!FileExist(loadDir))
 		loadDir := A_ScriptDir . "\GodPacks\" . fileName
+	if (!FileExist(loadDir))
+		loadDir := A_ScriptDir . "\SpecificCards\" . fileName
 
 	RunWait, % adbPath . " -s 127.0.0.1:" . adbPorts . " push """ . loadDir . ".xml""" . " /sdcard/deviceAccount.xml",, Hide
 
