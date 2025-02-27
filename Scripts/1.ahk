@@ -1919,12 +1919,6 @@ initializeAdbShell() {
 				}
 
 				adbShell.StdIn.WriteLine("su")
-				adbShell.StdIn.WriteLine("whoami")
-				output := adbShell.StdOut.ReadLine()
-				if (output != "root") {
-					MsgBox, "Failed to gain root access. Verify your settings"
-					ExitApp
-				}
 				adbShell.StdIn.WriteLine("exit")
 			}
 
