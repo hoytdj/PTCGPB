@@ -1242,7 +1242,6 @@ RemoveNonVipFriends() {
 ; Returns true if ID is found, false otherwise
 IsRecentlyCheckedId(id, ByRef IDList) {
     if (id == "") {
-		MsgBox, null id
 		return false	
 	}
 	
