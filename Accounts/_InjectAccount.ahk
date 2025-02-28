@@ -172,13 +172,19 @@ loadAccount() {
 
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 
-	loadDir := A_ScriptDir . "\" . fileName
-	if (!FileExist(loadDir))
-		loadDir := A_ScriptDir . "\GodPacks\" . fileName
-	if (!FileExist(loadDir))
-		loadDir := A_ScriptDir . "\SpecificCards\" . fileName
+	loadDir := A_ScriptDir . "\" . fileName . ".xml"
+	if(!FileExist(loadDir)) {
+		loadDir := A_ScriptDir . "\GodPacks\" . fileName . ".xml"
+		if(!FileExist(loadDir)) {
+			loadDir := A_ScriptDir . "\SpecificCards\" . fileName . ".xml"
+			if(!FileExist(loadDir)) {
+				Msgbox, 16, , Can't find XML file: %loadDir%
+				ExitApp
+			}
+		}
+	}
 
-	RunWait, % adbPath . " -s 127.0.0.1:" . adbPorts . " push """ . loadDir . ".xml""" . " /sdcard/deviceAccount.xml",, Hide
+	RunWait, % adbPath . " -s 127.0.0.1:" . adbPorts . " push " . loadDir . " /sdcard/deviceAccount.xml",, Hide
 
 	Sleep, 500
 

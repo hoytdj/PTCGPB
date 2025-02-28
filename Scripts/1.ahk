@@ -53,7 +53,8 @@ IniRead, ImmersiveCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, ImmersiveC
 IniRead, PseudoGodPack, %A_ScriptDir%\..\Settings.ini, UserSettings, PseudoGodPack, 0
 IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
 IniRead, Palkia, %A_ScriptDir%\..\Settings.ini, UserSettings, Palkia, 0
-IniRead, Dialga, %A_ScriptDir%\..\Settings.ini, UserSettings, Dialga, 1
+IniRead, Dialga, %A_ScriptDir%\..\Settings.ini, UserSettings, Dialga, 0
+IniRead, Arceus, %A_ScriptDir%\..\Settings.ini, UserSettings, Arceus, 1
 IniRead, Mew, %A_ScriptDir%\..\Settings.ini, UserSettings, Mew, 0
 IniRead, Pikachu, %A_ScriptDir%\..\Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, %A_ScriptDir%\..\Settings.ini, UserSettings, Charizard, 0
@@ -74,6 +75,8 @@ if(Charizard)
 	packArray.push("Charizard")
 if(Mewtwo)
 	packArray.push("Mewtwo")
+if(Arceus)
+	packArray.push("Arceus")
 
 changeDate := getChangeDateTime() ; get server reset time
 
@@ -682,7 +685,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 325, 55, 445, searchVariation)
 		}
 		if (vRet = 1) {
-			adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
+			adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 			waitadb()
 			CreateStatusMessage("Loaded deleted account. Deleting XML." )
 			if(loadedAccount) {
@@ -844,7 +847,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 325, 55, 445, searchVariation)
 			}
 			if (vRet = 1) {
-				adbShell.StdIn.WriteLine("su -c 'rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*'") ; clear cache
+				adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 				waitadb()
 				CreateStatusMessage("Loaded deleted account. Deleting XML." )
 				if(loadedAccount) {
@@ -983,7 +986,7 @@ restartGameInstance(reason, RL := true){
 		adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 		waitadb()
 		if(!RL)
-			adbShell.StdIn.WriteLine("su -c 'rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml'") ; delete account data
+			adbShell.StdIn.WriteLine("rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml") ; delete account data
 		waitadb()
 		adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
 		waitadb()
@@ -1433,8 +1436,7 @@ loadAccount() {
 
 	Sleep, 500
 
-	adbShell.StdIn.WriteLine("su -c 'cp /sdcard/deviceAccount.xml /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml'")
-
+	adbShell.StdIn.WriteLine("cp /sdcard/deviceAccount.xml /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml")
 	waitadb()
 	adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
 	waitadb()
@@ -1478,8 +1480,8 @@ saveAccount(file := "Valid") {
 	Loop {
 		CreateStatusMessage("Attempting to save account XML. " . count . "/10")
 
-		adbShell.StdIn.WriteLine("su -c 'cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml'")adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
-
+		adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
+		waitadb()
 		Sleep, 500
 
 		RunWait, % adbPath . " -s 127.0.0.1:" . adbPort . " pull /sdcard/deviceAccount.xml """ . filePath,, Hide
@@ -1621,10 +1623,12 @@ Screenshot(filename := "Valid") {
 
 	; File path for saving the screenshot locally
 	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
+	;pBitmap := from_window(WinExist(winTitle))
+	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 18, 175, 240, 227)
 
-	pBitmap := from_window(WinExist(winTitle))
 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
 
+	Gdip_DisposeImage(pBitmap)
 	return screenshotFile
 }
 
@@ -1918,8 +1922,13 @@ initializeAdbShell() {
 					throw "Failed to start ADB shell."
 				}
 
-				adbShell.StdIn.WriteLine("su")
-				adbShell.StdIn.WriteLine("exit")
+				adbShell.StdIn.WriteLine("su -c ""whoami && sh""")
+				Delay(2)
+				output := adbShell.StdOut.ReadLine()
+				if (output != "root") {
+					MsgBox, "Failed to gain root access."
+					ExitApp
+				}
 			}
 
 			; If adbShell is running, break loop
@@ -2494,9 +2503,7 @@ SelectPack(HG := false) {
 	packy := 196
 	if(openPack = "Mew") {
 		packx := 80
-	} else if(openPack = "Palkia") {
-		packx := 200
-	} else if(openPack = "Dialga") {
+	} else if(openPack = "Arceus") {
 		packx := 145
 	} else {
 		packx := 200
@@ -2513,6 +2520,10 @@ SelectPack(HG := false) {
 		}
 		FindImageAndClick(115, 140, 160, 155, , "SelectExpansion", 245, 475)
 		FindImageAndClick(233, 400, 264, 428, , "Points", packx, packy)
+	} else if(openPack = "Palkia") {
+		Delay(2)
+		adbClick(245, 245) ;temp
+		Delay(2)
 	}
 	if(HG = "Tutorial") {
 		FindImageAndClick(236, 198, 266, 226, , "Hourglass2", 180, 436, 500) ;stop at hourglasses tutorial 2 180 to 203?
@@ -2541,7 +2552,7 @@ SelectPack(HG := false) {
 			CreateStatusMessage("In failsafe for HourglassPack4. " . failSafeTime "/45 seconds")
 		}
 	}
-	if(HG != "Tutorial")
+	;if(HG != "Tutorial")
 		failSafe := A_TickCount
 		failSafeTime := 0
 		Loop {
@@ -2940,8 +2951,11 @@ getChangeDateTime() {
 	Return FormattedTime
 }
 
-; ^e::
-; msgbox ss
-; pToken := Gdip_Startup()
-; Screenshot()
-; return
+
+/*
+^e::
+	msgbox ss
+	pToken := Gdip_Startup()
+	Screenshot()
+return
+*/
