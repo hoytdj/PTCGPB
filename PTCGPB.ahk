@@ -81,6 +81,7 @@ IniRead, Charizard, Settings.ini, UserSettings, Charizard, 0
 IniRead, Mewtwo, Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, Settings.ini, UserSettings, slowMotion, 0
 IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
+IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 
 Gui, Add, Text, x10 y10, Friend ID:
 ; Add input controls
@@ -149,13 +150,17 @@ if(StrLen(heartBeatWebhookURL) < 3)
 if(heartBeat) {
 	Gui, Add, Checkbox, Checked vheartBeat x30 y315 gdiscordSettings, Discord Heartbeat
 	Gui, Add, Text, vhbName x30 y335, Name:
-	Gui, Add, Edit, vheartBeatName w50 x70 y330 h18, %heartBeatName%
+	Gui, Add, Edit, vheartBeatName w100 x70 y330 h18, %heartBeatName%
+	Gui, Add, Text, vhbDelay x175 y335, Delay:
+	Gui, Add, Edit, vheartBeatDelay w45 x210 y330 h18, %heartBeatDelay%
 	Gui, Add, Text, vhbURL x30 y360, Webhook URL:
 	Gui, Add, Edit, vheartBeatWebhookURL h20 w100 x110 y355 h18, %heartBeatWebhookURL%
 } else {
 	Gui, Add, Checkbox, vheartBeat x30 y315 gdiscordSettings, Discord Heartbeat
 	Gui, Add, Text, vhbName x30 y335 Hidden, Name:
-	Gui, Add, Edit, vheartBeatName w50 x70 y330 h18 Hidden, %heartBeatName%
+	Gui, Add, Edit, vheartBeatName w100 x70 y330 h18 Hidden, %heartBeatName%
+	Gui, Add, Text, vhbDelay x175 y335 Hidden, Delay:
+	Gui, Add, Edit, vheartBeatDelay w45 x210 y330 h18 Hidden, %heartBeatDelay%
 	Gui, Add, Text, vhbURL x30 y360 Hidden, Webhook URL:
 	Gui, Add, Edit, vheartBeatWebhookURL h20 w100 x110 y355 h18 Hidden, %heartBeatWebhookURL%
 }
@@ -385,6 +390,7 @@ Start:
 	IniWrite, %Mewtwo%, Settings.ini, UserSettings, Mewtwo
 	IniWrite, %slowMotion%, Settings.ini, UserSettings, slowMotion
 	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
+	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
 
 	; Run main before instances to account for instance start delay
 	if (runMain) {
@@ -434,7 +440,7 @@ Start:
 		packStatus := "Time: " . mminutes . "m Packs: " . total
 		CreateStatusMessage(packStatus, 287, 490)
 		if(heartBeat)
-			if((A_Index = 1 || (Mod(A_Index, 60) = 0))) {
+			if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
 				onlineAHK := "Online: "
 				offlineAHK := "Offline: "
 				Online := []
