@@ -1,6 +1,5 @@
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
-#Include %A_ScriptDir%\Include\ParseScreen.ahk
 #Include %A_ScriptDir%\Include\StringCompare.ahk
 
 #SingleInstance on
@@ -124,7 +123,7 @@ pToken := Gdip_Startup()
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
-firstRun := true
+firstRun := true ; DEBUG
 Loop {
 	; hoytdj Add + 6
 	if (GPTest) {
@@ -649,10 +648,10 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			firstRun := True
+			firstRun := True ; DEBUG
 			testStartTime := ""
 		}
-		CreateStatusMessage("Exiting GP Test Mode")		
+		CreateStatusMessage("Exiting GP Test Mode")
 	}
 }
 
@@ -1148,13 +1147,13 @@ GetFriendCode() {
 	}
 	; Parse friendCode status from screen
 	; Expected output something like "1234-5678-1234-5678"
-	GUI, Toolbar: Hide
-	GUI, StatusMessage: Hide
-	friendCode := GetTextFromScreen(x, y, w, h, "friendCode")
-	GUI, Toolbar: Show, NoActivate
-	GUI, StatusMessage: Show, NoActivate
-	friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
-	Return friendCode
+	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendCode")) {
+		ocrText := GetTextFromImage(capturedScreenshot)
+		friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
+		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendCode
+		return friendCode
+	}
+	return ""
 }
 
 GetFriendName() {
@@ -1173,9 +1172,13 @@ GetFriendName() {
 		h := 28
 	}
 
-	friendName := GetTextFromScreen(x, y, w, h, "friendName")
-	friendName := Trim(friendName, " `t`r`n")
-	Return friendName
+	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendName")) {
+		ocrText := GetTextFromImage(capturedScreenshot)
+		friendName := Trim(ocrText, " `t`r`n")
+		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendName
+		return friendName
+	}
+	return ""
 }
 
 ParseFriendCode(ByRef friendCode) {
@@ -1203,7 +1206,7 @@ ParseFriendName(ByRef friendName) {
 	parseFriendNameResult := False
 	Loop {
 		friendName := GetFriendName()
-		if (RegExMatch(friendCode, "^[a-zA-Z0-9]{5,20}$")) {
+		if (RegExMatch(friendName, "^[a-zA-Z0-9]{5,20}$")) {
 			parseFriendNameResult := True
 			break
 		}
@@ -1380,6 +1383,84 @@ DownloadFile(url, filename) {
 	}
 	return !errored
 }
+
+ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "DEFAULT") {
+	global winTitle
+	
+	; Load bitmap from window
+	pBitmapWindow := from_window(WinExist(winTitle))
+
+	; Create new cropped bitmap
+	pBitmapRegion := Gdip_CreateBitmap(width, height)
+	gRegion := Gdip_GraphicsFromImage(pBitmapRegion)
+	Gdip_SetSmoothingMode(gRegion, 0)  ; High quality
+
+	; Draw cropped region from the original bitmap onto the new one
+	Gdip_DrawImage(gRegion, pBitmapWindow, 0, 0, width, height, x, y, width, height)
+
+	; Increase contrast and convert to grayscale using a color matrix
+	contrast := 25  ; Adjust contrast level (-100 to 100)
+	factor := (100.0 + contrast) / 100.0
+	factor := factor * factor
+
+	; Grayscale conversion with contrast applied
+	redFactor := 0.299 * factor
+	greenFactor := 0.587 * factor
+	blueFactor := 0.114 * factor
+	xFactor := 0.5 * (1 - factor)
+	colorMatrix := redFactor . "|" . redFactor . "|" . redFactor . "|0|0|" . greenFactor . "|" . greenFactor . "|" . greenFactor . "|0|0|" . blueFactor . "|" . blueFactor . "|" . blueFactor . "|0|0|0|0|0|1|0|" . xFactor . "|" . xFactor . "|" . xFactor . "|0|1"
+
+	; Apply the color matrix
+	Gdip_DrawImage(gRegion, pBitmapRegion, 0, 0, width, height, 0, 0, width, height, colorMatrix)
+
+	; Define folder and file paths
+	screenshotsDir := A_ScriptDir . "\temp"
+	if !FileExist(screenshotsDir)
+		FileCreateDir, %screenshotsDir%
+
+	; File path for saving the screenshot locally
+	screenshotFile := screenshotsDir "\" . winTitle . "_" . filename . ".png"
+
+	; Save the cropped image
+	saveResult := Gdip_SaveBitmapToFile(pBitmapRegion, screenshotFile, 100)
+	if (saveResult != 0) {
+		CreateStatusMessage("Failed to save " . filename . " screenshot.`nError code: " . saveResult)
+		saveResult := false
+	}
+	else {
+		outputFilename := screenshotFile
+		saveResult := true
+	}
+
+	; Clean up resources
+	Gdip_DeleteGraphics(gRegion)
+	Gdip_DisposeImage(pBitmapWindow)
+	Gdip_DisposeImage(pBitmapRegion)
+
+	return saveResult
+}
+
+GetTextFromImage(inputFilename) {
+	SplitPath, inputFilename, FileName, , , FileNameNoExt
+	; --- Call Tesseract OCR ------------------------------------------------------
+	; Tesseract is a command-line utility. It takes an input image and an output base.
+	; The OCR result is written to "FileNameNoExt.txt". Adjust parameters as desired.
+	outputBase := A_ScriptDir . "\temp\" . FileNameNoExt
+	; tesseractPath can be set to the full path if tesseract.exe isn’t in your PATH.
+	tesseractPath := "C:\Program Files\Tesseract-OCR\tesseract.exe"
+	
+	RunWait, %ComSpec% /c ""%tesseractPath%" "%inputFilename%" "%outputBase%" --oem 3 --psm 7", , Hide
+
+	outputFilename := outputBase ".txt"
+	FileRead, ocrText, %outputFilename%
+	if (ErrorLevel)
+	{
+		MsgBox, 16, Error, "Failed to read OCR output from " outputFilename
+	}
+
+	return ocrText
+}
+
 
 ; DEBUG
 ; F1::
