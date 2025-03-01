@@ -17,7 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
-global triggerTestNeeded, testStartTime, firstRun, minStars, vipIdsURL
+global triggerTestNeeded, testStartTime, firstRun, minStars, vipIdsURL, tesseractPath
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -44,7 +44,8 @@ IniRead, deleteMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, deleteMethod
 IniRead, sendXML, %A_ScriptDir%\..\Settings.ini, UserSettings, sendXML, 0
 IniRead, heartBeat, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeat, 1
 IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
-IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL, ""
+IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL
+IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
 
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
@@ -95,10 +96,10 @@ Loop {
 		Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
 		Gui, Toolbar: Add, Button, x0 y0 w30 h25 gReloadScript, Reload  (F5)
 		Gui, Toolbar: Add, Button, x30 y0 w30 h25 gPauseScript, Pause (F6)
-		Gui, Toolbar: Add, Button, x60 y0 w30 h25 gResumeScript, Resume (F6)
-		Gui, Toolbar: Add, Button, x90 y0 w30 h25 gStopScript, Stop (F7)
-		Gui, Toolbar: Add, Button, x120 y0 w30 h25 gShowStatusMessages, Status (F8)
-		Gui, Toolbar: Add, Button, x150 y0 w30 h25 gTestScript, GP Test (F9) ; hoytdj Add
+		Gui, Toolbar: Add, Button, x60 y0 w40 h25 gResumeScript, Resume (F6)
+		Gui, Toolbar: Add, Button, x100 y0 w30 h25 gStopScript, Stop (F7)
+		Gui, Toolbar: Add, Button, x130 y0 w30 h25 gShowStatusMessages, Status (F8)
+		Gui, Toolbar: Add, Button, x160 y0 w30 h25 gTestScript, GP Test (F9) ; hoytdj Add
 		Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
 		break
 	}
@@ -648,7 +649,7 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			firstRun := True ; DEBUG
+			; firstRun := True ; DEBUG
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
@@ -1091,7 +1092,7 @@ RemoveNonVipFriends() {
 				; If it's a VIP friend, skip removal	
 				if (isVipResult)
 					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
-				Delay(4) ; DEBUG
+				Sleep, 1500 ; Time to read
 				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
 				Delay(2)
 				if (friendIndex < 2)
@@ -1105,7 +1106,7 @@ RemoveNonVipFriends() {
 			else {
 				; If NOT a VIP remove the friend
 				CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
-				Delay(4) ; DEBUG
+				Sleep, 1500 ; Time to read
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
 				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
 				Delay(1)
@@ -1134,14 +1135,14 @@ GetFriendCode() {
 	global winTitle, scaleParam
 	WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 172
+		x := x + 170
 		y := y + 63
 		w := 103
 		h := 20
 	}
 	else {
-		x := x + 172
-		y := y + 73
+		x := x + 169
+		y := y + 72
 		w := 100
 		h := 20
 	}
@@ -1160,14 +1161,14 @@ GetFriendName() {
 	global winTitle, scaleParam
 	WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 57
+		x := x + 52
 		y := y + 255
 		w := 174
 		h := 28
 	}
 	else {
 		x := x + 51
-		y := y + 260
+		y := y + 262
 		w := 174
 		h := 28
 	}
@@ -1441,13 +1442,12 @@ ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "DEFAULT
 }
 
 GetTextFromImage(inputFilename) {
+	global tesseractPath
 	SplitPath, inputFilename, FileName, , , FileNameNoExt
 	; --- Call Tesseract OCR ------------------------------------------------------
 	; Tesseract is a command-line utility. It takes an input image and an output base.
 	; The OCR result is written to "FileNameNoExt.txt". Adjust parameters as desired.
 	outputBase := A_ScriptDir . "\temp\" . FileNameNoExt
-	; tesseractPath can be set to the full path if tesseract.exe isn’t in your PATH.
-	tesseractPath := "C:\Program Files\Tesseract-OCR\tesseract.exe"
 	
 	RunWait, %ComSpec% /c ""%tesseractPath%" "%inputFilename%" "%outputBase%" --oem 3 --psm 7", , Hide
 
