@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v0.8alpha"
+localVersion := "v0.9alpha"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -80,6 +80,7 @@ IniRead, Pikachu, Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, Settings.ini, UserSettings, Charizard, 0
 IniRead, Mewtwo, Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, Settings.ini, UserSettings, slowMotion, 0
+IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 
 Gui, Add, Text, x10 y10, Friend ID:
 ; Add input controls
@@ -276,6 +277,9 @@ if (defaultLanguage = "Scale125") {
 
 Gui, Add, DropDownList, x161 y178 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
 
+Gui, Add, Text, x295 y330, VIP ID URL:
+Gui, Add, Edit, vvipIdsURL w100 x355 y328 h18, %vipIdsURL%
+
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License] ;'
 Return
 
@@ -380,6 +384,7 @@ Start:
 	IniWrite, %Charizard%, Settings.ini, UserSettings, Charizard
 	IniWrite, %Mewtwo%, Settings.ini, UserSettings, Mewtwo
 	IniWrite, %slowMotion%, Settings.ini, UserSettings, slowMotion
+	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
 
 	; Run main before instances to account for instance start delay
 	if (runMain) {
