@@ -1,6 +1,10 @@
 # Hoytdj's Pokemon Trading Card Game Pocket Bot
 This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/Arturo-1212/PTCGPB). _Thanks for all the hard work Arturo!_ After any new releases of the main bot, this bot will be updated as soon as possible.
 
+**IMPORTANT:** Tesseract is required for this to work.
+* Download/install Tesseract from here: [Tesseract Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
+* I recommend you install Tesseract under `C:\Program Files\Tesseract-OCR`. If you install it elsewhere, you **must** manually open your `Settings.ini` file and add the full path to your Tesseract executable. For example: `tesseractPath=C:\Program Files\Tesseract-OCR\tesseract.exe`
+
 ### What features does this add?
 A new "GP Test" mode has been added to the Main account script. When toggled on, the bot will automatically remove all non-VIP friends (i.e., friends that may have pulled a live GP). When all non-VIP friends have been removed, the bot will pause, giving you the opportunity to nagivate to Wonder Picks and look for God Packs. When you're ready to continue, simply toggle "GP Test" mode off.
 VIP friends are specified in the `vip_ids.txt` file. List friend codes each on their own line.
@@ -16,16 +20,16 @@ Example file contents:
 8076495483324199 | CheryS6334 | 3/5
 2666277563052062 | CCdarumaka | 3/5
 ```
-or 
+or
 ```
 0735520049083732
 8076495483324199
 2666277563052062
 ```
 
-**IMPORTANT:** Tesseract is required for this to work.
-* Download/install Tesseract from here: [Tesseract Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
-* For now, Tesseract **must** be installed under `C:\Program Files\Tesseract-OCR`
+## Bonus features:
+* _Rayer_3's Scale100_ - Adds support for 100% scale in addition to the standard 125% scale.
+* _DietPepperPhD's 5 Pack Method_ - The 5 Pack method is modified to skip the add/remove friend step between packs. This means you may have to test 5P GPs, but your effective packs per minute will be faster.
 
 ## License
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0), which allows you to use, modify, and share the software only for **non-commercial** purposes.
