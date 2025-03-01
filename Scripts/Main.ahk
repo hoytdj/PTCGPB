@@ -19,7 +19,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
-global triggerTestNeeded, testStartTime, firstRun
+global triggerTestNeeded, testStartTime, firstRun, minStars, vipIdsURL
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -45,6 +45,9 @@ IniRead, discordUserId, %A_ScriptDir%\..\Settings.ini, UserSettings, discordUser
 IniRead, deleteMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, deleteMethod, Hoard
 IniRead, sendXML, %A_ScriptDir%\..\Settings.ini, UserSettings, sendXML, 0
 IniRead, heartBeat, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeat, 1
+IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
+IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL, ""
+
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 
@@ -167,6 +170,9 @@ Loop {
 					break
 				} else if(clickButton) {
 					StringSplit, pos, clickButton, `,  ; Split at ", "
+					if (scaleParam = 287) {
+						pos2 += 5
+					}
 					Sleep, 1000
 					if(FindImageAndClick(190, 195, 215, 220, , "DeleteFriend", pos1, pos2, 4000)) {
 						Sleep, %Delay%
@@ -209,7 +215,19 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y1 := 220
 			X2 := 230
 			Y2 := 260
-		}
+		} 
+		else if (imageName = "99") { ; 100% full of friend list
+			X1 := 65
+			Y1 := 103
+			X2 := 105
+			Y2 := 118
+		} 
+		else if (imageName = "player") { ; 100% bot got deleted
+			X1 := 85
+			Y1 := 168
+			X2 := 120
+			Y2 := 181
+		} 
 	}
 	;bboxAndPause(X1, Y1, X2, Y2)
 
@@ -995,85 +1013,10 @@ HoytdjTestScript() {
 	global triggerTestNeeded
 	triggerTestNeeded := false
 	RemoveNonVipFriends()
-
-	;test := GetCurrentFriendCount()
-	;test := GetFriendCode()
-	;MsgBox, % """" test """"
-}
-
-GetCurrentFriendCount()
-{
-	global winTitle
-	WinGetPos, x, y, w, h, %winTitle%
-    ; Parse friendCount status from screen
-    ; Expected output something like "Number of friends 42/99"
-    friendCount := GetTextFromScreen(24 + x, 110 + y, 145, 20, "friendCount")
-    ; Remove "Number of friends", everything after "/", and trim spaces
-    friendCount := RegExReplace(RegExReplace(Trim(friendCount, " `t`r`n"), "^Number of friends\s*"), "\s*/.*$") + 0
-    Return friendCount
-}
-
-GetFriendCode()
-{
-	global winTitle
-	WinGetPos, x, y, w, h, %winTitle%
-    ; Parse friendCode status from screen
-    ; Expected output something like "1234-5678-1234-5678"
-	GUI, Toolbar: Hide
-	GUI, StatusMessage: Hide
-    friendCode := GetTextFromScreen(172 + x, 73 + y, 100, 20, "friendCode")
-	GUI, Toolbar: Show, NoActivate
-	GUI, StatusMessage: Show, NoActivate
-    friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
-    Return friendCode
-}
-
-IsVipId(inputString, vipIdsArray, ByRef matchedId)
-{
-    ; Initialize output to empty
-    matchedId := ""
-
-    ; Loop over each ID in the array
-	for index, id in vipIdsArray {
-		; Compare the line to the input string using SimilarityScore
-        similarity := SimilarityScore(inputString, id)
-
-		; If similarity is greater than 60%
-		if (similarity > 0.6) {
-			matchedId := id  ; Store the matched line in the matchedId variable
-			Return true  ; Return true if a match is found
-		}
-    }
-    
-    ; Return false if no match is found
-    Return false
-}
-
-ReadIDsFromFile(filePath, ByRef idCount) {
-    ids := []  ; Initialize an empty array
-    idCount := 0  ; Initialize ID count
-
-    ; Check if file exists
-    if !FileExist(filePath) {
-        CreateStatusMessage("Error - File not found: " . filePath)
-        return ids
-    }
-
-    ; Read file line by line
-    Loop, Read, %filePath%
-    {
-        trimmedLine := Trim(A_LoopReadLine)  ; Remove leading/trailing spaces
-        if (trimmedLine != "") {  ; Ignore empty lines
-            ids.Push(trimmedLine)  ; Add ID to the array
-            idCount++
-        }
-    }
-    
-    return ids
 }
 
 RemoveNonVipFriends() {
-	global GPTest
+	global GPTest, vipIdsURL
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
@@ -1101,70 +1044,56 @@ RemoveNonVipFriends() {
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	Delay(3)
 
-	; Get VIP IDs and target friend count using ReadIDsFromFile()
-	vipIdsArray := ReadIDsFromFile(A_ScriptDir . "\..\vip_ids.txt", vipIdCount)
-	if (vipIdCount = 0) {
-		CreateStatusMessage("Error - No IDs found in vip_ids.txt")
+	if (vipIdsURL != "" && !DownloadFile(vipIdsURL, "vip_ids.txt")) {
+		CreateStatusMessage("Failed to download vip_ids.txt. Aborting test...")
+		return
+	}
+
+	includesIdsAndNames := false
+	vipFriendsArray :=  ParseFriendAccounts(A_ScriptDir . "\..\vip_ids.txt", includesIdsAndNames)
+	if (!vipFriendsArray.MaxIndex()) {
+		CreateStatusMessage("No accounts found in vip_ids.txt. Aborting test...")
 		return
 	}
 
 	friendIndex := 0
-	repeatFriendCodes := 0
-	recentFriendCodes := []
+	repeatFriendAccounts := 0
+	recentFriendAccounts := []
 	Loop {
-		; ; Get GetCurrentFriendCount and compare to target friend count
-		; ; Removing all this and relying on duplicate FC parsing.
-		; failSafe := A_TickCount
-		; failSafeTime := 0
-		; Loop {
-		; 	currentFriendCount := GetCurrentFriendCount()
-		; 	if (RegExMatch(currentFriendCount, "^\d{1,2}$")) {
-		; 		break
-		; 	}
-		; 	failSafeTime := (A_TickCount - failSafe) // 1000
-		; 	if (failSafeTime > 5) {
-		; 		CreateStatusMessage("Couldn't parse friend count. Abandoning...`nParsed friend count: " . currentFriendCount)
-		; 		return
-		; 	}
-		; }
-		; if (currentFriendCount <= vipIdCount) {
-		; 	CreateStatusMessage("Current friend count: " . currentFriendCount . "`nTarget friend count: " . vipIdCount . "`nReady to test.")
-		; 	break
-		; }
-
 		friendClickY := 195 + (95 * friendIndex)
 		if (FindImageAndClick(75, 400, 105, 420, , "Friend", 138, friendClickY, 500, 3)) {
 			Delay(1)
-			; Get the friend code
-			failSafe := A_TickCount
-			failSafeTime := 0
-			Loop {
-				friendCode := GetFriendCode()
-				if (RegExMatch(friendCode, "^\d{14,17}$")) {
-					break
-				}
-				failSafeTime := (A_TickCount - failSafe) // 1000
-				if (failSafeTime > 5) {
-					CreateStatusMessage("Couldn't parse friend code. Abandoning...`nParsed friend code: " . friendCode)
-					return
-				}
-			}
+			
+			; Get the friend account
+			friendCode := ""
+			friendName := ""
+			parseFriendCodeResult := ParseFriendCode(friendCode)
+			if (includesIdsAndNames)
+				parseFriendNameResult := ParseFriendName(friendName)
+			parseFriendResult := parseFriendCodeResult || (includesIdsAndNames && parseFriendNameResult)
+			friendAccount := new FriendAccount(friendCode, friendName)
+
 			; Check if this is a repeat
-			if (IsRecentlyCheckedId(friendCode, recentFriendCodes)) {
-				repeatFriendCodes++
+			if (IsRecentlyCheckedAccount(friendAccount, recentFriendAccounts)) {
+				repeatFriendAccounts++
 			}
-			else {
-				repeatFriendCodes := 0
+			else if (parseFriendResult) {
+				repeatFriendAccounts := 0
 			}
-			if (repeatFriendCodes > 2) {
-				;CreateStatusMessage("Parsed the same friend code 3 times. Abandoning...`nParsed friend code: " . friendCode)
+			if (repeatFriendAccounts > 2) {
 				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
 				adbClick(143, 507)
 				return
 			}
-			if (IsVipId(friendCode, vipIdsArray, matchedId)) {
-				; If it's a VIP friend, skip removal
-				CreateStatusMessage("Parsed friend code: " . friendCode . "`nMatched friend code: " . matchedId . "`nSkipping VIP...")
+			matchedFriend := ""
+			isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
+			if (isVipResult || !parseFriendResult) {
+				; If we couldn't parse the friend, skip removal
+				if (!parseFriendResult)
+					CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
+				; If it's a VIP friend, skip removal	
+				if (isVipResult)
+					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
 				Delay(4) ; DEBUG
 				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
 				Delay(2)
@@ -1178,7 +1107,7 @@ RemoveNonVipFriends() {
 			}
 			else {
 				; If NOT a VIP remove the friend
-				CreateStatusMessage("Parsed friend code: " . friendCode . "`nNo match VIP match found.`nRemoving friend...")
+				CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
 				Delay(4) ; DEBUG
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
 				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
@@ -1188,9 +1117,15 @@ RemoveNonVipFriends() {
 			}
 		}
 		else {
-			; Handling for account not currently in use
-			FindImageAndClick(226, 100, 270, 135, , "Add", 143, 508, 500)
-			Delay(3)
+			; If on social screen, we're stuck between friends, micro scroll
+			If (FindOrLoseImage(226, 100, 270, 135, , "Add", 0)) {
+				CreateStatusMessage("Stuck between friends. Tiny scroll and continue.")
+				adbSwipeFriendMicro()
+			}
+			else { ; Handling for account not currently in use
+				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 508, 500)
+				Delay(3)
+			}
 		}
 		if (!GPTest) {
 			Return
@@ -1198,47 +1133,213 @@ RemoveNonVipFriends() {
 	}
 }
 
-; Function to check if ID exists in the list and update it
-; Parameters:
-;   id - The ID to check
-;   IDList - The list of IDs (passed by reference and updated)
-; Returns true if ID is found, false otherwise
-IsRecentlyCheckedId(id, ByRef IDList) {
-    ; Check if the ID is already in the list
-    for index, value in IDList {
-        if (value = id) {
-            return true  ; ID found
-        }
-    }
-
-    ; If the ID is not found, replace the oldest entry
-    if (IDList.MaxIndex() > 5) {
-        ; Remove the oldest ID (first item)
-        IDList.Remove(1)
-    }
-
-    ; Add the new ID to the end of the list
-    IDList.Push(id)
-
-    return false  ; ID was not found and has been added
+GetFriendCode() {
+	global winTitle, scaleParam
+	WinGetPos, x, y, w, h, %winTitle%
+	if (scaleParam = 287) {
+		x := x + 172
+		y := y + 63
+		w := 103
+		h := 20
+	}
+	else {
+		x := x + 172
+		y := y + 73
+		w := 100
+		h := 20
+	}
+	; Parse friendCode status from screen
+	; Expected output something like "1234-5678-1234-5678"
+	GUI, Toolbar: Hide
+	GUI, StatusMessage: Hide
+	friendCode := GetTextFromScreen(x, y, w, h, "friendCode")
+	GUI, Toolbar: Show, NoActivate
+	GUI, StatusMessage: Show, NoActivate
+	friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
+	Return friendCode
 }
 
-Delay(n) {
-	global Delay
-	msTime := Delay * n
-	Sleep, msTime
+GetFriendName() {
+	global winTitle, scaleParam
+	WinGetPos, x, y, w, h, %winTitle%
+	if (scaleParam = 287) {
+		x := x + 57
+		y := y + 255
+		w := 174
+		h := 28
+	}
+	else {
+		x := x + 51
+		y := y + 260
+		w := 174
+		h := 28
+	}
+
+	friendName := GetTextFromScreen(x, y, w, h, "friendName")
+	friendName := Trim(friendName, " `t`r`n")
+	Return friendName
+}
+
+ParseFriendCode(ByRef friendCode) {
+	failSafe := A_TickCount
+	failSafeTime := 0
+	parseFriendCodeResult := False
+	Loop {
+		friendCode := GetFriendCode()
+		if (RegExMatch(friendCode, "^\d{14,17}$")) {
+			parseFriendCodeResult := True
+			break
+		}
+		failSafeTime := (A_TickCount - failSafe) // 1000
+		if (failSafeTime > 3) {
+			parseFriendCodeResult := False
+			break
+		}
+	}
+	return parseFriendCodeResult
+}
+
+ParseFriendName(ByRef friendName) {
+	failSafe := A_TickCount
+	failSafeTime := 0
+	parseFriendNameResult := False
+	Loop {
+		friendName := GetFriendName()
+		if (RegExMatch(friendCode, "^[a-zA-Z0-9]{5,20}$")) {
+			parseFriendNameResult := True
+			break
+		}
+		failSafeTime := (A_TickCount - failSafe) // 1000
+		if (failSafeTime > 2) {
+			parseFriendNameResult := False
+			break
+		}
+	}
+	return parseFriendNameResult
+}
+
+class FriendAccount {
+	__New(Code, Name) {
+		this.Code := Code
+		this.Name := Name
+	}
+
+	ToString() {
+		if (this.Name != "" && this.Code != "")
+			return this.Name . " (" . this.Code . ")"
+		if (this.Name == "" && this.Code != "")
+			return this.Code
+		if (this.Name != "" && this.Code == "")
+			return this.Name
+		return "Null"
+	}
+}
+
+ParseFriendAccounts(filePath, ByRef includesIdsAndNames) {
+	global minStars
+	friendList := []  ; Create an empty array
+	includesIdsAndNames := false
+
+	FileRead, fileContent, %filePath%
+	if (ErrorLevel) {
+		MsgBox, Failed to read file!
+		return friendList  ; Return empty array if file can't be read
+	}
+
+	Loop, Parse, fileContent, `n, `r  ; Loop through lines in file
+	{
+		line := A_LoopField
+		if (line = "" || line ~= "^\s*$")  ; Skip empty lines
+			continue
+		
+		friendCode := ""
+		friendName := ""
+		twoStarCount := ""
+
+		if InStr(line, " | ") {
+			parts := StrSplit(line, " | ") ; Split by " | "
+			
+			; Check for ID and Name parts
+			friendCode := Trim(parts[1])
+			friendName := Trim(parts[2])
+			if (friendCode != "" && friendName != "")
+				includesIdsAndNames := true
+
+			; Extract the number before "/" in TwoStarCount
+			twoStarCount := RegExReplace(parts[3], "\D.*", "")  ; Remove everything after the first non-digit
+		} else {
+			friendCode := Trim(line)
+		}
+
+		; Trim spaces and create a FriendAccount object
+		if (twoStarCount == "" || twoStarCount >= minStars) {
+			friend := new FriendAccount(friendCode, friendName)
+			friendList.Push(friend)  ; Add to array
+		}
+	}
+	return friendList
+}
+
+MatchFriendAccounts(friend1, friend2) {
+	if (friend1.Code != "" && friend2.Code != "" && SimilarityScore(friend1.Code, friend2.Code) > 0.6)
+	{
+		return true
+	}
+	if (friend1.Name != "" && friend2.Name != "" && SimilarityScore(friend1.Name, friend2.Name) > 0.8)
+	{
+		return true
+	}
+	return false
+}
+
+IsFriendAccountInList(inputFriend, friendList, ByRef matchedFriend) {
+	matchedFriend := ""
+	for index, friend in friendList {
+		if (MatchFriendAccounts(inputFriend, friend))
+		{
+			matchedFriend := friend
+			return true
+		}
+	}
+	return false
+}
+
+IsRecentlyCheckedAccount(inputFriend, ByRef friendList) {
+	if (inputFriend == "") {
+		return false	
+	}
+	
+	; Check if the account is already in the list
+	if (IsFriendAccountInList(inputFriend, friendList, matchedFriend)) {
+		return true
+	}
+	
+	; Add the account to the end of the list
+	friendList.Push(inputFriend)
+
+	return false  ; Account was not found and has been added
 }
 
 adbSwipeFriend() {
 	global adbShell
 	initializeAdbShell()
-	X1 := 138
+	X := 138
 	Y1 := 380
-	X2 := 138
 	Y2 := 200
 
-	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . 300)
+	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 300)
 	Sleep, 1000
+ }
+
+ adbSwipeFriendMicro() {
+	global adbShell
+	initializeAdbShell()
+	X := 138
+	Y1 := 380
+	Y2 := 355
+
+	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 200)
+	Sleep, 500
  }
 
 adbGestureFriend() {
@@ -1253,6 +1354,33 @@ adbGestureFriend() {
 
 	adbShell.StdIn.WriteLine("input touchscreen gesture 0 " . duration . " " . X . " " . Y1 . " " . X . " " . Y2 . " " . X . " " . Y2)
 	Delay(1)
+}
+
+; Copied from other Arturo scripts
+Delay(n) {
+	global Delay
+	msTime := Delay * n
+	Sleep, msTime
+}
+
+DownloadFile(url, filename) {
+	url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
+	localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
+	errored := false
+	try {
+		whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+		whr.Open("GET", url, true)
+		whr.Send()
+		whr.WaitForResponse()
+		contents := whr.ResponseText
+	} catch {
+		errored := true
+	}
+	if(!errored) {
+		FileDelete, %localPath%
+		FileAppend, %contents%, %localPath%
+	}
+	return !errored
 }
 
 DJHDebugCode() {

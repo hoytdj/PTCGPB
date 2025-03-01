@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v0.5alpha"
+localVersion := "v0.9alpha"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -73,12 +73,14 @@ IniRead, ImmersiveCheck, Settings.ini, UserSettings, ImmersiveCheck, 0
 IniRead, PseudoGodPack, Settings.ini, UserSettings, PseudoGodPack, 0
 IniRead, minStars, Settings.ini, UserSettings, minStars, 0
 IniRead, Palkia, Settings.ini, UserSettings, Palkia, 0
-IniRead, Dialga, Settings.ini, UserSettings, Dialga, 1
+IniRead, Dialga, Settings.ini, UserSettings, Dialga, 0
+IniRead, Arceus, Settings.ini, UserSettings, Arceus, 1
 IniRead, Mew, Settings.ini, UserSettings, Mew, 0
 IniRead, Pikachu, Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, Settings.ini, UserSettings, Charizard, 0
 IniRead, Mewtwo, Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, Settings.ini, UserSettings, slowMotion, 0
+IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 
 Gui, Add, Text, x10 y10, Friend ID:
 ; Add input controls
@@ -160,20 +162,21 @@ if(heartBeat) {
 
 Gui, Add, Text, x275 y10, Choose Pack(s):
 
-if(Dialga)
-	Gui, Add, Checkbox, Checked vDialga x295 y30, Dialga
+if(Arceus)
+	Gui, Add, Checkbox, Checked vArceus x295 y30, Arceus
 else
-	Gui, Add, Checkbox, vDialga x295 y30, Dialga
+	Gui, Add, Checkbox, vArceus x295 y30, Arceus
 
 if(Palkia)
 	Gui, Add, Checkbox, Checked vPalkia x295 y50, Palkia
 else
 	Gui, Add, Checkbox, vPalkia x295 y50, Palkia
 
-if(Mew)
-	Gui, Add, Checkbox, Checked vMew x295 y70, Mew
+if(Dialga)
+	Gui, Add, Checkbox, Checked vDialga x295 y70, Dialga
 else
-	Gui, Add, Checkbox, vMew x295 y70, Mew
+	Gui, Add, Checkbox, vDialga x295 y70, Dialga
+
 
 if(Pikachu)
 	Gui, Add, Checkbox, Checked vPikachu x350 y30, Pikachu
@@ -189,6 +192,11 @@ if(Mewtwo)
 	Gui, Add, Checkbox, Checked vMewtwo x350 y70, Mewtwo
 else
 	Gui, Add, Checkbox, vMewtwo x350 y70, Mewtwo
+
+if(Mew)
+	Gui, Add, Checkbox, Checked vMew x410 y30, Mew
+else
+	Gui, Add, Checkbox, vMew x410 y30, Mew
 
 Gui, Add, Text, x275 y90, Other Pack Detection Settings:
 
@@ -257,6 +265,8 @@ Gui, Add, Button, gCheckForUpdates x275 y360 w120, Check for updates
 Gui, Add, Button, gArrangeWindows x275 y380 w120, Arrange Windows
 Gui, Add, Button, gStart x405 y380 w120, Start
 
+Gui, Add, Text, x130 y180, Scale:
+
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
 	scaleParam := 277
@@ -265,7 +275,10 @@ if (defaultLanguage = "Scale125") {
 	scaleParam := 287
 }
 
-; Gui, Add, DropDownList, x80 y245 w145 vdefaultLanguage choose%defaultLang%, Scale125
+Gui, Add, DropDownList, x161 y178 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
+
+Gui, Add, Text, x295 y330, VIP ID URL:
+Gui, Add, Edit, vvipIdsURL w100 x355 y328 h18, %vipIdsURL%
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License] ;'
 Return
@@ -365,11 +378,13 @@ Start:
 	IniWrite, %minStars%, Settings.ini, UserSettings, minStars
 	IniWrite, %Palkia%, Settings.ini, UserSettings, Palkia
 	IniWrite, %Dialga%, Settings.ini, UserSettings, Dialga
+	IniWrite, %Arceus%, Settings.ini, UserSettings, Arceus
 	IniWrite, %Mew%, Settings.ini, UserSettings, Mew
 	IniWrite, %Pikachu%, Settings.ini, UserSettings, Pikachu
 	IniWrite, %Charizard%, Settings.ini, UserSettings, Charizard
 	IniWrite, %Mewtwo%, Settings.ini, UserSettings, Mewtwo
 	IniWrite, %slowMotion%, Settings.ini, UserSettings, slowMotion
+	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
 
 	; Run main before instances to account for instance start delay
 	if (runMain) {
@@ -540,7 +555,6 @@ resetWindows(Title, SelectedMonitorIndex){
 	MaxRetries := 10
 	Loop
 	{
-		msgbox %Title%
 		try {
 			; Get monitor origin from index
 			SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
@@ -558,7 +572,6 @@ resetWindows(Title, SelectedMonitorIndex){
 			currentRow := Floor((instanceIndex - 1) / Columns)
 			y := currentRow * rowHeight
 			x := Mod((instanceIndex - 1), Columns) * scaleParam
-			msgbox %Title% %x% %y% %scaleParam%
 			WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
 			break
 		}
