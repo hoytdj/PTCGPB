@@ -7,6 +7,22 @@ VIP friends are specified in the `vip_ids.txt` file. List friend codes each on t
 
 [YouTube Demo & Brief Tutorial](https://youtu.be/LOV1Yx08wLg)
 
+- A new setting "VIP ID URL" has been added. You can add specify a downloadable text file for your vip_ids.txt file.
+- vip_ids.txt now also supports FC, IGN, and star count. Including the IGN can improve account matching accuracy. Including the star count will apply additional filtering. For example, if your min 2 star setting is 3, accounts with a GP not meeting the minimum will be ignored (not counted as a VIP).
+
+Example file contents:
+```
+0735520049083732 | Nate0562 | 0/5
+8076495483324199 | CheryS6334 | 3/5
+2666277563052062 | CCdarumaka | 3/5
+```
+or 
+```
+0735520049083732
+8076495483324199
+2666277563052062
+```
+
 **IMPORTANT:** Tesseract is required for this to work.
 * Download/install Tesseract from here: [Tesseract Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
 * For now, Tesseract **must** be installed under `C:\Program Files\Tesseract-OCR`
