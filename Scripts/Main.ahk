@@ -1,8 +1,6 @@
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
-#Include %A_ScriptDir%\Include\ParseScreen.ahk
 #Include %A_ScriptDir%\Include\StringCompare.ahk
-#Include %A_ScriptDir%\Include\OCR.ahk
 
 #SingleInstance on
 ;SetKeyDelay, -1, -1
@@ -125,7 +123,7 @@ pToken := Gdip_Startup()
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
-; firstRun := true ; DEBUG
+firstRun := true ; DEBUG
 Loop {
 	; hoytdj Add + 6
 	if (GPTest) {
@@ -419,19 +417,19 @@ restartGameInstance(reason, RL := true){
 	global Delay, scriptName, adbShell, adbPath, adbPort
 	initializeAdbShell()
 	; hoytdj DEBUG
-	; CreateStatusMessage("Restarting game reason: " reason)
+	CreateStatusMessage("Restarting game reason: " reason)
 
-	; adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
-	; ;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
-	; Sleep, 3000
-	; adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
+	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
+	;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
+	Sleep, 3000
+	adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
 
-	; Sleep, 3000
-	; if(RL) {
-	; 	LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
-	; 	LogToDiscord("Restarted game for instance " scriptName " Reason: " reason, , discordUserId)
-	; 	Reload
-	; }
+	Sleep, 3000
+	if(RL) {
+		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+		LogToDiscord("Restarted game for instance " scriptName " Reason: " reason, , discordUserId)
+		Reload
+	}
 }
 
 LogToFile(message, logFile := "") {
@@ -650,7 +648,7 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			; firstRun := True ; DEBUG
+			firstRun := True ; DEBUG
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
@@ -783,7 +781,6 @@ from_window(ByRef image) {
 ~F7::ExitApp
 ~F8::ToggleStatusMessages()
 ~F9::ToggleTestScript() ; hoytdj Add
-~F10::DJHDebugCode()
 
 ToggleStatusMessages() {
 	if(showStatus)
@@ -1150,13 +1147,13 @@ GetFriendCode() {
 	}
 	; Parse friendCode status from screen
 	; Expected output something like "1234-5678-1234-5678"
-	GUI, Toolbar: Hide
-	GUI, StatusMessage: Hide
-	friendCode := GetTextFromScreen(x, y, w, h, "friendCode")
-	GUI, Toolbar: Show, NoActivate
-	GUI, StatusMessage: Show, NoActivate
-	friendCode := RegExReplace(Trim(friendCode, " `t`r`n"), "\D")
-	Return friendCode
+	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendCode")) {
+		ocrText := GetTextFromImage(capturedScreenshot)
+		friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
+		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendCode
+		return friendCode
+	}
+	return ""
 }
 
 GetFriendName() {
@@ -1175,9 +1172,13 @@ GetFriendName() {
 		h := 28
 	}
 
-	friendName := GetTextFromScreen(x, y, w, h, "friendName")
-	friendName := Trim(friendName, " `t`r`n")
-	Return friendName
+	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendName")) {
+		ocrText := GetTextFromImage(capturedScreenshot)
+		friendName := Trim(ocrText, " `t`r`n")
+		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendName
+		return friendName
+	}
+	return ""
 }
 
 ParseFriendCode(ByRef friendCode) {
@@ -1205,7 +1206,7 @@ ParseFriendName(ByRef friendName) {
 	parseFriendNameResult := False
 	Loop {
 		friendName := GetFriendName()
-		if (RegExMatch(friendCode, "^[a-zA-Z0-9]{5,20}$")) {
+		if (RegExMatch(friendName, "^[a-zA-Z0-9]{5,20}$")) {
 			parseFriendNameResult := True
 			break
 		}
@@ -1383,19 +1384,7 @@ DownloadFile(url, filename) {
 	return !errored
 }
 
-DJHDebugCode() {
-	if (ScreenshotRegion(0, 0, 540, 960, capturedScreenshot, "friendCode")) {
-		ocrText := ocr(capturedScreenshot, "en")
-		MsgBox % ocrText
-	}
-	if (ScreenshotRegion(165, 60, 105, 35, capturedScreenshot, "friendCode")) {
-		ocrText := ocr(capturedScreenshot, "en")
-		MsgBox % ocrText
-	}
-	; CreateStatusMessage("Made it to DJHDebugCode")
-}
-
-ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "Valid") {
+ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "DEFAULT") {
 	global winTitle
 	
 	; Load bitmap from window
@@ -1422,13 +1411,10 @@ ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "Valid")
 	colorMatrix := redFactor . "|" . redFactor . "|" . redFactor . "|0|0|" . greenFactor . "|" . greenFactor . "|" . greenFactor . "|0|0|" . blueFactor . "|" . blueFactor . "|" . blueFactor . "|0|0|0|0|0|1|0|" . xFactor . "|" . xFactor . "|" . xFactor . "|0|1"
 
 	; Apply the color matrix
-	; pImageAttr := Gdip_CreateImageAttributes()
-	; Gdip_SetImageAttributesColorMatrix(pImageAttr, colorMatrix)
-	; Gdip_DrawImageAttributes(gRegion, pBitmapRegion, pImageAttr, 0, 0, width, height, 0, 0, width, height)
 	Gdip_DrawImage(gRegion, pBitmapRegion, 0, 0, width, height, 0, 0, width, height, colorMatrix)
 
 	; Define folder and file paths
-	screenshotsDir := A_ScriptDir "\..\Screenshots"
+	screenshotsDir := A_ScriptDir . "\temp"
 	if !FileExist(screenshotsDir)
 		FileCreateDir, %screenshotsDir%
 
@@ -1452,6 +1438,27 @@ ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "Valid")
 	Gdip_DisposeImage(pBitmapRegion)
 
 	return saveResult
+}
+
+GetTextFromImage(inputFilename) {
+	SplitPath, inputFilename, FileName, , , FileNameNoExt
+	; --- Call Tesseract OCR ------------------------------------------------------
+	; Tesseract is a command-line utility. It takes an input image and an output base.
+	; The OCR result is written to "FileNameNoExt.txt". Adjust parameters as desired.
+	outputBase := A_ScriptDir . "\temp\" . FileNameNoExt
+	; tesseractPath can be set to the full path if tesseract.exe isn’t in your PATH.
+	tesseractPath := "C:\Program Files\Tesseract-OCR\tesseract.exe"
+	
+	RunWait, %ComSpec% /c ""%tesseractPath%" "%inputFilename%" "%outputBase%" --oem 3 --psm 7", , Hide
+
+	outputFilename := outputBase ".txt"
+	FileRead, ocrText, %outputFilename%
+	if (ErrorLevel)
+	{
+		MsgBox, 16, Error, "Failed to read OCR output from " outputFilename
+	}
+
+	return ocrText
 }
 
 
