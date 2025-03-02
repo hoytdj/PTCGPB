@@ -1089,8 +1089,10 @@ RemoveNonVipFriends() {
 			isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
 			if (isVipResult || !parseFriendResult) {
 				; If we couldn't parse the friend, skip removal
-				if (!parseFriendResult)
+				if (!parseFriendResult) {
 					CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
+					LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
+				}
 				; If it's a VIP friend, skip removal	
 				if (isVipResult)
 					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
@@ -1108,6 +1110,7 @@ RemoveNonVipFriends() {
 			else {
 				; If NOT a VIP remove the friend
 				CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
+				LogToFile("Friend removed: " . friendAccount.ToString() . ". No VIP match found.", "GPTestLog.txt")
 				Sleep, 1500 ; Time to read
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
 				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
