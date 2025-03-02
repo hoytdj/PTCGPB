@@ -651,7 +651,7 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			; firstRun := True ; DEBUG
+			firstRun := True ; DEBUG
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
