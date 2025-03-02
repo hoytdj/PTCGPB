@@ -27,3 +27,5 @@ Settings.ini
 Sync_Settings.ini
 synchronizer.ahk
 temp.csv
+/Accounts/SpecificCards
+Logs/GPTestLog.txt
