@@ -1460,7 +1460,7 @@ GetTextFromImage(inputFilename) {
 	FileRead, ocrText, %outputFilename%
 	if (ErrorLevel)
 	{
-		MsgBox, 16, Error, "Failed to read OCR output from " outputFilename
+		MsgBox, 16, Error, % "Failed to read OCR output from " . outputFilename
 	}
 
 	return ocrText
