@@ -328,6 +328,7 @@ ArrangeWindows:
 	GuiControlGet, Instances,, Instances
 	GuiControlGet, Columns,, Columns
 	GuiControlGet, SelectedMonitorIndex,, SelectedMonitorIndex
+	GuiControlGet, defaultLanguage,, defaultLanguage
 	if (runMain) {
 		resetWindows("Main", SelectedMonitorIndex)
 		sleep, 10
