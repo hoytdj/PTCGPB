@@ -1137,17 +1137,18 @@ RemoveNonVipFriends() {
 }
 
 GetFriendCode() {
-	global winTitle, scaleParam
-	WinGetPos, x, y, w, h, %winTitle%
+	global scaleParam ;winTitle
+	;TODO: win position doesn't matter now
+	;WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 170
-		y := y + 63
+		x := 170
+		y := 63
 		w := 103
 		h := 20
 	}
 	else {
-		x := x + 169
-		y := y + 72
+		x := 169
+		y := 72
 		w := 100
 		h := 20
 	}
@@ -1163,17 +1164,18 @@ GetFriendCode() {
 }
 
 GetFriendName() {
-	global winTitle, scaleParam
-	WinGetPos, x, y, w, h, %winTitle%
+	global scaleParam ;winTitle
+	;TODO: win position doesn't matter now
+	;WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 52
-		y := y + 255
+		x := 52
+		y := 255
 		w := 174
 		h := 28
 	}
 	else {
-		x := x + 51
-		y := y + 262
+		x := 51
+		y := 262
 		w := 174
 		h := 28
 	}
