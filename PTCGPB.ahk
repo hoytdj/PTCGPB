@@ -300,12 +300,14 @@ discordSettings:
 		GuiControl, Show, heartBeatWebhookURL
 		GuiControl, Show, hbName
 		GuiControl, Show, hbURL
+		GuiControl, Show, heartBeatDelay
 	}
 	else {
 		GuiControl, Hide, heartBeatName
 		GuiControl, Hide, heartBeatWebhookURL
 		GuiControl, Hide, hbName
 		GuiControl, Hide, hbURL
+		GuiControl, Hide, heartBeatDelay
 	}
 return
 
