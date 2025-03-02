@@ -9,7 +9,7 @@ This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/A
 A new "GP Test" mode has been added to the Main account script. When toggled on, the bot will automatically remove all non-VIP friends (i.e., friends that may have pulled a live GP). When all non-VIP friends have been removed, the bot will pause, giving you the opportunity to nagivate to Wonder Picks and look for God Packs. When you're ready to continue, simply toggle "GP Test" mode off.
 VIP friends are specified in the `vip_ids.txt` file. List friend codes each on their own line.
 
-[YouTube Demo & Brief Tutorial](https://youtu.be/LOV1Yx08wLg)
+[YouTube Demo & Brief Tutorial](https://youtu.be/EHEwbdloBjM)
 
 - A new setting "VIP ID URL" has been added. You can add specify a downloadable text file for your vip_ids.txt file.
 - vip_ids.txt now also supports FC, IGN, and star count. Including the IGN can improve account matching accuracy. Including the star count will apply additional filtering. For example, if your min 2 star setting is 3, accounts with a GP not meeting the minimum will be ignored (not counted as a VIP).
