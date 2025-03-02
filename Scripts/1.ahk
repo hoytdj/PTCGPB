@@ -1618,6 +1618,10 @@ Screenshot(filename := "Valid") {
 	;pBitmap := from_window(WinExist(winTitle))
 	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 18, 175, 240, 227)
 
+	;scale 100%
+	if (scaleParam = 287) {
+	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 17, 168, 245, 230)
+	}
 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
 
 	Gdip_DisposeImage(pBitmap)
