@@ -131,6 +131,8 @@ Loop {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
 		Sleep, 1000
+		if (heartBeat && (Mod(A_Index, 60) = 0))
+			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
 	if(heartBeat)
