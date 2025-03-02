@@ -112,7 +112,7 @@ Gui, Add, Edit, vminStars w25 x90 y155 h18, %minStars%
 Gui, Add, Text, x10 y180, Method:
 
 ; Pack selection logic
-if (deleteMethod = "5 Pack") {
+if (deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Remove") {
 	defaultDelete := 1
 } else if (deleteMethod = "3 Pack") {
 	defaultDelete := 2
@@ -120,7 +120,7 @@ if (deleteMethod = "5 Pack") {
 	defaultDelete := 3
 }
 
-Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w60, 5 Pack|3 Pack|Inject
+Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w60, 5 Pack|5 Pack No Delete|3 Pack|Inject
 
 if(packMethod)
 	Gui, Add, Checkbox, Checked vpackMethod x30 y205, 1 Pack Method

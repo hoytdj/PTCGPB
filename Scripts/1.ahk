@@ -216,7 +216,7 @@ Loop {
 	if(!injectMethod || !loadedAccount)
 		DoTutorial()
 
-	if(deleteMethod = "5 Pack" || packMethod)
+	if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Delete" || packMethod)
 		if(!loadedAccount)
 			wonderPicked := DoWonderPick()
 
@@ -235,9 +235,13 @@ Loop {
 		HourglassOpening() ;deletemethod check in here at the start
 
 	if(wonderPicked) {
-		;friendsAdded := AddFriends(true) ;dpp
-		FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500) ;dpp
-		FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) ;dpp
+		if (deleteMethod = "5 Pack") {
+			friendsAdded := AddFriends(true)
+		}
+		if (deleteMethod = "5 Pack No Delete") {
+			FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500) ;dpp
+			FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) ;dpp
+		}
 		SelectPack("HGPack")
 		PackOpening()
 		if(packMethod) {
@@ -268,7 +272,7 @@ Loop {
 	CreateStatusMessage("New Run")
 	rerolls++
 	if(!loadedAccount)
-		if(deleteMethod = "5 Pack" || packMethod)
+		if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Delete" || packMethod)
 			packs := 5
 	AppendToJsonFile(packs)
 	totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
@@ -1290,8 +1294,8 @@ FindGodPack() {
 			,[105, 278, 175, 280]]
 	}
 		
-	;if(packs = 3) ;dpp
-	;	packs := 0 ;dpp
+	if(packs = 3 && deleteMethod = "5 Pack") ;dpp
+		packs := 0
 	Loop {
 		normalBorders := false
 		pBitmap := from_window(WinExist(winTitle))
