@@ -13,6 +13,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
+global sendAccountXml
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
 foundGP := false
@@ -56,6 +57,7 @@ IniRead, Pikachu, %A_ScriptDir%\..\Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, %A_ScriptDir%\..\Settings.ini, UserSettings, Charizard, 0
 IniRead, Mewtwo, %A_ScriptDir%\..\Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, %A_ScriptDir%\..\Settings.ini, UserSettings, slowMotion, 0
+IniRead, sendAccountXml, %A_ScriptDir%\..\Settings.ini, UserSettings, sendAccountXml, 0
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus"]
 
@@ -216,7 +218,7 @@ Loop {
 	if(!injectMethod || !loadedAccount)
 		DoTutorial()
 
-	if(deleteMethod = "5 Pack" || packMethod)
+	if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Remove" || packMethod)
 		if(!loadedAccount)
 			wonderPicked := DoWonderPick()
 
@@ -235,9 +237,13 @@ Loop {
 		HourglassOpening() ;deletemethod check in here at the start
 
 	if(wonderPicked) {
-		;friendsAdded := AddFriends(true) ;dpp
-		FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500) ;dpp
-		FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) ;dpp
+		if (deleteMethod = "5 Pack") {
+			friendsAdded := AddFriends(true)
+		}
+		if (deleteMethod = "5 Pack No Remove") {
+			FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500) ;dpp
+			FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) ;dpp
+		}
 		SelectPack("HGPack")
 		PackOpening()
 		if(packMethod) {
@@ -268,7 +274,7 @@ Loop {
 	CreateStatusMessage("New Run")
 	rerolls++
 	if(!loadedAccount)
-		if(deleteMethod = "5 Pack" || packMethod)
+		if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Remove" || packMethod)
 			packs := 5
 	AppendToJsonFile(packs)
 	totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
@@ -1227,14 +1233,14 @@ CheckPack() {
 
 FoundStars(star) {
 	screenShot := Screenshot(star)
-	accountFile := saveAccount(star)
+	accountFile := saveAccount(star, accountFullPath)
 	friendCode := getFriendCode()
 	if(star = "Crown" || star = "Immersive")
 		RemoveFriends()
 	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
 	CreateStatusMessage(logMessage)
 	LogToFile(logMessage, "GPlog.txt")
-	LogToDiscord(logMessage, screenShot, discordUserId)
+	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
 }
 
 FindBorders(prefix) {
@@ -1290,8 +1296,8 @@ FindGodPack() {
 			,[105, 278, 175, 280]]
 	}
 		
-	;if(packs = 3) ;dpp
-	;	packs := 0 ;dpp
+	if(packs = 3 && deleteMethod = "5 Pack") ;dpp
+		packs := 0
 	Loop {
 		normalBorders := false
 		pBitmap := from_window(WinExist(winTitle))
@@ -1355,7 +1361,7 @@ GodPackFound(validity) {
 	Interjection := Praise[rand]
 	starCount := 5 - FindBorders("1star")
 	screenShot := Screenshot(validity)
-	accountFile := saveAccount(validity)
+	accountFile := saveAccount(validity, accountFullPath)
 	logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGetting friend code then sendind discord message."
 	godPackLog = GPlog.txt
 	LogToFile(logMessage, godPackLog)
@@ -1364,7 +1370,7 @@ GodPackFound(validity) {
 	logMessage := Interjection . "\n" . username . " (" . friendCode . ")\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nBacking up to the Accounts\\GodPacks folder and continuing..."
 	LogToFile(logMessage, godPackLog)
 	;Run, http://google.com, , Hide ;Remove the ; at the start of the line and replace your url if you want to trigger a link when finding a god pack.
-	LogToDiscord(logMessage, screenShot, discordUserId)
+	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
 }
 
 loadAccount() {
@@ -1434,7 +1440,7 @@ loadAccount() {
 	return loadDir
 }
 
-saveAccount(file := "Valid") {
+saveAccount(file := "Valid", ByRef filePath := "") {
 	global adbShell, adbPath, adbPort
 	;initializeAdbShell()
 	currentDate := A_Now
@@ -1447,6 +1453,8 @@ saveAccount(file := "Valid") {
 	daysSinceBase += day
 
 	remainder := Mod(daysSinceBase, 3)
+
+	filePath := ""
 
 	if (file = "All") {
 		saveDir := A_ScriptDir "\..\Accounts\Saved\" . remainder . "\" . winTitle
@@ -1614,6 +1622,10 @@ Screenshot(filename := "Valid") {
 	;pBitmap := from_window(WinExist(winTitle))
 	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 18, 175, 240, 227)
 
+	;scale 100%
+	if (scaleParam = 287) {
+	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 17, 168, 245, 230)
+	}
 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
 
 	Gdip_DisposeImage(pBitmap)
@@ -1621,7 +1633,7 @@ Screenshot(filename := "Valid") {
 }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
-	global discordUserId, discordWebhookURL, friendCode
+	global discordUserId, discordWebhookURL, friendCode, sendAccountXml
 	discordPing := "<@" . discordUserId . "> "
 	discordFriends := ReadFile("discord")
 
@@ -1634,27 +1646,32 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 	}
 
 	if (discordWebhookURL != "") {
+		if (!sendAccountXml) {
+			xmlFile := ""
+		}
 		MaxRetries := 10
 		RetryCount := 0
 		Loop {
 			try {
-				; If an image file is provided, send it
-				if (screenshotFile != "") {
-					; Check if the file exists
-					if (FileExist(screenshotFile)) {
-						; Send the image using curl
-						curlCommand := "curl -k "
-							. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-							. "-F ""file=@" . screenshotFile . """ "
-							. discordWebhookURL
-						RunWait, %curlCommand%,, Hide
-					}
+				; Base command
+				curlCommand := "curl -k "
+					. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
+				; If an image or xml file is provided, send it
+
+				if (screenshotFile != "" && xmlFile != "" && FileExist(screenshotFile) && FileExist(xmlFile)) {
+					curlCommand := curlCommand . "-F ""file1=@" . screenshotFile . """ "
+					curlCommand := curlCommand . "-F ""file2=@" . xmlFile . """ "
 				}
-				else {
-					curlCommand := "curl -k "
-						. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" " . discordWebhookURL
-					RunWait, %curlCommand%,, Hide
+				else if (screenshotFile != "" && FileExist(screenshotFile)) {
+					curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
 				}
+				else if (xmlFile != "" && FileExist(xmlFile)) {
+					curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
+				}
+				; Add the webhook
+				curlCommand := curlCommand . discordWebhookURL
+				; Send the message using curl
+				RunWait, %curlCommand%,, Hide
 				break
 			}
 			catch {

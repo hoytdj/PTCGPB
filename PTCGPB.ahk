@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v1.1beta"
+localVersion := "v1.2beta"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -82,6 +82,7 @@ IniRead, Mewtwo, Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, Settings.ini, UserSettings, slowMotion, 0
 IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
+IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 
 Gui, Add, Text, x10 y10, Friend ID:
 ; Add input controls
@@ -114,13 +115,15 @@ Gui, Add, Text, x10 y180, Method:
 ; Pack selection logic
 if (deleteMethod = "5 Pack") {
 	defaultDelete := 1
-} else if (deleteMethod = "3 Pack") {
+} else if (deleteMethod = "5 Pack No Remove") {
 	defaultDelete := 2
-} else if (deleteMethod = "Inject") {
+} else if (deleteMethod = "3 Pack") {
 	defaultDelete := 3
+} else if (deleteMethod = "Inject") {
+	defaultDelete := 4
 }
 
-Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w60, 5 Pack|3 Pack|Inject
+Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w110, 5 Pack|5 Pack No Remove|3 Pack|Inject
 
 if(packMethod)
 	Gui, Add, Checkbox, Checked vpackMethod x30 y205, 1 Pack Method
@@ -139,9 +142,14 @@ if(StrLen(discordWebhookURL) < 3)
 
 Gui, Add, Text, x10 y245, Discord Settings:
 Gui, Add, Text, x30 y265, Discord ID:
-Gui, Add, Edit, vdiscordUserId w100 x90 y260 h18, %discordUserId%
+Gui, Add, Edit, vdiscordUserId w100 x90 y263 h18, %discordUserId%
 Gui, Add, Text, x30 y290, Discord Webhook URL:
 Gui, Add, Edit, vdiscordWebhookURL h20 w100 x150 y285 h18, %discordWebhookURL%
+
+if(sendAccountXml)
+	Gui, Add, Checkbox, Checked vsendAccountXml x120 y245, Send Account XML
+else
+	Gui, Add, Checkbox, vsendAccountXml x120 y245, Send Account XML
 
 if(StrLen(heartBeatName) < 3)
 	heartBeatName =
@@ -270,7 +278,7 @@ Gui, Add, Button, gCheckForUpdates x275 y360 w120, Check for updates
 Gui, Add, Button, gArrangeWindows x275 y380 w120, Arrange Windows
 Gui, Add, Button, gStart x405 y380 w120, Start
 
-Gui, Add, Text, x130 y180, Scale:
+Gui, Add, Text, x140 y205, Scale:
 
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
@@ -280,7 +288,7 @@ if (defaultLanguage = "Scale125") {
 	scaleParam := 287
 }
 
-Gui, Add, DropDownList, x161 y178 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
+Gui, Add, DropDownList, x171 y202 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
 
 Gui, Add, Text, x295 y330, VIP ID URL:
 Gui, Add, Edit, vvipIdsURL w100 x355 y328 h18, %vipIdsURL%
@@ -300,12 +308,16 @@ discordSettings:
 		GuiControl, Show, heartBeatWebhookURL
 		GuiControl, Show, hbName
 		GuiControl, Show, hbURL
+		GuiControl, Show, hbDelay
+		GuiControl, Show, heartBeatDelay
 	}
 	else {
 		GuiControl, Hide, heartBeatName
 		GuiControl, Hide, heartBeatWebhookURL
 		GuiControl, Hide, hbName
 		GuiControl, Hide, hbURL
+		GuiControl, Hide, hbDelay
+		GuiControl, Hide, heartBeatDelay
 	}
 return
 
@@ -326,6 +338,7 @@ ArrangeWindows:
 	GuiControlGet, Instances,, Instances
 	GuiControlGet, Columns,, Columns
 	GuiControlGet, SelectedMonitorIndex,, SelectedMonitorIndex
+	GuiControlGet, defaultLanguage,, defaultLanguage
 	if (runMain) {
 		resetWindows("Main", SelectedMonitorIndex)
 		sleep, 10
@@ -391,6 +404,7 @@ Start:
 	IniWrite, %slowMotion%, Settings.ini, UserSettings, slowMotion
 	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
 	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
+	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 
 	; Run main before instances to account for instance start delay
 	if (runMain) {

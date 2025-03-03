@@ -131,6 +131,8 @@ Loop {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
 		Sleep, 1000
+		if (heartBeat && (Mod(A_Index, 60) = 0))
+			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
 	if(heartBeat)
@@ -649,7 +651,7 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			; firstRun := True ; DEBUG
+			firstRun := True ; DEBUG
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
@@ -1087,8 +1089,10 @@ RemoveNonVipFriends() {
 			isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
 			if (isVipResult || !parseFriendResult) {
 				; If we couldn't parse the friend, skip removal
-				if (!parseFriendResult)
+				if (!parseFriendResult) {
 					CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
+					LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
+				}
 				; If it's a VIP friend, skip removal	
 				if (isVipResult)
 					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
@@ -1106,6 +1110,7 @@ RemoveNonVipFriends() {
 			else {
 				; If NOT a VIP remove the friend
 				CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
+				LogToFile("Friend removed: " . friendAccount.ToString() . ". No VIP match found.", "GPTestLog.txt")
 				Sleep, 1500 ; Time to read
 				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
 				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
@@ -1132,17 +1137,18 @@ RemoveNonVipFriends() {
 }
 
 GetFriendCode() {
-	global winTitle, scaleParam
-	WinGetPos, x, y, w, h, %winTitle%
+	global scaleParam ;winTitle
+	;TODO: win position doesn't matter now
+	;WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 170
-		y := y + 63
+		x := 170
+		y := 63
 		w := 103
 		h := 20
 	}
 	else {
-		x := x + 169
-		y := y + 72
+		x := 169
+		y := 72
 		w := 100
 		h := 20
 	}
@@ -1158,17 +1164,18 @@ GetFriendCode() {
 }
 
 GetFriendName() {
-	global winTitle, scaleParam
-	WinGetPos, x, y, w, h, %winTitle%
+	global scaleParam ;winTitle
+	;TODO: win position doesn't matter now
+	;WinGetPos, x, y, w, h, %winTitle%
 	if (scaleParam = 287) {
-		x := x + 52
-		y := y + 255
+		x := 52
+		y := 255
 		w := 174
 		h := 28
 	}
 	else {
-		x := x + 51
-		y := y + 262
+		x := 51
+		y := 262
 		w := 174
 		h := 28
 	}
@@ -1329,6 +1336,7 @@ adbSwipeFriend() {
 	Y1 := 380
 	Y2 := 200
 
+	Delay(1)
 	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 300)
 	Sleep, 1000
  }
@@ -1340,6 +1348,7 @@ adbSwipeFriend() {
 	Y1 := 380
 	Y2 := 355
 
+	Delay(1)
 	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 200)
 	Sleep, 500
  }
@@ -1455,7 +1464,7 @@ GetTextFromImage(inputFilename) {
 	FileRead, ocrText, %outputFilename%
 	if (ErrorLevel)
 	{
-		MsgBox, 16, Error, "Failed to read OCR output from " outputFilename
+		MsgBox, 16, Error, % "Failed to read OCR output from " . outputFilename
 	}
 
 	return ocrText
