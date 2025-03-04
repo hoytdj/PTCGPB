@@ -5,10 +5,11 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v1.2beta"
+localVersion := "v1.3beta"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
+DEBUG := false
 
 if not A_IsAdmin
 {
@@ -17,9 +18,11 @@ if not A_IsAdmin
 	ExitApp
 }
 
-MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
-
-CheckForUpdate()
+if (!DEBUG)
+{
+	MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
+	CheckForUpdate()
+}
 
 KillADBProcesses()
 
@@ -95,11 +98,11 @@ else
 	Gui, Add, Edit, vFriendID w120 x60 y8 h18, %FriendID%
 
 Gui, Add, Text, x10 y30, Rerolling Instances:
-Gui, Add, Text, x30 y50, Instances:
+Gui, Add, Text, x30 y47, Instances:
 Gui, Add, Edit, vInstances w25 x90 y45 h18, %Instances%
-Gui, Add, Text, x30 y72, Start Delay:
+Gui, Add, Text, x30 y69, Start Delay:
 Gui, Add, Edit, vinstanceStartDelay w25 x90 y67 h18, %instanceStartDelay%
-Gui, Add, Text, x30 y95, Columns:
+Gui, Add, Text, x30 y92, Columns:
 Gui, Add, Edit, vColumns w25 x90 y90 h18, %Columns%
 if(runMain)
 	Gui, Add, Checkbox, Checked vrunMain x30 y115, Run Main
@@ -108,7 +111,7 @@ else
 
 Gui, Add, Text, x10 y135, God Pack Settings:
 Gui, Add, Text, x30 y155, Min. 2 Stars:
-Gui, Add, Edit, vminStars w25 x90 y155 h18, %minStars%
+Gui, Add, Edit, vminStars w25 x90 y153 h18, %minStars%
 
 Gui, Add, Text, x10 y180, Method:
 
@@ -123,7 +126,7 @@ if (deleteMethod = "5 Pack") {
 	defaultDelete := 4
 }
 
-Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w110, 5 Pack|5 Pack No Remove|3 Pack|Inject
+Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x55 y178 w120, 5 Pack|5 Pack No Remove|3 Pack|Inject
 
 if(packMethod)
 	Gui, Add, Checkbox, Checked vpackMethod x30 y205, 1 Pack Method
@@ -142,35 +145,35 @@ if(StrLen(discordWebhookURL) < 3)
 
 Gui, Add, Text, x10 y245, Discord Settings:
 Gui, Add, Text, x30 y265, Discord ID:
-Gui, Add, Edit, vdiscordUserId w100 x90 y263 h18, %discordUserId%
-Gui, Add, Text, x30 y290, Discord Webhook URL:
-Gui, Add, Edit, vdiscordWebhookURL h20 w100 x150 y285 h18, %discordWebhookURL%
+Gui, Add, Edit, vdiscordUserId w120 x135 y263 h18, %discordUserId%
+Gui, Add, Text, x30 y285, Discord Webhook:
+Gui, Add, Edit, vdiscordWebhookURL w120 x135 y283 h18, %discordWebhookURL%
 
 if(sendAccountXml)
-	Gui, Add, Checkbox, Checked vsendAccountXml x120 y245, Send Account XML
+	Gui, Add, Checkbox, Checked vsendAccountXml x30 y305, Send Account XML
 else
-	Gui, Add, Checkbox, vsendAccountXml x120 y245, Send Account XML
+	Gui, Add, Checkbox, vsendAccountXml x30 y305, Send Account XML
 
 if(StrLen(heartBeatName) < 3)
 	heartBeatName =
 if(StrLen(heartBeatWebhookURL) < 3)
 	heartBeatWebhookURL =
 if(heartBeat) {
-	Gui, Add, Checkbox, Checked vheartBeat x30 y315 gdiscordSettings, Discord Heartbeat
-	Gui, Add, Text, vhbName x30 y335, Name:
-	Gui, Add, Edit, vheartBeatName w100 x70 y330 h18, %heartBeatName%
-	Gui, Add, Text, vhbDelay x175 y335, Delay:
-	Gui, Add, Edit, vheartBeatDelay w45 x210 y330 h18, %heartBeatDelay%
-	Gui, Add, Text, vhbURL x30 y360, Webhook URL:
-	Gui, Add, Edit, vheartBeatWebhookURL h20 w100 x110 y355 h18, %heartBeatWebhookURL%
+	Gui, Add, Checkbox, Checked vheartBeat x10 y325 gdiscordSettings, Discord Heartbeat
+	Gui, Add, Text, vhbName x30 y345, Name:
+	Gui, Add, Edit, vheartBeatName w120 x135 y343 h18, %heartBeatName%
+	Gui, Add, Text, vhbURL x30 y365, Heartbeat Webhook:
+	Gui, Add, Edit, vheartBeatWebhookURL w120 x135 y363 h18, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbDelay x30 y385, Heartbeat Delay (min):
+	Gui, Add, Edit, vheartBeatDelay w35 x135 y383 h18, %heartBeatDelay%
 } else {
-	Gui, Add, Checkbox, vheartBeat x30 y315 gdiscordSettings, Discord Heartbeat
-	Gui, Add, Text, vhbName x30 y335 Hidden, Name:
-	Gui, Add, Edit, vheartBeatName w100 x70 y330 h18 Hidden, %heartBeatName%
-	Gui, Add, Text, vhbDelay x175 y335 Hidden, Delay:
-	Gui, Add, Edit, vheartBeatDelay w45 x210 y330 h18 Hidden, %heartBeatDelay%
-	Gui, Add, Text, vhbURL x30 y360 Hidden, Webhook URL:
-	Gui, Add, Edit, vheartBeatWebhookURL h20 w100 x110 y355 h18 Hidden, %heartBeatWebhookURL%
+	Gui, Add, Checkbox, vheartBeat x10 y325 gdiscordSettings, Discord Heartbeat
+	Gui, Add, Text, vhbName x30 y345 Hidden, Name:
+	Gui, Add, Edit, vheartBeatName w120 x135 y343 h18 Hidden, %heartBeatName%
+	Gui, Add, Text, vhbURL x30 y365 Hidden, Heartbeat Webhook:
+	Gui, Add, Edit, vheartBeatWebhookURL w120 x135 y363 h18 Hidden, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbDelay x30 y385 Hidden, Delay:
+	Gui, Add, Edit, vheartBeatDelay w35 x135 y383 h18 Hidden, %heartBeatDelay%
 }
 
 Gui, Add, Text, x275 y10, Choose Pack(s):
@@ -207,9 +210,9 @@ else
 	Gui, Add, Checkbox, vMewtwo x350 y70, Mewtwo
 
 if(Mew)
-	Gui, Add, Checkbox, Checked vMew x410 y30, Mew
+	Gui, Add, Checkbox, Checked vMew x411 y30, Mew
 else
-	Gui, Add, Checkbox, vMew x410 y30, Mew
+	Gui, Add, Checkbox, vMew x411 y30, Mew
 
 Gui, Add, Text, x275 y90, Other Pack Detection Settings:
 
@@ -244,15 +247,15 @@ else
 	Gui, Add, Checkbox, vImmersiveCheck x392 y150, Save Immersives
 
 Gui, Add, Text, x275 y170, Time Settings:
-Gui, Add, Text, x295 y190, Delay:
-Gui, Add, Edit, vDelay w35 x330 y190 h18, %Delay%
-Gui, Add, Text, x295 y210, Wait Time:
-Gui, Add, Edit, vwaitTime w25 x350 y210 h18, %waitTime%
-Gui, Add, Text, x295 y230, Swipe Speed:
-Gui, Add, Edit, vswipeSpeed w35 x365 y230 h18, %swipeSpeed%
+Gui, Add, Text, x295 y190, Action Delay (ms):
+Gui, Add, Edit, vDelay w35 x385 y189 h18, %Delay%
+Gui, Add, Text, x295 y210, Wait Time (sec):
+Gui, Add, Edit, vwaitTime w25 x385 y208 h18, %waitTime%
+Gui, Add, Text, x295 y230, Swipe Speed (ms):
+Gui, Add, Edit, vswipeSpeed w35 x385 y228 h18, %swipeSpeed%
 
-Gui, Add, Text, x275 y250, Other Settings:
-Gui, Add, Text, x295 y270, Monitor:
+Gui, Add, Text, x275 y330, Other Settings:
+Gui, Add, Text, x295 y290, Monitor:
 ; Initialize monitor dropdown options
 SysGet, MonitorCount, MonitorCount
 MonitorOptions := ""
@@ -264,22 +267,23 @@ Loop, %MonitorCount%
 
 }
 SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-Gui, Add, DropDownList, x335 y268 w90 vSelectedMonitorIndex Choose%SelectedMonitorIndex%, %MonitorOptions%
-Gui, Add, Text, x295 y290, Folder Path:
-Gui, Add, Edit, vfolderPath w100 x355 y290 h18, %folderPath%
+Gui, Add, DropDownList, x335 y287 w110 vSelectedMonitorIndex Choose%SelectedMonitorIndex%, %MonitorOptions%
+Gui, Add, Text, x295 y350, Folder Path:
+Gui, Add, Edit, vfolderPath w130 x365 y348 h18, %folderPath%
 if(slowMotion)
-	Gui, Add, Checkbox, Checked vslowMotion x295 y310, Base Game Compatibility
+	Gui, Add, Checkbox, Checked vslowMotion x295 y250, Base Game Compatibility
 else
-	Gui, Add, Checkbox, vslowMotion x295 y310, Base Game Compatibility
+	Gui, Add, Checkbox, vslowMotion x295 y250, Base Game Compatibility
 
-Gui, Add, Button, gOpenLink x15 y380 w120, Buy Me a Coffee <3
-Gui, Add, Button, gOpenDiscord x145 y380 w120, Join our Discord!
-Gui, Add, Button, gCheckForUpdates x275 y360 w120, Check for updates
-Gui, Add, Button, gArrangeWindows x275 y380 w120, Arrange Windows
-Gui, Add, Button, gStart x405 y380 w120, Start
+Gui, Add, Button, gOpenLink x15 y415 w120, Buy Me a Coffee <3
+Gui, Add, Button, gOpenDiscord x15 y440 w120, Join our Discord!
+Gui, Add, Button, gCheckForUpdates x140 y440 w120, Check for updates
+Gui, Add, Button, gArrangeWindows x265 y440 w120, Arrange Windows
+Gui, Add, Button, gStart x390 y420 w120 h42, START
 
-Gui, Add, Text, x140 y205, Scale:
+Gui, Add, Text, x275 y270, Display Settings:
 
+Gui, Add, Text, x295 y312, Scale:
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
 	scaleParam := 277
@@ -287,11 +291,10 @@ if (defaultLanguage = "Scale125") {
 	defaultLang := 2
 	scaleParam := 287
 }
+Gui, Add, DropDownList, x335 y309 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
 
-Gui, Add, DropDownList, x171 y202 w80 vdefaultLanguage choose%defaultLang%, Scale125|Scale100
-
-Gui, Add, Text, x295 y330, VIP ID URL:
-Gui, Add, Edit, vvipIdsURL w100 x355 y328 h18, %vipIdsURL%
+Gui, Add, Text, x295 y370, VIP IDs URL:
+Gui, Add, Edit, vvipIdsURL w130 x365 y368 h18, %vipIdsURL%
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License] ;'
 Return
@@ -339,6 +342,11 @@ ArrangeWindows:
 	GuiControlGet, Columns,, Columns
 	GuiControlGet, SelectedMonitorIndex,, SelectedMonitorIndex
 	GuiControlGet, defaultLanguage,, defaultLanguage
+	if (defaultLanguage = "Scale125") {
+		scaleParam := 277
+	} else if (defaultLanguage = "Scale100") {
+		scaleParam := 287
+	}
 	if (runMain) {
 		resetWindows("Main", SelectedMonitorIndex)
 		sleep, 10
@@ -570,7 +578,7 @@ DownloadFile(url, filename) {
 }
 
 resetWindows(Title, SelectedMonitorIndex){
-	global Columns, runMain
+	global Columns, runMain, scaleParam
 	RetryCount := 0
 	MaxRetries := 10
 	Loop
