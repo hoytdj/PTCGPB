@@ -2517,12 +2517,12 @@ SelectPack(HG := false) {
 	if(openPack = "Pikachu" || openPack = "Mewtwo" || openPack = "Charizard") {
 		packy := 442
 		if(openPack = "Pikachu"){
-			packx := 264
-		} else if(openPack = "Mewtwo"){
-			packx := 206
-		} else if(openPack = "Charizard"){
-			packx := 180
-		}
+            packx := 245
+        } else if(openPack = "Mewtwo"){
+            packx := 205
+        } else if(openPack = "Charizard"){
+            packx := 165
+        }
 		FindImageAndClick(115, 140, 160, 155, , "SelectExpansion", 245, 475)
 		FindImageAndClick(233, 400, 264, 428, , "Points", packx, packy)
 	} else if(openPack = "Palkia") {
