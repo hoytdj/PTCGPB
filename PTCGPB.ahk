@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v1.2beta"
+localVersion := "v1.3beta"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -249,7 +249,7 @@ else
 Gui, Add, Text, x275 y170, Time Settings:
 Gui, Add, Text, x295 y190, Action Delay (ms):
 Gui, Add, Edit, vDelay w35 x385 y189 h18, %Delay%
-Gui, Add, Text, x295 y210, Wait Time (s):
+Gui, Add, Text, x295 y210, Wait Time (sec):
 Gui, Add, Edit, vwaitTime w25 x385 y208 h18, %waitTime%
 Gui, Add, Text, x295 y230, Swipe Speed (ms):
 Gui, Add, Edit, vswipeSpeed w35 x385 y228 h18, %swipeSpeed%
