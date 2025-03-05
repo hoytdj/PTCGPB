@@ -1259,7 +1259,9 @@ FindBorders(prefix) {
 		,[195, 277, 250, 281]
 		,[70, 394, 125, 398]
 		,[156, 394, 211, 398]]
+		pos2 += 5
 	}
+
 	pBitmap := from_window(WinExist(winTitle))
 	; imagePath := "C:\Users\Arturo\Desktop\PTCGP\GPs\" . Clipboard . ".png"
 	; pBitmap := Gdip_CreateBitmapFromFile(imagePath)
@@ -1927,13 +1929,7 @@ initializeAdbShell() {
 					throw "Failed to start ADB shell."
 				}
 
-				adbShell.StdIn.WriteLine("su -c ""whoami && sh""")
-				Delay(2)
-				output := adbShell.StdOut.ReadLine()
-				if (output != "root") {
-					MsgBox, "Failed to gain root access."
-					ExitApp
-				}
+				adbShell.StdIn.WriteLine("su")
 			}
 
 			; If adbShell is running, break loop

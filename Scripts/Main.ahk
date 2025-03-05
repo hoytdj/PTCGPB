@@ -160,7 +160,16 @@ Loop {
 				if(FindOrLoseImage(123, 110, 162, 127, , "99", 0, failSafeTime)) {
 					done := true
 					break
-				} else if(FindOrLoseImage(80, 170, 120, 195, , "player", 0, failSafeTime)) {
+				}else if(FindOrLoseImage(123, 110, 162, 127, , "991", 0, failSafeTime)) {
+					done := true
+					break
+				}else if(FindOrLoseImage(123, 110, 162, 127, , "992", 0, failSafeTime)) {
+					done := true
+					break
+				}else if(FindOrLoseImage(123, 110, 162, 127, , "993", 0, failSafeTime)) {
+					done := true
+					break
+				}else if(FindOrLoseImage(80, 170, 120, 195, , "player", 0, failSafeTime)) {
 					Sleep, %Delay%
 					adbClick(210, 210)
 					Sleep, 1000
@@ -218,9 +227,27 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y2 := 260
 		} 
 		else if (imageName = "99") { ; 100% full of friend list
-			X1 := 65
+			X1 := 60 ; Francais
 			Y1 := 103
-			X2 := 105
+			X2 := 168 ; English
+			Y2 := 118
+		} 
+		else if (imageName = "991") { ; 100% full of friend list
+			X1 := 60 ; Francais
+			Y1 := 103
+			X2 := 168 ; English
+			Y2 := 118
+		} 
+		else if (imageName = "992") { ; 100% full of friend list
+			X1 := 60 ; Francais
+			Y1 := 103
+			X2 := 168 ; English
+			Y2 := 118
+		} 
+		else if (imageName = "993") { ; 100% full of friend list
+			X1 := 60 ; Francais
+			Y1 := 103
+			X2 := 168 ; English
 			Y2 := 118
 		} 
 		else if (imageName = "player") { ; 100% bot got deleted
@@ -779,11 +806,11 @@ from_window(ByRef image) {
 	return pBitmap
 }
 
-~F5::Reload
-~F6::Pause
-~F7::ExitApp
-~F8::ToggleStatusMessages()
-~F9::ToggleTestScript() ; hoytdj Add
+~+F5::Reload
+~+F6::Pause
+~+F7::ExitApp
+~+F8::ToggleStatusMessages()
+~+F9::ToggleTestScript() ; hoytdj Add
 
 ToggleStatusMessages() {
 	if(showStatus)
