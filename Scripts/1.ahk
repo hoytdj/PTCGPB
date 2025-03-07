@@ -1232,15 +1232,23 @@ CheckPack() {
 }
 
 FoundStars(star) {
+	global injectMethod
 	screenShot := Screenshot(star)
 	accountFile := saveAccount(star, accountFullPath)
 	friendCode := getFriendCode()
+	if (injectMethod){
+		Sleep, 3000
+		friendCodeScreenshot := Screenshot("FriendCode")
+		}		
 	if(star = "Crown" || star = "Immersive")
 		RemoveFriends()
 	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
 	CreateStatusMessage(logMessage)
 	LogToFile(logMessage, "GPlog.txt")
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
+	if (injectMethod) {
+		LogToDiscord("Friend Code Screenshot:", friendCodeScreenshot, discordUserId)
+	}		
 }
 
 FindBorders(prefix) {
@@ -1351,6 +1359,7 @@ FindGodPack() {
 }
 
 GodPackFound(validity) {
+	global injectMethod
 	if(validity = "Valid") {
 		Praise := ["Congrats!", "Congratulations!", "GG!", "Whoa!", "Praise Helix! ༼ つ ◕_◕ ༽つ", "Way to go!", "You did it!", "Awesome!", "Nice!", "Cool!", "You deserve it!", "Keep going!", "This one has to be live!", "No duds, no duds, no duds!", "Fantastic!", "Bravo!", "Excellent work!", "Impressive!", "You're amazing!", "Well done!", "You're crushing it!", "Keep up the great work!", "You're unstoppable!", "Exceptional!", "You nailed it!", "Hats off to you!", "Sweet!", "Kudos!", "Phenomenal!", "Boom! Nailed it!", "Marvelous!", "Outstanding!", "Legendary!", "Youre a rock star!", "Unbelievable!", "Keep shining!", "Way to crush it!", "You're on fire!", "Killing it!", "Top-notch!", "Superb!", "Epic!", "Cheers to you!", "Thats the spirit!", "Magnificent!", "Youre a natural!", "Gold star for you!", "You crushed it!", "Incredible!", "Shazam!", "You're a genius!", "Top-tier effort!", "This is your moment!", "Powerful stuff!", "Wicked awesome!", "Props to you!", "Big win!", "Yesss!", "Champion vibes!", "Spectacular!"]
 		invalid := ""
@@ -1369,10 +1378,17 @@ GodPackFound(validity) {
 	LogToFile(logMessage, godPackLog)
 	CreateStatusMessage(logMessage)
 	friendCode := getFriendCode()
+	if (validity = "Valid" && injectMethod){
+		Sleep, 3000
+		friendCodeScreenshot := Screenshot("FriendCode")
+		}
 	logMessage := Interjection . "\n" . username . " (" . friendCode . ")\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nBacking up to the Accounts\\GodPacks folder and continuing..."
 	LogToFile(logMessage, godPackLog)
 	;Run, http://google.com, , Hide ;Remove the ; at the start of the line and replace your url if you want to trigger a link when finding a god pack.
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
+	if (validity = "Valid" && InjectMethod) {
+		LogToDiscord("Friend Code Screenshot:", friendCodeScreenshot, discordUserId)
+	}
 }
 
 loadAccount() {
