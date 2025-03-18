@@ -1,6 +1,9 @@
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
-#Include %A_ScriptDir%\Include\StringCompare.ahk
+
+#Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
+#Include *i %A_ScriptDir%\Include\StringCompare.ahk
+#Include *i %A_ScriptDir%\Include\OCR.ahk
 
 #SingleInstance on
 ;SetKeyDelay, -1, -1
@@ -43,12 +46,13 @@ IniRead, discordUserId, %A_ScriptDir%\..\Settings.ini, UserSettings, discordUser
 IniRead, deleteMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, deleteMethod, Hoard
 IniRead, sendXML, %A_ScriptDir%\..\Settings.ini, UserSettings, sendXML, 0
 IniRead, heartBeat, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeat, 1
-IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
-IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL
-IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
-
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL
+IniRead, ocrLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, ocrLanguage, en
+IniRead, clientLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, clientLanguage, en
+IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
+IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
 
 adbPort := findAdbPorts(folderPath)
 
@@ -90,16 +94,18 @@ Loop {
 		x4 := x + 5
 		y4 := y + 44
 
-		Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption
+		Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
 		Gui, Toolbar: Default
 		Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
 		Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-		Gui, Toolbar: Add, Button, x0 y0 w30 h25 gReloadScript, Reload  (F5)
-		Gui, Toolbar: Add, Button, x30 y0 w30 h25 gPauseScript, Pause (F6)
-		Gui, Toolbar: Add, Button, x60 y0 w40 h25 gResumeScript, Resume (F6)
-		Gui, Toolbar: Add, Button, x100 y0 w30 h25 gStopScript, Stop (F7)
-		Gui, Toolbar: Add, Button, x130 y0 w30 h25 gShowStatusMessages, Status (F8)
-		Gui, Toolbar: Add, Button, x160 y0 w30 h25 gTestScript, GP Test (F9) ; hoytdj Add
+		Gui, Toolbar: Add, Button, x0 y0 w35 h25 gReloadScript, Reload  (Shift+F5)
+		Gui, Toolbar: Add, Button, x35 y0 w35 h25 gPauseScript, Pause (Shift+F6)
+		Gui, Toolbar: Add, Button, x70 y0 w35 h25 gResumeScript, Resume (Shift+F6)
+		Gui, Toolbar: Add, Button, x105 y0 w35 h25 gStopScript, Stop (Shift+F7)
+		Gui, Toolbar: Add, Button, x140 y0 w35 h25 gShowStatusMessages, Status (Shift+F8)
+		Gui, Toolbar: Add, Button, x175 y0 w35 h25 gTestScript, GP Test (Shift+F9) ; hoytdj Add
+		DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
 		Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
 		break
 	}
@@ -125,6 +131,22 @@ if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
 firstRun := true ; DEBUG
+
+global 99Configs := {}
+99Configs["en"] := {leftx: 123, rightx: 162}
+99Configs["es"] := {leftx: 68, rightx: 107}
+99Configs["fr"] := {leftx: 56, rightx: 95}
+99Configs["de"] := {leftx: 72, rightx: 111}
+99Configs["it"] := {leftx: 60, rightx: 99}
+99Configs["pt"] := {leftx: 127, rightx: 166}
+99Configs["jp"] := {leftx: 84, rightx: 127}
+99Configs["ko"] := {leftx: 65, rightx: 100}
+99Configs["cn"] := {leftx: 63, rightx: 102}
+
+99Path := "99" . clientLanguage
+99Leftx := 99Configs[clientLanguage].leftx
+99Rightx := 99Configs[clientLanguage].rightx
+
 Loop {
 	; hoytdj Add + 6
 	if (GPTest) {
@@ -135,6 +157,7 @@ Loop {
 			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
+
 	if(heartBeat)
 		IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 	Sleep, %Delay%
@@ -157,7 +180,7 @@ Loop {
 			Loop {
 				Sleep, %Delay%
 				clickButton := FindOrLoseImage(75, 340, 195, 530, 80, "Button", 0, failSafeTime) ;looking for ok button in case an invite is withdrawn
-				if(FindOrLoseImage(123, 110, 162, 127, , "99", 0, failSafeTime)) {
+				if(FindOrLoseImage(99Leftx, 110, 99Rightx, 127, , 99Path, 0, failSafeTime)) {
 					done := true
 					break
 				}else if(FindOrLoseImage(123, 110, 162, 127, , "991", 0, failSafeTime)) {
@@ -195,7 +218,7 @@ Loop {
 				CreateStatusMessage("Failsafe " . failSafeTime "/180 seconds")
 			}
 		}
-		if(done || fullList || GPTest)
+		if(done || fullList|| GPTest)
 			break
 	}
 }
@@ -283,6 +306,8 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	}
 	if(imageName = "Country" || imageName = "Social")
 		FSTime := 90
+	else if(imageName = "Button")
+		FSTime := 240
 	else
 		FSTime := 180
 	if (safeTime >= FSTime) {
@@ -474,27 +499,62 @@ LogToFile(message, logFile := "") {
 	FileAppend, % "[" readableTime "] " message "`n", %logFile%
 }
 
-CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
+CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80) {
 	global scriptName, winTitle, StatusText
+	static hwnds := {}
 	if(!showStatus)
 		return
 	try {
-		;GuiName := GuiName ; hoytdj Removed
-		WinGetPos, xpos, ypos, Width, Height, %winTitle%
-		X := X + xpos + 5
-		Y := Y + ypos
-		if(!X)
-			X := 0
-		if(!Y)
-			Y := 0
+		; Check if GUI with this name already exists
+		if !hwnds.HasKey(GuiName) {
+			WinGetPos, xpos, ypos, Width, Height, %winTitle%
+			X := X + xpos + 5
+			Y := Y + ypos
+			if(!X)
+				X := 0
+			if(!Y)
+				Y := 0
 
-		; Create a new GUI with the given name, position, and message
-		Gui, StatusMessage: New, -AlwaysOnTop +ToolWindow -Caption
-		Gui, StatusMessage: Margin, 2, 2  ; Set margin for the GUI
-		Gui, StatusMessage: Font, s8  ; Set the font size to 8 (adjust as needed)
-		Gui, StatusMessage: Add, Text, vStatusText, %Message%
-		Gui, StatusMessage: Show, NoActivate x%X% y%Y% AutoSize, NoActivate %GuiName%
+			; Create a new GUI with the given name, position, and message
+			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+			hwnds[GuiName] := hCtrl
+			OwnerWND := WinExist(winTitle)
+			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+		}
+		SetTextAndResize(hwnds[GuiName], Message)
+		Gui, %GuiName%:Show, NoActivate AutoSize
 	}
+}
+
+;Modified from https://stackoverflow.com/a/49354127
+SetTextAndResize(controlHwnd, newText) {
+    dc := DllCall("GetDC", "Ptr", controlHwnd)
+
+    ; 0x31 = WM_GETFONT
+    SendMessage 0x31,,,, ahk_id %controlHwnd%
+    hFont := ErrorLevel
+    oldFont := 0
+    if (hFont != "FAIL")
+        oldFont := DllCall("SelectObject", "Ptr", dc, "Ptr", hFont)
+
+    VarSetCapacity(rect, 16, 0)
+    ; 0x440 = DT_CALCRECT | DT_EXPANDTABS
+    h := DllCall("DrawText", "Ptr", dc, "Ptr", &newText, "Int", -1, "Ptr", &rect, "UInt", 0x440)
+    ; width = rect.right - rect.left
+    w := NumGet(rect, 8, "Int") - NumGet(rect, 0, "Int")
+
+    if oldFont
+        DllCall("SelectObject", "Ptr", dc, "Ptr", oldFont)
+    DllCall("ReleaseDC", "Ptr", controlHwnd, "Ptr", dc)
+
+    GuiControl,, %controlHwnd%, %newText%
+    GuiControl MoveDraw, %controlHwnd%, % "h" h*96/A_ScreenDPI + 2 " w" w*96/A_ScreenDPI + 2
 }
 
 adbClick(X, Y) {
@@ -1031,6 +1091,45 @@ IsLeapYear(year) {
 ; Screenshot()
 ; return
 
+; friendCount := cropAndOcr("Main", 234, 172, 90, 40, True, True, 200)
+; friendCode := cropAndOcr("Main", 336, 106, 188, 20, True, True, blowUp)
+cropAndOcr(winTitle := "Main", x := 0, y := 0, width := 200, height := 200, moveWindow := True, revertWindow := True, blowupPercent := 200)
+{
+	global ocrLanguage 
+	
+    if(moveWindow) {
+		WinGetPos, srcX, srcY, srcW, srcH, %winTitle%
+        WinMove, %winTitle%, , srcX, srcY, 550, 1015
+        Delay(1)
+    }
+    hwnd := WinExist(winTitle)
+    pBitmap := from_window(hwnd) ; Gdip_BitmapFromScreen( "hwnd: " . hwnd)
+    ;;;;Gdip_SaveBitmapToFile(pBitmap, "src.jpg")
+
+    pBitmap2 := Gdip_CropImage(pBitmap, x, y, width, height)
+    pBitmap3 := Gdip_ResizeBitmap(pBitmap2, blowupPercent, true)
+    hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap3)
+    ;;hBitmap2 := ToGrayscale(hBitmap)
+
+    ;;;; ret := SavePicture(hBitmap, "biggrey1.png")
+    pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
+    text := ocr(pIRandomAccessStream, ocrLanguage)
+    ;;;; MsgBox %text%
+
+    DeleteObject(hBitmap)
+    ;;DeleteObject(hBitmap2)
+    Gdip_DisposeImage(pBitmap)
+    Gdip_DisposeImage(pBitmap2)
+    Gdip_DisposeImage(pBitmap3)
+
+    if(revertWindow && moveWindow) {
+        WinMove, %winTitle%, , srcX, srcY, srcW, srcH
+        Delay(1)
+    }
+
+    return text
+}
+
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ; ~~~ hoytdj Everying Below ~~~
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1071,6 +1170,7 @@ RemoveNonVipFriends() {
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	Delay(3)
 
+	CreateStatusMessage("Downloading vip_ids.txt.")
 	if (vipIdsURL != "" && !DownloadFile(vipIdsURL, "vip_ids.txt")) {
 		CreateStatusMessage("Failed to download vip_ids.txt. Aborting test...")
 		return
@@ -1090,7 +1190,7 @@ RemoveNonVipFriends() {
 		friendClickY := 195 + (95 * friendIndex)
 		if (FindImageAndClick(75, 400, 105, 420, , "Friend", 138, friendClickY, 500, 3)) {
 			Delay(1)
-			
+
 			; Get the friend account
 			friendCode := ""
 			friendName := ""
@@ -1163,10 +1263,22 @@ RemoveNonVipFriends() {
 	}
 }
 
-GetFriendCode() {
-	global scaleParam ;winTitle
-	;TODO: win position doesn't matter now
-	;WinGetPos, x, y, w, h, %winTitle%
+GetFriendCodeWinOCR(blowupPercent := 200) {
+	global winTitle
+	ocrText := cropAndOcr(winTitle, 336, 106, 188, 20, True, True, blowupPercent)
+	friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
+	return friendCode
+}
+
+GetFriendNameWinOCR(blowupPercent := 200) {
+	global winTitle
+	ocrText := cropAndOcr(winTitle, 122, 483, 300, 33, True, True, blowupPercent)
+	friendName := Trim(ocrText, " `t`r`n")
+	return friendName
+}
+
+GetFriendCodeTesseract() {
+	global scaleParam
 	if (scaleParam = 287) {
 		x := 170
 		y := 63
@@ -1190,10 +1302,8 @@ GetFriendCode() {
 	return ""
 }
 
-GetFriendName() {
-	global scaleParam ;winTitle
-	;TODO: win position doesn't matter now
-	;WinGetPos, x, y, w, h, %winTitle%
+GetFriendNameTesseract() {
+	global scaleParam
 	if (scaleParam = 287) {
 		x := 52
 		y := 255
@@ -1217,11 +1327,18 @@ GetFriendName() {
 }
 
 ParseFriendCode(ByRef friendCode) {
+	global tesseractPath
 	failSafe := A_TickCount
 	failSafeTime := 0
 	parseFriendCodeResult := False
+	blowUp := [200, 200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
 	Loop {
-		friendCode := GetFriendCode()
+		if (StrLen(tesseractPath) < 3) {
+			friendCode := GetFriendCodeWinOCR(blowUp[A_Index])
+		}
+		else {
+			friendCode := GetFriendCodeTesseract()
+		}
 		if (RegExMatch(friendCode, "^\d{14,17}$")) {
 			parseFriendCodeResult := True
 			break
@@ -1239,8 +1356,14 @@ ParseFriendName(ByRef friendName) {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	parseFriendNameResult := False
+	blowUp := [200, 200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
 	Loop {
-		friendName := GetFriendName()
+		if (StrLen(tesseractPath) < 3) {
+			friendName := GetFriendNameWinOCR(blowUp[A_Index])
+		}
+		else {
+			friendName := GetFriendNameTesseract()
+		}
 		if (RegExMatch(friendName, "^[a-zA-Z0-9]{5,20}$")) {
 			parseFriendNameResult := True
 			break
@@ -1363,7 +1486,7 @@ adbSwipeFriend() {
 	Y1 := 380
 	Y2 := 200
 
-	Delay(1)
+	Delay(10)
 	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 300)
 	Sleep, 1000
  }
@@ -1375,7 +1498,7 @@ adbSwipeFriend() {
 	Y1 := 380
 	Y2 := 355
 
-	Delay(1)
+	Delay(3)
 	adbShell.StdIn.WriteLine("input swipe " . X . " " . Y1 . " " . X . " " . Y2 . " " . 200)
 	Sleep, 500
  }

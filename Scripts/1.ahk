@@ -1,5 +1,9 @@
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
+
+; BallCity - 2025.20.25 - Add OCR library for Username if Inject is on
+#Include *i %A_ScriptDir%\Include\OCR.ahk
+
 #SingleInstance on
 SetMouseDelay, -1
 SetDefaultMouseSpeed, 0
@@ -13,7 +17,9 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
+global DeadCheck
 global sendAccountXml
+
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
 foundGP := false
@@ -57,6 +63,8 @@ IniRead, Pikachu, %A_ScriptDir%\..\Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, %A_ScriptDir%\..\Settings.ini, UserSettings, Charizard, 0
 IniRead, Mewtwo, %A_ScriptDir%\..\Settings.ini, UserSettings, Mewtwo, 0
 IniRead, slowMotion, %A_ScriptDir%\..\Settings.ini, UserSettings, slowMotion, 0
+IniRead, DeadCheck, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck, 0
+IniRead, ocrLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, ocrLanguage, en
 IniRead, sendAccountXml, %A_ScriptDir%\..\Settings.ini, UserSettings, sendAccountXml, 0
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus"]
@@ -113,15 +121,17 @@ Loop {
 		x4 := x + 5
 		y4 := y + 44
 
-		Gui, New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption
+		Gui, New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
 		Gui, Default
 		Gui, Margin, 4, 4  ; Set margin for the GUI
 		Gui, Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-		Gui, Add, Button, x0 y0 w30 h25 gReloadScript, Reload  (F5)
-		Gui, Add, Button, x30 y0 w30 h25 gPauseScript, Pause (F6)
-		Gui, Add, Button, x60 y0 w40 h25 gResumeScript, Resume (F6)
-		Gui, Add, Button, x100 y0 w30 h25 gStopScript, Stop (F7)
-		Gui, Add, Button, x130 y0 w40 h25 gShowStatusMessages, Status (F8)
+		Gui, Add, Button, x0 y0 w40 h25 gReloadScript, Reload  (Shift+F5)
+		Gui, Add, Button, x40 y0 w40 h25 gPauseScript, Pause (Shift+F6)
+		Gui, Add, Button, x80 y0 w40 h25 gResumeScript, Resume (Shift+F6)
+		Gui, Add, Button, x120 y0 w40 h25 gStopScript, Stop (Shift+F7)
+		Gui, Add, Button, x160 y0 w40 h25 gShowStatusMessages, Status (Shift+F8)
+		DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
 		Gui, Show, NoActivate x%x4% y%y4% AutoSize
 		break
 	}
@@ -177,116 +187,144 @@ if(!injectMethod || !loadedAccount)
 pToken := Gdip_Startup()
 packs := 0
 
-Loop {
-	Randmax := packArray.Length()
-	Random, rand, 1, Randmax
-	openPack := packArray[rand]
-	friended := false
-	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Instance%scriptName%
-	FormatTime, CurrentTime,, HHmm
+if(DeadCheck==1) {
+	;LogToDiscord("Sup dudes. Not sure what happened, but a script died and I'm doing a menu delete and starting over.")
+	friended:= true
+	menuDeleteStart()
+	IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+	Reload
+}else{
+	Loop {
+		Randmax := packArray.Length()
+		Random, rand, 1, Randmax
+		openPack := packArray[rand]
+		friended := false
+		IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Instance%scriptName%
+		FormatTime, CurrentTime,, HHmm
 
-	StartTime := changeDate - 45 ; 12:55 AM2355
-	EndTime := changeDate + 5 ; 1:01 AM
+		StartTime := changeDate - 45 ; 12:55 AM2355
+		EndTime := changeDate + 5 ; 1:01 AM
 
-	; Adjust for crossing midnight
-	if (StartTime < 0)
-		StartTime += 2400
-	if (EndTime >= 2400)
-		EndTime -= 2400
+		; Adjust for crossing midnight
+		if (StartTime < 0)
+			StartTime += 2400
+		if (EndTime >= 2400)
+			EndTime -= 2400
 
-	Random, randomTime, 3, 7
+		Random, randomTime, 3, 7
 
-	While(((CurrentTime - StartTime >= 0) && (CurrentTime - StartTime <= randomTime)) || ((EndTime - CurrentTime >= 0) && (EndTime - CurrentTime <= randomTime)))
-	{
-		CreateStatusMessage("I need a break... Sleeping until " . changeDate + randomTime . " `nto avoid being kicked out from the date change")
-		FormatTime, CurrentTime,, HHmm ; Update the current time after sleep
-		Sleep, 5000
-		dateChange := true
-	}
-	if(dateChange)
-		createAccountList(scriptName)
-	FindImageAndClick(65, 195, 100, 215, , "Platin", 18, 109, 2000) ; click mod settings
-	if(setSpeed = 3)
-		FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click mod settings
-	else
-		FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click mod settings
-	Delay(1)
-	adbClick(41, 296)
-	Delay(1)
-	packs := 0
-
-	if(!injectMethod || !loadedAccount)
-		DoTutorial()
-
-	if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Remove" || packMethod)
-		if(!loadedAccount)
-			wonderPicked := DoWonderPick()
-
-	friendsAdded := AddFriends()
-	SelectPack("First")
-	PackOpening()
-
-	if(packMethod) {
-		friendsAdded := AddFriends(true)
-		SelectPack()
-	}
-
-	PackOpening()
-
-	if(!injectMethod || !loadedAccount)
-		HourglassOpening() ;deletemethod check in here at the start
-
-	if(wonderPicked) {
-		if (deleteMethod = "5 Pack") {
-			friendsAdded := AddFriends(true)
+		While(((CurrentTime - StartTime >= 0) && (CurrentTime - StartTime <= randomTime)) || ((EndTime - CurrentTime >= 0) && (EndTime - CurrentTime <= randomTime)))
+		{
+			CreateStatusMessage("I need a break... Sleeping until " . changeDate + randomTime . " `nto avoid being kicked out from the date change")
+			FormatTime, CurrentTime,, HHmm ; Update the current time after sleep
+			Sleep, 5000
+			dateChange := true
 		}
-		if (deleteMethod = "5 Pack No Remove") {
-			FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500) ;dpp
-			FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) ;dpp
-		}
-		SelectPack("HGPack")
+		if(dateChange)
+			createAccountList(scriptName)
+		FindImageAndClick(65, 195, 100, 215, , "Platin", 18, 109, 2000) ; click mod settings
+		if(setSpeed = 3)
+			FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click mod settings
+		else
+			FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click mod settings
+		Delay(1)
+		adbClick(41, 296)
+		Delay(1)
+		packs := 0
+
+		; BallCity 2025.02.21 - Keep track of additional metrics
+		now := A_NowUTC
+		IniWrite, %now%, %A_ScriptDir%\%scriptName%.ini, Metrics, LastStartTimeUTC
+		EnvSub, now, 1970, seconds
+		IniWrite, %now%, %A_ScriptDir%\%scriptName%.ini, Metrics, LastStartEpoch
+
+		if(!injectMethod || !loadedAccount)
+			DoTutorial()
+
+		;	SquallTCGP 2025.03.12 - 	Adding the delete method 5 Pack (Fast) to the wonder pick check.
+		if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack (Fast)" || packMethod)
+			if(!loadedAccount)
+				wonderPicked := DoWonderPick()
+
+		friendsAdded := AddFriends()
+		SelectPack("First")
 		PackOpening()
+
 		if(packMethod) {
 			friendsAdded := AddFriends(true)
+			SelectPack()
+		}
+
+		PackOpening()
+
+		if(!injectMethod || !loadedAccount)
+			HourglassOpening() ;deletemethod check in here at the start
+
+		if(wonderPicked) {
+			
+			;	SquallTCGP 2025.03.12 - 	Added a check to not add friends if the delete method is 5 Pack (Fast). When using this method (5 Pack (Fast)), 
+			;															it goes to the social menu and clicks the home button to exit (instead of opening all packs directly)
+			; 														just to get around the checking for a level after opening a pack. This change is made based on the 
+			;															5p-no delete community mod created by DietPepperPhD in the discord server.
+
+			if(deleteMethod != "5 Pack (Fast)") {
+				friendsAdded := AddFriends(true)
+			} else {
+				FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500)
+				FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500)
+			}
 			SelectPack("HGPack")
 			PackOpening()
+			if(packMethod) {
+				friendsAdded := AddFriends(true)
+				SelectPack("HGPack")
+				PackOpening()
+			}
+			else {
+				HourglassOpening(true)
+			}
 		}
-		else {
-			HourglassOpening(true)
+
+		if(nukeAccount && !injectMethod) {
+			menuDelete()
+		}else{
+			RemoveFriends()
 		}
+		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+
+		; BallCity 2025.02.21 - Keep track of additional metrics
+		now := A_NowUTC
+		IniWrite, %now%, %A_ScriptDir%\%scriptName%.ini, Metrics, LastEndTimeUTC
+		EnvSub, now, 1970, seconds
+		IniWrite, %now%, %A_ScriptDir%\%scriptName%.ini, Metrics, LastEndEpoch
+
+		if(injectMethod)
+			loadedAccount := loadAccount()
+
+		if(!injectMethod || !loadedAccount) {
+			if(!nukeAccount) {
+				saveAccount("All")
+				restartGameInstance("New Run", false)
+			}
+		}
+
+		CreateStatusMessage("New Run")
+		rerolls++
+		if(!loadedAccount)
+			if(deleteMethod = "5 Pack" || packMethod)
+				packs := 5
+		AppendToJsonFile(packs)
+		totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
+		avgtotalSeconds := Round(totalSeconds / rerolls) ; Total time in seconds
+		minutes := Floor(avgtotalSeconds / 60) ; Total minutes
+		seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
+		mminutes := Floor(totalSeconds / 60) ; Total minutes
+		sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
+		CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
+		LogToFile("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
+		if(stopToggle)
+			ExitApp
 	}
-
-	if(nukeAccount && !injectMethod)
-		menuDelete()
-	else
-		RemoveFriends()
-
-	if(injectMethod)
-		loadedAccount := loadAccount()
-
-	if(!injectMethod || !loadedAccount) {
-		if(!nukeAccount) {
-			saveAccount("All")
-			restartGameInstance("New Run", false)
-		}
-	}
-
-	CreateStatusMessage("New Run")
-	rerolls++
-	if(!loadedAccount)
-		if(deleteMethod = "5 Pack" || deleteMethod = "5 Pack No Remove" || packMethod)
-			packs := 5
-	AppendToJsonFile(packs)
-	totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
-	avgtotalSeconds := Round(totalSeconds / rerolls) ; Total time in seconds
-	minutes := Floor(avgtotalSeconds / 60) ; Total minutes
-	seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
-	mminutes := Floor(totalSeconds / 60) ; Total minutes
-	sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
-	CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
-	LogToFile("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
-	if(stopToggle)
-		ExitApp
 }
 return
 
@@ -410,7 +448,10 @@ RemoveFriends() {
 		}
 	}
 	if(stopToggle)
+	{
+		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 		ExitApp
+	}
 	friended := false
 }
 
@@ -424,7 +465,8 @@ TradeTutorial() {
 }
 
 AddFriends(renew := false, getFC := false) {
-	global FriendID, friendIds, waitTime, friendCode
+	global FriendID, friendIds, waitTime, friendCode, scriptName
+	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 	friendIDs := ReadFile("ids")
 	count := 0
 	friended := true
@@ -597,6 +639,18 @@ AddFriends(renew := false, getFC := false) {
 	return n ;return added friends so we can dynamically update the .txt in the middle of a run without leaving friends at the end
 }
 
+ChooseTag() {
+	FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500)
+	FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500) 212 276 230 294
+	FindImageAndClick(203, 272, 237, 300, , "Profile", 143, 95, 500)
+	FindImageAndClick(205, 310, 220, 319, , "ChosenTag", 143, 306, 1000)
+	FindImageAndClick(203, 272, 237, 300, , "Profile", 143, 505, 1000)
+	if(FindOrLoseImage(145, 140, 157, 155, , "Eevee", 1)) {
+		FindImageAndClick(163, 200, 173, 207, , "ChooseEevee", 147, 207, 1000)
+		FindImageAndClick(53, 218, 63, 228, , "Badge", 143, 466, 500)
+	}
+}
+
 EraseInput(num := 0, total := 0) {
 	if(num)
 		CreateStatusMessage("Removing friend ID " . num . "/" . total)
@@ -684,6 +738,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			CreateStatusMessage("Loaded deleted account. Deleting XML." )
 			if(loadedAccount) {
 				FileDelete, %loadedAccount%
+				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			}
 			LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
 			Reload
@@ -846,6 +901,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				CreateStatusMessage("Loaded deleted account. Deleting XML." )
 				if(loadedAccount) {
 					FileDelete, %loadedAccount%
+					IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 				}
 				LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
 				Reload
@@ -972,14 +1028,14 @@ waitadb() {
 }
 
 restartGameInstance(reason, RL := true){
-	global Delay, scriptName, adbShell, adbPath, adbPort, friended, loadedAccount
+	global Delay, scriptName, adbShell, adbPath, adbPort, friended, loadedAccount, DeadCheck
 	;initializeAdbShell()
 	CreateStatusMessage("Restarting game reason: `n" reason)
 
 	if(!RL || RL != "GodPack") {
 		adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 		waitadb()
-		if(!RL)
+		if(!RL && DeadCheck==0)
 			adbShell.StdIn.WriteLine("rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml") ; delete account data
 		waitadb()
 		adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
@@ -989,14 +1045,18 @@ restartGameInstance(reason, RL := true){
 
 	if(RL = "GodPack") {
 		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+
 		Reload
 	} else if(RL) {
 		if(menuDeleteStart()) {
+			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGot stuck getting friend code."
 			LogToFile(logMessage, "GPlog.txt")
 			LogToDiscord(logMessage, screenShot, discordUserId)
 		}
 		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+
 		Reload
 	}
 }
@@ -1157,29 +1217,66 @@ LogToFile(message, logFile := "") {
 
 CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
 	global scriptName, winTitle, StatusText, showStatus
+	static hwnds = {}
 	if(!showStatus) {
 		return
 	}
 	try {
+		; Check if GUI with this name already exists
 		GuiName := GuiName+scriptName
-		WinGetPos, xpos, ypos, Width, Height, %winTitle%
-		X := X + xpos + 5
-		Y := Y + ypos
-		if(!X)
-			X := 0
-		if(!Y)
-			Y := 0
+		if !hwnds.HasKey(GuiName) {
+			WinGetPos, xpos, ypos, Width, Height, %winTitle%
+			X := X + xpos + 5
+			Y := Y + ypos
+			if(!X)
+				X := 0
+			if(!Y)
+				Y := 0
 
-		; Create a new GUI with the given name, position, and message
-		Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-		Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-		Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-		Gui, %GuiName%:Add, Text, vStatusText, %Message%
-		Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize, NoActivate %GuiName%
+			; Create a new GUI with the given name, position, and message
+			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+			hwnds[GuiName] := hCtrl
+			OwnerWND := WinExist(winTitle)
+			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+		}
+		SetTextAndResize(hwnds[GuiName], Message)
+		Gui, %GuiName%:Show, NoActivate AutoSize
 	}
 }
 
+;Modified from https://stackoverflow.com/a/49354127
+SetTextAndResize(controlHwnd, newText) {
+    dc := DllCall("GetDC", "Ptr", controlHwnd)
+
+    ; 0x31 = WM_GETFONT
+    SendMessage 0x31,,,, ahk_id %controlHwnd%
+    hFont := ErrorLevel
+    oldFont := 0
+    if (hFont != "FAIL")
+        oldFont := DllCall("SelectObject", "Ptr", dc, "Ptr", hFont)
+
+    VarSetCapacity(rect, 16, 0)
+    ; 0x440 = DT_CALCRECT | DT_EXPANDTABS
+    h := DllCall("DrawText", "Ptr", dc, "Ptr", &newText, "Int", -1, "Ptr", &rect, "UInt", 0x440)
+    ; width = rect.right - rect.left
+    w := NumGet(rect, 8, "Int") - NumGet(rect, 0, "Int")
+
+    if oldFont
+        DllCall("SelectObject", "Ptr", dc, "Ptr", oldFont)
+    DllCall("ReleaseDC", "Ptr", controlHwnd, "Ptr", dc)
+
+    GuiControl,, %controlHwnd%, %newText%
+    GuiControl MoveDraw, %controlHwnd%, % "h" h*96/A_ScreenDPI + 2 " w" w*96/A_ScreenDPI + 2
+}
+
 CheckPack() {
+	global scriptName, DeadCheck
 	foundGP := false ;check card border to find godpacks
 	foundTrainer := false
 	foundRainbow := false
@@ -1220,8 +1317,10 @@ CheckPack() {
 			foundTS := "Double two star"
 	}
 	if(foundGP || foundTrainer || foundRainbow || foundFullArt || foundImmersive || foundCrown || 2starCount > 1) {
-		if(loadedAccount)
+		if(loadedAccount) {
 			FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
+			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+		}
 		if(foundGP)
 			restartGameInstance("God Pack found. Continuing...", "GodPack") ; restarts to backup and delete xml file with account info.
 		else {
@@ -1232,23 +1331,44 @@ CheckPack() {
 }
 
 FoundStars(star) {
-	global injectMethod
+	global scriptName, DeadCheck, ocrLanguage, injectMethod
 	screenShot := Screenshot(star)
 	accountFile := saveAccount(star, accountFullPath)
 	friendCode := getFriendCode()
-	if (injectMethod){
-		Sleep, 3000
-		friendCodeScreenshot := Screenshot("FriendCode")
-		}		
+	IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+
+	; Pull back screenshot of the friend code/name (good for inject method)
+	Sleep, 8000
+	fcScreenshot := Screenshot("FRIENDCODE")
+
 	if(star = "Crown" || star = "Immersive")
 		RemoveFriends()
+	else {
+		; If we're doing the inject method, try to OCR our Username
+		try {
+			if(injectMethod && IsFunc("ocr_from_file"))
+			{
+					ocrText := Func("ocr_from_file").Call(fcScreenshot, ocrLanguage)
+					ocrLines := StrSplit(ocrText, "`n")
+					len := ocrLines.MaxIndex()
+					if(len > 1) {
+						playerName := ocrLines[1]
+						playerID := RegExReplace(ocrLines[2], "[^0-9]", "")
+						; playerID := SubStr(ocrLines[2], 1, 19)
+						username := playerName
+					}
+			}
+		} catch e {
+			LogToFile("Failed to OCR the friend code: " . e.message, "BC.txt")
+		}
+	}
+
 	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
 	CreateStatusMessage(logMessage)
 	LogToFile(logMessage, "GPlog.txt")
-	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
-	if (injectMethod) {
-		LogToDiscord("Friend Code Screenshot:", friendCodeScreenshot, discordUserId)
-	}		
+	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
+	if(star != "Crown" && star != "Immersive")
+		ChooseTag()
 }
 
 FindBorders(prefix) {
@@ -1287,7 +1407,7 @@ FindBorders(prefix) {
 }
 
 FindGodPack() {
-	global winTitle, discordUserId, Delay, username, packs, minStars
+	global winTitle, discordUserId, Delay, username, packs, minStars, scriptName, DeadCheck, deleteMethod
 	gpFound := false
 	invalidGP := false
 	searchVariation := 5
@@ -1306,8 +1426,15 @@ FindGodPack() {
 			,[105, 278, 175, 280]]
 	}
 		
-	if(packs = 3 && deleteMethod = "5 Pack") ;dpp
-		packs := 0
+
+	;	SquallTCGP 2025.03.12 - 	Just checking the packs count and setting them to 0 if it's number of packs is 3. 
+	;															This applies to any Delete Method except 5 Pack (Fast). This change is made based 
+	;															on the 5p-no delete community mod created by DietPepperPhD in the discord server.
+	if(deleteMethod != "5 Pack (Fast)") {
+		if(packs = 3)
+			packs := 0
+	}
+
 	Loop {
 		normalBorders := false
 		pBitmap := from_window(WinExist(winTitle))
@@ -1346,6 +1473,7 @@ FindGodPack() {
 				gpFound := true
 				GodPackFound("Invalid")
 				RemoveFriends()
+				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 				break
 			}
 			else {
@@ -1359,8 +1487,10 @@ FindGodPack() {
 }
 
 GodPackFound(validity) {
-	global injectMethod
+	global scriptName, DeadCheck, ocrLanguage, injectMethod
+
 	if(validity = "Valid") {
+		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 		Praise := ["Congrats!", "Congratulations!", "GG!", "Whoa!", "Praise Helix! ༼ つ ◕_◕ ༽つ", "Way to go!", "You did it!", "Awesome!", "Nice!", "Cool!", "You deserve it!", "Keep going!", "This one has to be live!", "No duds, no duds, no duds!", "Fantastic!", "Bravo!", "Excellent work!", "Impressive!", "You're amazing!", "Well done!", "You're crushing it!", "Keep up the great work!", "You're unstoppable!", "Exceptional!", "You nailed it!", "Hats off to you!", "Sweet!", "Kudos!", "Phenomenal!", "Boom! Nailed it!", "Marvelous!", "Outstanding!", "Legendary!", "Youre a rock star!", "Unbelievable!", "Keep shining!", "Way to crush it!", "You're on fire!", "Killing it!", "Top-notch!", "Superb!", "Epic!", "Cheers to you!", "Thats the spirit!", "Magnificent!", "Youre a natural!", "Gold star for you!", "You crushed it!", "Incredible!", "Shazam!", "You're a genius!", "Top-tier effort!", "This is your moment!", "Powerful stuff!", "Wicked awesome!", "Props to you!", "Big win!", "Yesss!", "Champion vibes!", "Spectacular!"]
 		invalid := ""
 	} else {
@@ -1378,16 +1508,40 @@ GodPackFound(validity) {
 	LogToFile(logMessage, godPackLog)
 	CreateStatusMessage(logMessage)
 	friendCode := getFriendCode()
-	if (validity = "Valid" && injectMethod){
-		Sleep, 3000
-		friendCodeScreenshot := Screenshot("FriendCode")
+	IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+
+	; Pull screenshot of the Friend code page; wait so we don't get the clipboard pop up; good for the inject method
+	Sleep, 8000
+	fcScreenshot := Screenshot("FRIENDCODE")
+
+	; If we're doing the inject method, try to OCR our Username
+	try {
+		if(injectMethod && IsFunc("ocr_from_file"))
+		{
+				ocrText := Func("ocr_from_file").Call(fcScreenshot, ocrLanguage)
+				ocrLines := StrSplit(ocrText, "`n")
+				len := ocrLines.MaxIndex()
+				if(len > 1) {
+					playerName := ocrLines[1]
+					playerID := RegExReplace(ocrLines[2], "[^0-9]", "")
+					; playerID := SubStr(ocrLines[2], 1, 19)
+					username := playerName
+				}
 		}
+	} catch e {
+		LogToFile("Failed to OCR the friend code: " . e.message, "BC.txt")
+	}
+
 	logMessage := Interjection . "\n" . username . " (" . friendCode . ")\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nBacking up to the Accounts\\GodPacks folder and continuing..."
 	LogToFile(logMessage, godPackLog)
 	;Run, http://google.com, , Hide ;Remove the ; at the start of the line and replace your url if you want to trigger a link when finding a god pack.
-	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath)
-	if (validity = "Valid" && InjectMethod) {
-		LogToDiscord("Friend Code Screenshot:", friendCodeScreenshot, discordUserId)
+
+	; Adjust the below to only send a 'ping' to Discord friends on Valid packs
+	if(validity = "Valid") {
+		LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
+		ChooseTag()
+	} else {
+		LogToDiscord(logMessage, screenShot)
 	}
 }
 
@@ -1455,6 +1609,9 @@ loadAccount() {
 	adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
 	waitadb()
 	Sleep, 1000
+
+	FileSetTime,, %loadDir%
+
 	return loadDir
 }
 
@@ -1494,11 +1651,15 @@ saveAccount(file := "Valid", ByRef filePath := "") {
 	Loop {
 		CreateStatusMessage("Attempting to save account XML. " . count . "/10")
 
-		adbShell.StdIn.WriteLine("cp /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
+		adbShell.StdIn.WriteLine("cp -f /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
 		waitadb()
 		Sleep, 500
 
 		RunWait, % adbPath . " -s 127.0.0.1:" . adbPort . " pull /sdcard/deviceAccount.xml """ . filePath,, Hide
+
+		Sleep, 500
+
+		adbShell.StdIn.WriteLine("rm /sdcard/deviceAccount.xml")
 
 		Sleep, 500
 
@@ -1570,7 +1731,7 @@ DownloadFile(url, filename) {
 
 ReadFile(filename, numbers := false) {
 	global FriendID
-	if(InStr(FriendID, "https")) {
+	if(InStr(FriendID, "http")) {
 		DownloadFile(FriendID, "ids.txt")
 		Delay(1)
 	}
@@ -1637,8 +1798,9 @@ Screenshot(filename := "Valid") {
 
 	; File path for saving the screenshot locally
 	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
-	;pBitmap := from_window(WinExist(winTitle))
-	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 18, 175, 240, 227)
+	pBitmapW := from_window(WinExist(winTitle))
+	pBitmap := Gdip_CloneBitmapArea(pBitmapW, 18, 175, 240, 227)
+	Gdip_DisposeImage(pBitmapW)
 
 	;scale 100%
 	if (scaleParam = 287) {
@@ -1650,12 +1812,12 @@ Screenshot(filename := "Valid") {
 	return screenshotFile
 }
 
-LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
+LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "") {
 	global discordUserId, discordWebhookURL, friendCode, sendAccountXml
 	discordPing := "<@" . discordUserId . "> "
 	discordFriends := ReadFile("discord")
 
-	if(discordFriends) {
+	if(ping != false && discordFriends) {
 		for index, value in discordFriends {
 			if(value = discordUserId)
 				continue
@@ -1664,9 +1826,8 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 	}
 
 	if (discordWebhookURL != "") {
-		if (!sendAccountXml) {
+		if (!sendAccountXml)
 			xmlFile := ""
-		}
 		MaxRetries := 10
 		RetryCount := 0
 		Loop {
@@ -1674,17 +1835,33 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 				; Base command
 				curlCommand := "curl -k "
 					. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-				; If an image or xml file is provided, send it
-
-				if (screenshotFile != "" && xmlFile != "" && FileExist(screenshotFile) && FileExist(xmlFile)) {
-					curlCommand := curlCommand . "-F ""file1=@" . screenshotFile . """ "
-					curlCommand := curlCommand . "-F ""file2=@" . xmlFile . """ "
+				
+				; If an screenshot or xml file is provided, send it
+				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
+				sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
+				sendAccountXml := xmlFile != "" && FileExist(xmlFile)
+				if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
+					fileIndex := 0
+					if (sendScreenshot1) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
+					}
+					if (sendScreenshot2) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
+					}
+					if (sendAccountXml) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
+					}
 				}
-				else if (screenshotFile != "" && FileExist(screenshotFile)) {
-					curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-				}
-				else if (xmlFile != "" && FileExist(xmlFile)) {
-					curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
+				else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
+					if (sendScreenshot1)
+						curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
+					if (sendScreenshot2)
+						curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
+					if (sendAccountXml)
+						curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
 				}
 				; Add the webhook
 				curlCommand := curlCommand . discordWebhookURL
@@ -2282,13 +2459,26 @@ DoTutorial() {
 			adbClick(41, 296)
 		}
 	FindImageAndClick(190, 241, 225, 270, , "Name", 189, 438) ;wait for name input screen
-
+	;choose any
+	Delay(1)
+	if(FindOrLoseImage(147, 160, 157, 169, , "Erika", 1)) {
+		AdbClick(143, 207)
+		Delay(1)
+		AdbClick(143, 207)
+		FindImageAndClick(165, 294, 173, 301, , "ChooseErika", 143, 306)
+		FindImageAndClick(190, 241, 225, 270, , "Name", 143, 462) ;wait for name input screen
+	}
 	FindImageAndClick(0, 476, 40, 502, , "OK", 139, 257) ;wait for name input screen
 
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		name := ReadFile("usernames")
+		fileName := A_ScriptDir . "\..\usernames.txt"
+		if(FileExist(fileName))
+			name := ReadFile("usernames")
+		else
+			name := ReadFile("usernames_default")
+
 		Random, randomIndex, 1, name.MaxIndex()
 		username := name[randomIndex]
 		username := SubStr(username, 1, 14)  ;max character limit
