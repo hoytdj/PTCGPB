@@ -16,7 +16,7 @@ CoordMode, Pixel, Screen
 DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
-global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
+global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
 global DeadCheck
 global sendAccountXml
 
@@ -43,6 +43,7 @@ IniRead, SelectedMonitorIndex, %A_ScriptDir%\..\Settings.ini, UserSettings, Sele
 IniRead, swipeSpeed, %A_ScriptDir%\..\Settings.ini, UserSettings, swipeSpeed, 300
 IniRead, deleteMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, deleteMethod, 3 Pack
 IniRead, runMain, %A_ScriptDir%\..\Settings.ini, UserSettings, runMain, 1
+IniRead, Mains, %A_ScriptDir%\..\Settings.ini, UserSettings, Mains, 1
 IniRead, heartBeat, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeat, 0
 IniRead, heartBeatWebhookURL, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeatWebhookURL, ""
 IniRead, heartBeatName, %A_ScriptDir%\..\Settings.ini, UserSettings, heartBeatName, ""
@@ -762,7 +763,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 
 FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
 	global winTitle, failSafe, confirmed, slowMotion
-	
+
 	if(slowMotion) {
 		if(imageName = "Platin" || imageName = "One" || imageName = "Two" || imageName = "Three")
 			return true
@@ -949,7 +950,7 @@ LevelUp() {
 }
 
 resetWindows(){
-	global Columns, winTitle, SelectedMonitorIndex, scaleParam, FriendID
+	global Columns, winTitle, SelectedMonitorIndex, scaleParam
 	CreateStatusMessage("Arranging window positions and sizes")
 	RetryCount := 0
 	MaxRetries := 10
@@ -960,33 +961,17 @@ resetWindows(){
 			SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
 			SysGet, Monitor, Monitor, %SelectedMonitorIndex%
 			Title := winTitle
-			rowHeight := 533  ; Height of each row
 
-			if(runMain) {
-				; Calculate currentRow
-				if (winTitle <= Columns - 1) {
-					currentRow := 0  ; First row has (Columns - 1) windows
-				} else {
-					; For rows after the first, adjust calculation
-					adjustedWinTitle := winTitle - (Columns - 1)
-					currentRow := Floor((adjustedWinTitle - 1) / Columns) + 1
-				}
-
-				; Calculate x position
-				if (currentRow == 0) {
-					x := winTitle * scaleParam  ; First row uses (Columns - 1) columns
-				} else {
-					adjustedWinTitle := winTitle - (Columns - 1)
-					x := Mod(adjustedWinTitle - 1, Columns) * scaleParam  ; Subsequent rows use full Columns
-				}
+			if (runMain) {
+				instanceIndex := (Mains - 1) + Title + 1
 			} else {
-				currentRow := Floor((winTitle - 1) / Columns)
-				x := Mod((winTitle - 1), Columns) * scaleParam
+				instanceIndex := Title
 			}
 
+			rowHeight := 533  ; Adjust the height of each row
+			currentRow := Floor((instanceIndex - 1) / Columns)
 			y := currentRow * rowHeight
-
-			; Move the window
+			x := Mod((instanceIndex - 1), Columns) * scaleParam
 			WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
 			break
 		}
@@ -1695,7 +1680,7 @@ adbClick(X, Y) {
     static clickCommands := Object()
     static convX := 540/277, convY := 960/489, offset := -44
 
-    key := X << 16 | Y 
+    key := X << 16 | Y
 
     if (!clickCommands.HasKey(key)) {
         clickCommands[key] := Format("input tap {} {}"
@@ -1730,11 +1715,6 @@ DownloadFile(url, filename) {
 }
 
 ReadFile(filename, numbers := false) {
-	global FriendID
-	if(InStr(FriendID, "http")) {
-		DownloadFile(FriendID, "ids.txt")
-		Delay(1)
-	}
 	FileRead, content, %A_ScriptDir%\..\%filename%.txt
 
 	if (!content)
@@ -3020,7 +3000,7 @@ createAccountList(instance) {
 			xml := saveDir . "\" . A_LoopFileName
 			FileGetTime, fileTime, %xml%, M
 			timeDiff := A_Now - fileTime  ; Calculate time difference
-			if (timeDiff > 86400) {  ; 24 hours in seconds (60 * 60 * 24) 
+			if (timeDiff > 86400) {  ; 24 hours in seconds (60 * 60 * 24)
 				FileAppend, % A_LoopFileName "`n", %outputTxt%  ; Append file path to output.txt\
 			}
 		}

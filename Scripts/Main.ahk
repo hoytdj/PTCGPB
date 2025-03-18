@@ -450,11 +450,15 @@ resetWindows(){
 			SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
 			SysGet, Monitor, Monitor, %SelectedMonitorIndex%
 			Title := winTitle
-			rowHeight := 533  ; Adjust the height of each row
-			currentRow := Floor((1 - 1) / Columns)
-			y := currentRow * rowHeight
-			x := Mod((1 - 1), Columns) * scaleParam
 
+			instanceIndex := StrReplace(Title, "Main", "")
+			if (instanceIndex = "")
+				instanceIndex := 1
+
+			rowHeight := 533  ; Adjust the height of each row
+			currentRow := Floor((instanceIndex - 1) / Columns)
+			y := currentRow * rowHeight
+			x := Mod((instanceIndex - 1), Columns) * scaleParam
 			WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
 			break
 		}
@@ -1220,7 +1224,7 @@ RemoveNonVipFriends() {
 					CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
 					LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
 				}
-				; If it's a VIP friend, skip removal	
+				; If it's a VIP friend, skip removal
 				if (isVipResult)
 					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
 				Sleep, 1500 ; Time to read
@@ -1410,14 +1414,14 @@ ParseFriendAccounts(filePath, ByRef includesIdsAndNames) {
 		line := A_LoopField
 		if (line = "" || line ~= "^\s*$")  ; Skip empty lines
 			continue
-		
+
 		friendCode := ""
 		friendName := ""
 		twoStarCount := ""
 
 		if InStr(line, " | ") {
 			parts := StrSplit(line, " | ") ; Split by " | "
-			
+
 			; Check for ID and Name parts
 			friendCode := Trim(parts[1])
 			friendName := Trim(parts[2])
@@ -1465,14 +1469,14 @@ IsFriendAccountInList(inputFriend, friendList, ByRef matchedFriend) {
 
 IsRecentlyCheckedAccount(inputFriend, ByRef friendList) {
 	if (inputFriend == "") {
-		return false	
+		return false
 	}
-	
+
 	; Check if the account is already in the list
 	if (IsFriendAccountInList(inputFriend, friendList, matchedFriend)) {
 		return true
 	}
-	
+
 	; Add the account to the end of the list
 	friendList.Push(inputFriend)
 
