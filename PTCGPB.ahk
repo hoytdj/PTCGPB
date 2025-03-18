@@ -91,6 +91,7 @@ IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 IniRead, instanceLaunchDelay, Settings.ini, UserSettings, instanceLaunchDelay, 5
 IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
+IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
 
 ; Create a stylish GUI with custom colors and modern look
 Gui, Color, 1E1E1E, 333333 ; Dark theme background
@@ -209,7 +210,7 @@ else if (deleteMethod = "3 Pack")
     defaultDelete := 2
 else if (deleteMethod = "Inject")
     defaultDelete := 3
-else if (deleteMethod = "5 Pack (Fast)")
+else if (deleteMethod = "5 Pack (Fast)" || deleteMethod = "5 Pack No Remove")
     defaultDelete := 4
 ;	SquallTCGP 2025.03.12 - 	Adding the delete method 5 Pack (Fast) to the delete method dropdown list.
 Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x325 y48 w100 Background2A2A2A cWhite, 5 Pack|3 Pack|Inject|5 Pack (Fast)
@@ -294,8 +295,11 @@ Gui, Add, Edit, vmainIdsURL w460 x270 y425 h20 -E0x200 Background2A2A2A cWhite, 
 Gui, Add, Text, x270 y445 cWhite, vip_ids.txt (GP Test Mode) API:
 Gui, Add, Edit, vvipIdsURL w460 x270 y465 h20 -E0x200 Background2A2A2A cWhite, %vipIdsURL%
 
-;TODO: (DJH) Add extra settings here
+; ========= Column 1-3 =========
+; ==============================
 
+; ========== Add-On Settings Section ==========
+Gui, Add, GroupBox, x5 y495 w740 h95 cWhite, Extra Settings
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
 	scaleParam := 277
@@ -304,8 +308,16 @@ if (defaultLanguage = "Scale125") {
 	scaleParam := 287
 }
 
-;Gui, Add, Text, x270 y400 cWhite, Scale:
-;Gui, Add, DropDownList, x310 y395 w145 vdefaultLanguage choose%defaultLang%, Scale125
+Gui, Add, Text, x20 y518 cWhite, Scale:
+Gui, Add, DropDownList, x100 y515 w80 vdefaultLanguage gdefaultLangSetting Choose%defaultLang% Background2A2A2A cWhite, Scale125|Scale100
+
+Gui, Add, Text, vhbDelay x20 y545 cWhite, Heartbeat Delay (min):
+Gui, Add, Edit, vheartBeatDelay w35 x160 y545 h20 -E0x200 Background2A2A2A cWhite Center, %heartBeatDelay%
+
+Gui, Add, Checkbox, % (sendAccountXml ? "Checked" : "") " vsendAccountXml x270 y515 cWhite", Send Account XML
+
+Gui, Add, Text, x270 y535 cWhite, Tesseract Path:
+Gui, Add, Edit, vtesseractPath w300 x270 y555 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License]
 Return
@@ -323,16 +335,12 @@ discordSettings:
 		GuiControl, Show, heartBeatWebhookURL
 		GuiControl, Show, hbName
 		GuiControl, Show, hbURL
-		GuiControl, Show, hbDelay
-		GuiControl, Show, heartBeatDelay
 	}
 	else {
 		GuiControl, Hide, heartBeatName
 		GuiControl, Hide, heartBeatWebhookURL
 		GuiControl, Hide, hbName
 		GuiControl, Hide, hbURL
-		GuiControl, Hide, hbDelay
-		GuiControl, Hide, heartBeatDelay
 	}
 return
 
@@ -452,6 +460,7 @@ Start:
 	
 	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
 	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
+	IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
 
 	; Download a new Main ID file prior to running the rest of the below
 	if(mainIdsURL != "") {

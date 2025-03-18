@@ -1263,23 +1263,21 @@ RemoveNonVipFriends() {
 	}
 }
 
-
-
-GetFriendCode(blowupPercent := 200) {
+GetFriendCodeWinOCR(blowupPercent := 200) {
 	global winTitle
 	ocrText := cropAndOcr(winTitle, 336, 106, 188, 20, True, True, blowupPercent)
 	friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
 	return friendCode
 }
 
-GetFriendName(blowupPercent := 200) {
+GetFriendNameWinOCR(blowupPercent := 200) {
 	global winTitle
 	ocrText := cropAndOcr(winTitle, 122, 483, 300, 33, True, True, blowupPercent)
 	friendName := Trim(ocrText, " `t`r`n")
 	return friendName
 }
 
-GetFriendCode() {
+GetFriendCodeTesseract() {
 	global scaleParam
 	if (scaleParam = 287) {
 		x := 170
@@ -1304,7 +1302,7 @@ GetFriendCode() {
 	return ""
 }
 
-GetFriendName() {
+GetFriendNameTesseract() {
 	global scaleParam
 	if (scaleParam = 287) {
 		x := 52
@@ -1329,12 +1327,18 @@ GetFriendName() {
 }
 
 ParseFriendCode(ByRef friendCode) {
+	global tesseractPath
 	failSafe := A_TickCount
 	failSafeTime := 0
 	parseFriendCodeResult := False
 	blowUp := [200, 200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
 	Loop {
-		friendCode := GetFriendCode(blowUp[A_Index])
+		if (StrLen(tesseractPath) < 3) {
+			friendCode := GetFriendCodeWinOCR(blowUp[A_Index])
+		}
+		else {
+			friendCode := GetFriendCodeTesseract()
+		}
 		if (RegExMatch(friendCode, "^\d{14,17}$")) {
 			parseFriendCodeResult := True
 			break
@@ -1354,7 +1358,12 @@ ParseFriendName(ByRef friendName) {
 	parseFriendNameResult := False
 	blowUp := [200, 200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
 	Loop {
-		friendName := GetFriendName(blowUp[A_Index])
+		if (StrLen(tesseractPath) < 3) {
+			friendName := GetFriendNameWinOCR(blowUp[A_Index])
+		}
+		else {
+			friendName := GetFriendNameTesseract()
+		}
 		if (RegExMatch(friendName, "^[a-zA-Z0-9]{5,20}$")) {
 			parseFriendNameResult := True
 			break
@@ -1535,7 +1544,6 @@ DownloadFile(url, filename) {
 	return !errored
 }
 
-; TODO: Reconcile this
 ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "DEFAULT") {
 	global winTitle
 	

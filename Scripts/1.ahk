@@ -1826,48 +1826,42 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 	}
 
 	if (discordWebhookURL != "") {
-		if (!sendAccountXml) {
+		if (!sendAccountXml)
 			xmlFile := ""
-		}
 		MaxRetries := 10
 		RetryCount := 0
 		Loop {
 			try {
-				; TODO: (DJH) Need to fix this
 				; Base command
 				curlCommand := "curl -k "
 					. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-				; If an image or xml file is provided, send it
-
-				if (screenshotFile != "" && xmlFile != "" && FileExist(screenshotFile) && FileExist(xmlFile)) {
-					curlCommand := curlCommand . "-F ""file1=@" . screenshotFile . """ "
-					curlCommand := curlCommand . "-F ""file2=@" . xmlFile . """ "
-				}
-				if(screenshotFile != "" && screenshotFile2 != "" && FileExist(screenshotFile) && FileExist(screenshotFile2))
-				{
-					; Send the image using curl
-					curlCommand := "curl -k "
-						. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-						. "-F ""file1=@" . screenshotFile . """ "
-						. "-F ""file2=@" . screenshotFile2 . """ "
-						. discordWebhookURL
-					RunWait, %curlCommand%,, Hide
-				} else if (screenshotFile != "") {
-					; Check if the file exists
-					if (FileExist(screenshotFile)) {
-						; Send the image using curl
-						curlCommand := "curl -k "
-							. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-							. "-F ""file=@" . screenshotFile . """ "
-							. discordWebhookURL
-						RunWait, %curlCommand%,, Hide
+				
+				; If an screenshot or xml file is provided, send it
+				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
+				sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
+				sendAccountXml := xmlFile != "" && FileExist(xmlFile)
+				if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
+					fileIndex := 0
+					if (sendScreenshot1) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
+					}
+					if (sendScreenshot2) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
+					}
+					if (sendAccountXml) {
+						fileIndex++
+						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
 					}
 				}
-				else if (screenshotFile != "" && FileExist(screenshotFile)) {
-					curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-				}
-				else if (xmlFile != "" && FileExist(xmlFile)) {
-					curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
+				else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
+					if (sendScreenshot1)
+						curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
+					if (sendScreenshot2)
+						curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
+					if (sendAccountXml)
+						curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
 				}
 				; Add the webhook
 				curlCommand := curlCommand . discordWebhookURL
