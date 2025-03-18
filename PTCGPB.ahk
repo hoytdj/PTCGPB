@@ -9,7 +9,7 @@ localVersion := "v1.4.2"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
-DEBUG := true
+DEBUG := true ; TODO: Remove this!
 
 if not A_IsAdmin
 {
@@ -102,11 +102,11 @@ Gui, Font, s10 cWhite, Segoe UI ; Modern font
 ; ==============================
 
 ; ========== Friend ID Section ==========
-Gui, Add, GroupBox, x5 y0 w240 h45 cWhite, Friend ID
+Gui, Add, GroupBox, x5 y0 w240 h40 cWhite, Friend ID
 if(FriendID = "ERROR" || FriendID = "")
-    Gui, Add, Edit, vFriendID w210 x20 y18 h20 -E0x200 Background2A2A2A cWhite
+    Gui, Add, Edit, vFriendID w180 x35 y15 h20 -E0x200 Background2A2A2A cWhite
 else 
-    Gui, Add, Edit, vFriendID w210 x20 y18 h20 -E0x200 Background2A2A2A cWhite, %FriendID%
+    Gui, Add, Edit, vFriendID w180 x35 y15 h20 -E0x200 Background2A2A2A cWhite, %FriendID%
 
 ; ========== Instance Settings Section ==========
 Gui, Add, GroupBox, x5 y40 w240 h125 cWhite, Instance Settings
@@ -294,6 +294,7 @@ Gui, Add, Edit, vmainIdsURL w460 x270 y425 h20 -E0x200 Background2A2A2A cWhite, 
 Gui, Add, Text, x270 y445 cWhite, vip_ids.txt (GP Test Mode) API:
 Gui, Add, Edit, vvipIdsURL w460 x270 y465 h20 -E0x200 Background2A2A2A cWhite, %vipIdsURL%
 
+;TODO: (DJH) Add extra settings here
 
 if (defaultLanguage = "Scale125") {
 	defaultLang := 1
@@ -448,15 +449,14 @@ Start:
 	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
 	IniWrite, %autoLaunchMonitor%, Settings.ini, UserSettings, autoLaunchMonitor
 	IniWrite, %instanceLaunchDelay%, Settings.ini, UserSettings, instanceLaunchDelay
-
+	
+	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
+	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 
 	; Download a new Main ID file prior to running the rest of the below
 	if(mainIdsURL != "") {
 		DownloadFile(mainIdsURL, "ids.txt")
 	}
-	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
-	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
-	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 
 	; Run main before instances to account for instance start delay
 	if (runMain) {
