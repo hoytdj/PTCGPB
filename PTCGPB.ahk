@@ -9,7 +9,7 @@ localVersion := "v1.4.2"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
-DEBUG := true ; TODO: Remove this!
+DEBUG := false ; TODO: Make this false!
 
 if not A_IsAdmin
 {
