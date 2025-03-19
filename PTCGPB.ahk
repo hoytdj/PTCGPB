@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v1.4.2"
+localVersion := "v1.4.4"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -302,16 +302,16 @@ Gui, Add, Edit, vvipIdsURL w460 x270 y465 h20 -E0x200 Background2A2A2A cWhite, %
 
 ; ========== Add-On Settings Section ==========
 Gui, Add, GroupBox, x5 y495 w740 h95 cWhite, Extra Settings
-if (defaultLanguage = "Scale125") {
+; if (defaultLanguage = "Scale125") {
 	defaultLang := 1
 	scaleParam := 277
-} else if (defaultLanguage = "Scale100") {
-	defaultLang := 2
-	scaleParam := 287
-}
+; } else if (defaultLanguage = "Scale100") {
+; 	defaultLang := 2
+; 	scaleParam := 287
+; }
 
 Gui, Add, Text, x20 y518 cWhite, Scale:
-Gui, Add, DropDownList, x100 y515 w80 vdefaultLanguage gdefaultLangSetting Choose%defaultLang% Background2A2A2A cWhite, Scale125|Scale100
+Gui, Add, DropDownList, x100 y515 w80 vdefaultLanguage gdefaultLangSetting Choose%defaultLang% Background2A2A2A cWhite, Scale125 ;|Scale100
 
 Gui, Add, Text, vhbDelay x20 y545 cWhite, Heartbeat Delay (min):
 Gui, Add, Edit, vheartBeatDelay w35 x160 y545 h20 -E0x200 Background2A2A2A cWhite Center, %heartBeatDelay%
