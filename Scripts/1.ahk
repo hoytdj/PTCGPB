@@ -1038,7 +1038,7 @@ restartGameInstance(reason, RL := true){
 			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGot stuck getting friend code."
 			LogToFile(logMessage, "GPlog.txt")
-			LogToDiscord(logMessage, screenShot, discordUserId)
+			LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		}
 		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
 
@@ -1526,7 +1526,7 @@ GodPackFound(validity) {
 		LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		ChooseTag()
 	} else {
-		LogToDiscord(logMessage, screenShot)
+		LogToDiscord(logMessage, screenShot, false, accountFullPath, fcScreenshot)
 	}
 }
 
@@ -1824,15 +1824,15 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 					fileIndex := 0
 					if (sendScreenshot1) {
 						fileIndex++
-						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
+						curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
 					}
 					if (sendScreenshot2) {
 						fileIndex++
-						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
+						curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
 					}
 					if (sendAccountXml) {
 						fileIndex++
-						curlCommand := urlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
+						curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
 					}
 				}
 				else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
