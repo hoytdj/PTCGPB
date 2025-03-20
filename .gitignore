@@ -1,5 +1,5 @@
+*.bak
 sample.png
-
 Accounts/*
 !Accounts/Saved/1.txt
 !Accounts/*.ahk
