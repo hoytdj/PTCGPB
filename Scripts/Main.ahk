@@ -183,16 +183,7 @@ Loop {
 				if(FindOrLoseImage(99Leftx, 110, 99Rightx, 127, , 99Path, 0, failSafeTime)) {
 					done := true
 					break
-				}else if(FindOrLoseImage(123, 110, 162, 127, , "991", 0, failSafeTime)) {
-					done := true
-					break
-				}else if(FindOrLoseImage(123, 110, 162, 127, , "992", 0, failSafeTime)) {
-					done := true
-					break
-				}else if(FindOrLoseImage(123, 110, 162, 127, , "993", 0, failSafeTime)) {
-					done := true
-					break
-				}else if(FindOrLoseImage(80, 170, 120, 195, , "player", 0, failSafeTime)) {
+				} else if(FindOrLoseImage(80, 170, 120, 195, , "player", 0, failSafeTime)) {
 					Sleep, %Delay%
 					adbClick(210, 210)
 					Sleep, 1000
@@ -248,36 +239,9 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y1 := 220
 			X2 := 230
 			Y2 := 260
-		} 
-		else if (imageName = "99") { ; 100% full of friend list
-			X1 := 60 ; Francais
+		}else if (imageName = 99Path) { ; 100% full of friend list
 			Y1 := 103
-			X2 := 168 ; English
 			Y2 := 118
-		} 
-		else if (imageName = "991") { ; 100% full of friend list
-			X1 := 60 ; Francais
-			Y1 := 103
-			X2 := 168 ; English
-			Y2 := 118
-		} 
-		else if (imageName = "992") { ; 100% full of friend list
-			X1 := 60 ; Francais
-			Y1 := 103
-			X2 := 168 ; English
-			Y2 := 118
-		} 
-		else if (imageName = "993") { ; 100% full of friend list
-			X1 := 60 ; Francais
-			Y1 := 103
-			X2 := 168 ; English
-			Y2 := 118
-		} 
-		else if (imageName = "player") { ; 100% bot got deleted
-			X1 := 85
-			Y1 := 168
-			X2 := 120
-			Y2 := 181
 		} 
 	}
 	;bboxAndPause(X1, Y1, X2, Y2)

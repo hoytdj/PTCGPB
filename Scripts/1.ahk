@@ -699,6 +699,11 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y1 := 220
 			X2 := 230
 			Y2 := 260
+		} else if (imageName = "Erika") { ; 100% fix for Erika avatar
+			X1 := 149
+			Y1 := 153
+			X2 := 159
+			Y2 := 162
 		}
 	}
 	;bboxAndPause(X1, Y1, X2, Y2)
@@ -815,6 +820,28 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			Y1 := 130
 			X2 := 174
 			Y2 := 155
+		} else if (imageName = "ChosenTag") { ; ChangeTag GP found
+			X1 := 218
+			Y1 := 307
+			X2 := 231
+			Y2 := 312
+		} else if (imageName = "Badge") { ; ChangeTag GP found
+			X1 := 48
+			Y1 := 204
+			X2 := 72
+			Y2 := 230
+		} else if (imageName = "ChooseErika") { ; ChangeTag GP found
+			X1 := 150
+			Y1 := 286
+			X2 := 155
+			Y2 := 291
+		} else if (imageName = "ChooseEevee") { ; Change Eevee Avatar
+			X1 := 157
+			Y1 := 195
+			X2 := 162
+			Y2 := 200
+			clickx := 147
+			clicky := 207
 		}
 	}
 
@@ -852,6 +879,8 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			ElapsedTime := (A_TickCount - StartSkipTime) // 1000
 			if(imageName = "Country")
 				FSTime := 90
+			else if(imageName = "Proceed") ; Decrease time for Marowak
+				FSTime := 8
 			else
 				FSTime := 45
 			if(!skip) {
@@ -1372,9 +1401,7 @@ FindBorders(prefix) {
 		,[195, 277, 250, 281]
 		,[70, 394, 125, 398]
 		,[156, 394, 211, 398]]
-		pos2 += 5
 	}
-
 	pBitmap := from_window(WinExist(winTitle))
 	; imagePath := "C:\Users\Arturo\Desktop\PTCGP\GPs\" . Clipboard . ".png"
 	; pBitmap := Gdip_CreateBitmapFromFile(imagePath)
@@ -1410,7 +1437,6 @@ FindGodPack() {
 		borderCoords := [[21, 278, 91, 280]
 			,[105, 278, 175, 280]]
 	}
-		
 
 	;	SquallTCGP 2025.03.12 - 	Just checking the packs count and setting them to 0 if it's number of packs is 3. 
 	;															This applies to any Delete Method except 5 Pack (Fast). This change is made based 
@@ -1780,12 +1806,12 @@ Screenshot(filename := "Valid") {
 	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
 	pBitmapW := from_window(WinExist(winTitle))
 	pBitmap := Gdip_CloneBitmapArea(pBitmapW, 18, 175, 240, 227)
-	Gdip_DisposeImage(pBitmapW)
-
 	;scale 100%
 	if (scaleParam = 287) {
-	pBitmap := Gdip_CloneBitmapArea(from_window(WinExist(winTitle)), 17, 168, 245, 230)
+	pBitmap := Gdip_CloneBitmapArea(pBitmapW, 17, 168, 245, 230)
 	}
+	Gdip_DisposeImage(pBitmapW)
+
 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
 
 	Gdip_DisposeImage(pBitmap)
