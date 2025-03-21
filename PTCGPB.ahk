@@ -651,7 +651,7 @@ Start:
 
 
 
-				discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . localVersion
+				discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
 				discMessage .= typeMsg
 				discMessage .= selectMsg
 				if(heartBeatName)
