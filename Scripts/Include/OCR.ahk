@@ -42,7 +42,7 @@ CLSIDFromString(IID, ByRef CLSID) {
 	Return &CLSID
 }
 
-ocr(file, lang := "FirstFromAvailableLanguages")
+ocr(fileOrStream, lang := "FirstFromAvailableLanguages")
 {
 	static OcrEngineStatics, OcrEngine, MaxDimension, LanguageFactory, Language, CurrentLanguage, BitmapDecoderStatics, GlobalizationPreferencesStatics
 	if (OcrEngineStatics = "")
@@ -52,7 +52,7 @@ ocr(file, lang := "FirstFromAvailableLanguages")
 		CreateClass("Windows.Media.Ocr.OcrEngine", IOcrEngineStatics := "{5BFFA85A-3384-3540-9940-699120D428A8}", OcrEngineStatics)
 		DllCall(NumGet(NumGet(OcrEngineStatics+0)+6*A_PtrSize), "ptr", OcrEngineStatics, "uint*", MaxDimension)   ; MaxImageDimension
 	}
-	if (file = "ShowAvailableLanguages")
+	if (fileOrStream = "ShowAvailableLanguages")
 	{
 		if (GlobalizationPreferencesStatics = "")
 			CreateClass("Windows.System.UserProfile.GlobalizationPreferences", IGlobalizationPreferencesStatics := "{01BF4326-ED37-4E96-B0E9-C1340D1EA158}", GlobalizationPreferencesStatics)
@@ -99,7 +99,22 @@ ocr(file, lang := "FirstFromAvailableLanguages")
 		}
 		CurrentLanguage := lang
 	}
-	IRandomAccessStream := file
+	if (SubStr(fileOrStream, 2, 1) = ":") ; FilePath
+	{
+		if !FileExist(fileOrStream) or InStr(FileExist(fileOrStream), "D")
+		{
+			; msgbox File "%fileOrStream%" does not exist
+			; ExitApp
+			return False
+		}
+		VarSetCapacity(GUID, 16)
+		DllCall("ole32\CLSIDFromString", "wstr", IID_RandomAccessStream := "{905A0FE1-BC53-11DF-8C49-001E4FC686DA}", "ptr", &GUID)
+		DllCall("ShCore\CreateRandomAccessStreamOnFile", "wstr", fileOrStream, "uint", Read := 0, "ptr", &GUID, "ptr*", IRandomAccessStream)
+	}
+	else ; IRandomAccessStream
+	{
+		IRandomAccessStream := fileOrStream
+	}
 	DllCall(NumGet(NumGet(BitmapDecoderStatics+0)+14*A_PtrSize), "ptr", BitmapDecoderStatics, "ptr", IRandomAccessStream, "ptr*", BitmapDecoder)   ; CreateAsync
 	WaitForAsync(BitmapDecoder)
 	BitmapFrame := ComObjQuery(BitmapDecoder, IBitmapFrame := "{72A49A1C-8081-438D-91BC-94ECFC8185C6}")
