@@ -132,19 +132,19 @@ Gui, Add, Text, x20 y325 c4169E1, Monitor:
 SysGet, MonitorCount, MonitorCount
 MonitorOptions := ""
 Loop, %MonitorCount% {
-    SysGet, MonitorName, MonitorName, %A_Index%
-    SysGet, Monitor, Monitor, %A_Index%
-    MonitorOptions .= (A_Index > 1 ? "|" : "") "" A_Index ": (" MonitorRight - MonitorLeft "x" MonitorBottom - MonitorTop ")"
+	SysGet, MonitorName, MonitorName, %A_Index%
+	SysGet, Monitor, Monitor, %A_Index%
+	MonitorOptions .= (A_Index > 1 ? "|" : "") "" A_Index ": (" MonitorRight - MonitorLeft "x" MonitorBottom - MonitorTop ")"
 }
 SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
 Gui, Add, DropDownList, x20 y345 w125 vSelectedMonitorIndex Choose%SelectedMonitorIndex% Background2A2A2A cWhite, %MonitorOptions%
 Gui, Add, Text, x155 y325 c4169E1, Scale:
 if (defaultLanguage = "Scale125") {
-    defaultLang := 1
-    scaleParam := 277
+	defaultLang := 1
+	scaleParam := 277
 } else if (defaultLanguage = "Scale100") {
-    defaultLang := 2  
-    scaleParam := 287
+	defaultLang := 2  
+	scaleParam := 287
 }
 Gui, Add, DropDownList, x155 y345 w75 vdefaultLanguage choose%defaultLang% Background2A2A2A cWhite, Scale125 ;|Scale100
 Gui, Add, Text, x20 y375 c4169E1, Folder Path:
@@ -158,15 +158,15 @@ ocrLanguageList := "en|zh|es|de|fr|ja|ru|pt|ko|it|tr|pl|nl|sv|ar|uk|id|vi|th|he|
 if (ocrLanguage != "")
 {
 	index := 0
-    Loop, Parse, ocrLanguageList, |
-    {
-        index++
-        if (A_LoopField = ocrLanguage)
-        {
-            defaultOcrLang := index
-            break
-        }
-    }
+	Loop, Parse, ocrLanguageList, |
+	{
+		index++
+		if (A_LoopField = ocrLanguage)
+		{
+			defaultOcrLang := index
+			break
+		}
+	}
 }
 
 Gui, Add, DropDownList, vocrLanguage choose%defaultOcrLang% x60 y420 w50 Background2A2A2A cWhite, %ocrLanguageList%
@@ -179,15 +179,15 @@ clientLanguageList := "en|es|fr|de|it|pt|jp|ko|cn"
 if (clientLanguage != "")
 {
 	index := 0
-    Loop, Parse, clientLanguageList, |
-    {
-        index++
-        if (A_LoopField = clientLanguage)
-        {
-            defaultClientLang := index
-            break
-        }
-    }
+	Loop, Parse, clientLanguageList, |
+	{
+		index++
+		if (A_LoopField = clientLanguage)
+		{
+			defaultClientLang := index
+			break
+		}
+	}
 }
 
 Gui, Add, DropDownList, vclientLanguage choose%defaultClientLang% x170 y420 w50 Background2A2A2A cWhite, %clientLanguageList%
@@ -207,13 +207,13 @@ Gui, Add, Text, x270 y25 c39FF14, Min. 2 Stars:
 Gui, Add, Edit, vminStars w50 x350 y23 h20 -E0x200 Background2A2A2A cWhite Center, %minStars%
 Gui, Add, Text, x270 y53 c39FF14, Method:
 if (deleteMethod = "5 Pack")
-    defaultDelete := 1
+	defaultDelete := 1
 else if (deleteMethod = "3 Pack")
-    defaultDelete := 2
+	defaultDelete := 2
 else if (deleteMethod = "Inject")
-    defaultDelete := 3
+	defaultDelete := 3
 else if (deleteMethod = "5 Pack (Fast)")
-    defaultDelete := 4
+	defaultDelete := 4
 ;	SquallTCGP 2025.03.12 - 	Adding the delete method 5 Pack (Fast) to the delete method dropdown list.
 Gui, Add, DropDownList, vdeleteMethod gdeleteSettings choose%defaultDelete% x325 y48 w100 Background2A2A2A cWhite, 5 Pack|3 Pack|Inject|5 Pack (Fast)
 Gui, Add, Checkbox, % (packMethod ? "Checked" : "") " vpackMethod x280 y80 c39FF14", 1 Pack Method
@@ -246,9 +246,9 @@ Gui, Add, Checkbox, % (ImmersiveCheck ? "Checked" : "") " vImmersiveCheck x280 y
 ; ========== Discord Settings Section ==========
 Gui, Add, GroupBox, x505 y0 w240 h130 cFF69B4, Discord Settings ; Hot pink
 if(StrLen(discordUserID) < 3)
-    discordUserID =
+	discordUserID =
 if(StrLen(discordWebhookURL) < 3)
-    discordWebhookURL =
+	discordWebhookURL =
 Gui, Add, Text, x520 y20 cFF69B4, Discord ID:
 Gui, Add, Edit, vdiscordUserId w210 x520 y40 h20 -E0x200 Background2A2A2A cWhite, %discordUserId%
 Gui, Add, Text, x520 y60 cFF69B4, Webhook URL:
@@ -260,20 +260,20 @@ Gui, Add, GroupBox, x505 y130 w240 h160 c00FFFF, Heartbeat Settings ; Cyan
 Gui, Add, Checkbox, % (heartBeat ? "Checked" : "") " vheartBeat x520 y155 gdiscordSettings c00FFFF", Discord Heartbeat
 
 if(StrLen(heartBeatName) < 3)
-    heartBeatName =
+	heartBeatName =
 if(StrLen(heartBeatWebhookURL) < 3)
-    heartBeatWebhookURL =
+	heartBeatWebhookURL =
 
 if (heartBeat) {
-    Gui, Add, Text, vhbName x520 y175 c00FFFF, Name:
-    Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 -E0x200 Background2A2A2A cWhite, %heartBeatName%
-    Gui, Add, Text, vhbURL x520 y215 c00FFFF, Webhook URL:
-    Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbName x520 y175 c00FFFF, Name:
+	Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 -E0x200 Background2A2A2A cWhite, %heartBeatName%
+	Gui, Add, Text, vhbURL x520 y215 c00FFFF, Webhook URL:
+	Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
 } else {
-    Gui, Add, Text, vhbName x520 y175 Hidden c00FFFF, Name:
-    Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatName%
-    Gui, Add, Text, vhbURL x520 y215 Hidden c00FFFF, Webhook URL:
-    Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbName x520 y175 Hidden c00FFFF, Name:
+	Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatName%
+	Gui, Add, Text, vhbURL x520 y215 Hidden c00FFFF, Webhook URL:
+	Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
 }
 
 ; ========== Action Buttons ==========
@@ -289,9 +289,9 @@ Gui, Add, Button, gLaunchAllMumu x505 y335 w115 h30, Launch All Mumu
 Gui, Add, GroupBox, x255 y405 w490 h110 cWhite, Download Settings ;
 
 if(StrLen(mainIdsURL) < 3)
-    mainIdsURL =
+	mainIdsURL =
 if(StrLen(vipIdsURL) < 3)
-    vipIdsURL =
+	vipIdsURL =
 
 Gui, Add, Text, x270 y425 cWhite, ids.txt API:
 Gui, Add, Edit, vmainIdsURL w460 x270 y445 h20 -E0x200 Background2A2A2A cWhite, %mainIdsURL%
@@ -458,16 +458,16 @@ Start:
 	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 	
 	; Using FriendID field to provide a URL to download ids.txt is deprecated.
-    if (inStr(FriendID, "http")) {
-    	MsgBox, To provide a URL for friend IDs, please use the ids.txt API field and leave the Friend ID field empty.
+	if (inStr(FriendID, "http")) {
+		MsgBox, To provide a URL for friend IDs, please use the ids.txt API field and leave the Friend ID field empty.
 
-    	if (mainIdsURL = "") {
+		if (mainIdsURL = "") {
 			IniWrite, "", Settings.ini, UserSettings, FriendID
 			IniWrite, %FriendID%, Settings.ini, UserSettings, mainIdsURL
 		}
 
-    	Reload
-    }
+		Reload
+	}
 
 	; Download a new Main ID file prior to running the rest of the below
 	if (mainIdsURL != "") {
@@ -982,7 +982,7 @@ MoveFilesRecursively(srcFolder, destFolder) {
 				|| (relativePath = "discord.txt" && FileExist(destPath))
 				|| (relativePath = "vip_ids.txt" && FileExist(destPath))) {
 				continue
-            }
+			}
 			; If it's a file, move it to the destination folder
 			; Ensure the directory exists before moving the file
 			FileCreateDir, % SubStr(destPath, 1, InStr(destPath, "\", 0, 0) - 1)
