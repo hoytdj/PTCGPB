@@ -20,7 +20,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
-global triggerTestNeeded, testStartTime, firstRun
+global triggerTestNeeded, testStartTime, firstRun, minStars
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -51,6 +51,7 @@ if(heartBeat)
 IniRead, vipIdsURL, %A_ScriptDir%\..\Settings.ini, UserSettings, vipIdsURL
 IniRead, ocrLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, ocrLanguage, en
 IniRead, clientLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, clientLanguage, en
+IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
 
 adbPort := findAdbPorts(folderPath)
 
@@ -162,6 +163,8 @@ Loop {
 		if (triggerTestNeeded)
 			HoytdjTestScript()
 		Sleep, 1000
+		if (heartBeat && (Mod(A_Index, 60) = 0))
+			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
 
@@ -481,7 +484,6 @@ CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80) {
 		return
 	try {
 		; Check if GUI with this name already exists
-		;GuiName := GuiName ; hoytdj Removed
 		if !hwnds.HasKey(GuiName) {
 			WinGetPos, xpos, ypos, Width, Height, %winTitle%
 			X := X + xpos + 5

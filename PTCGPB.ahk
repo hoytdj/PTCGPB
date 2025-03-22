@@ -981,14 +981,11 @@ MoveFilesRecursively(srcFolder, destFolder) {
 		}
 		else
 		{
-			if ((relativePath = "ids.txt" && FileExist(destPath)) || (relativePath = "usernames.txt" && FileExist(destPath)) || (relativePath = "discord.txt" && FileExist(destPath))) {
-                continue
-            }
-			if (relativePath = "usernames.txt" && FileExist(destPath)) {
-                continue
-            }
-			if (relativePath = "usernames.txt" && FileExist(destPath)) {
-                continue
+			if ((relativePath = "ids.txt" && FileExist(destPath))
+				|| (relativePath = "usernames.txt" && FileExist(destPath))
+				|| (relativePath = "discord.txt" && FileExist(destPath))
+				|| (relativePath = "vip_ids.txt" && FileExist(destPath))) {
+				continue
             }
 			; If it's a file, move it to the destination folder
 			; Ensure the directory exists before moving the file
