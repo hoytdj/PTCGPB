@@ -87,6 +87,7 @@ IniRead, autoLaunchMonitor, Settings.ini, UserSettings, autoLaunchMonitor, 1
 IniRead, mainIdsURL, Settings.ini, UserSettings, mainIdsURL, ""
 IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 IniRead, instanceLaunchDelay, Settings.ini, UserSettings, instanceLaunchDelay, 5
+IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 
 ; Create a stylish GUI with custom colors and modern look
 Gui, Color, 1E1E1E, 333333 ; Dark theme background
@@ -252,6 +253,7 @@ Gui, Add, Text, x520 y20 cFF69B4, Discord ID:
 Gui, Add, Edit, vdiscordUserId w210 x520 y40 h20 -E0x200 Background2A2A2A cWhite, %discordUserId%
 Gui, Add, Text, x520 y60 cFF69B4, Webhook URL:
 Gui, Add, Edit, vdiscordWebhookURL w210 x520 y80 h20 -E0x200 Background2A2A2A cWhite, %discordWebhookURL%
+Gui, Add, Checkbox, % (sendAccountXml ? "Checked" : "") " vsendAccountXml x520 y105 cFF69B4", Send Account XML
 
 ; ========== Heartbeat Settings Section ==========
 Gui, Add, GroupBox, x505 y130 w240 h160 c00FFFF, Heartbeat Settings ; Cyan
@@ -452,8 +454,9 @@ Start:
 	IniWrite, %vipIdsURL%, Settings.ini, UserSettings, vipIdsURL
 	IniWrite, %autoLaunchMonitor%, Settings.ini, UserSettings, autoLaunchMonitor
 	IniWrite, %instanceLaunchDelay%, Settings.ini, UserSettings, instanceLaunchDelay
-
-
+	
+	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
+	
 	; Using FriendID field to provide a URL to download ids.txt is deprecated.
     if (inStr(FriendID, "http")) {
     	MsgBox, To provide a URL for friend IDs, please use the ids.txt API field and leave the Friend ID field empty.
