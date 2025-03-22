@@ -87,6 +87,7 @@ IniRead, autoLaunchMonitor, Settings.ini, UserSettings, autoLaunchMonitor, 1
 IniRead, mainIdsURL, Settings.ini, UserSettings, mainIdsURL, ""
 IniRead, vipIdsURL, Settings.ini, UserSettings, vipIdsURL, ""
 IniRead, instanceLaunchDelay, Settings.ini, UserSettings, instanceLaunchDelay, 5
+IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 
 ; Create a stylish GUI with custom colors and modern look
@@ -269,11 +270,15 @@ if (heartBeat) {
 	Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 -E0x200 Background2A2A2A cWhite, %heartBeatName%
 	Gui, Add, Text, vhbURL x520 y215 c00FFFF, Webhook URL:
 	Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbDelay x520 y260 cWhite, Heartbeat Delay (min):
+	Gui, Add, Edit, vheartBeatDelay w50 x660 y260 h20 -E0x200 Background2A2A2A cWhite Center, %heartBeatDelay%
 } else {
 	Gui, Add, Text, vhbName x520 y175 Hidden c00FFFF, Name:
 	Gui, Add, Edit, vheartBeatName w210 x520 y195 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatName%
 	Gui, Add, Text, vhbURL x520 y215 Hidden c00FFFF, Webhook URL:
 	Gui, Add, Edit, vheartBeatWebhookURL w210 x520 y235 h20 Hidden -E0x200 Background2A2A2A cWhite, %heartBeatWebhookURL%
+	Gui, Add, Text, vhbDelay x520 y260 Hidden c00FFFF, Heartbeat Delay (min):
+	Gui, Add, Edit, vheartBeatDelay w50 x660 y260 h20 Hidden -E0x200 Background2A2A2A cWhite Center, %heartBeatDelay%
 }
 
 ; ========== Action Buttons ==========
@@ -323,14 +328,18 @@ discordSettings:
 	if (heartBeat) {
 		GuiControl, Show, heartBeatName
 		GuiControl, Show, heartBeatWebhookURL
+		GuiControl, Show, heartBeatDelay
 		GuiControl, Show, hbName
 		GuiControl, Show, hbURL
+		GuiControl, Show, hbDelay
 	}
 	else {
 		GuiControl, Hide, heartBeatName
 		GuiControl, Hide, heartBeatWebhookURL
+		GuiControl, Hide, heartBeatDelay
 		GuiControl, Hide, hbName
 		GuiControl, Hide, hbURL
+		GuiControl, Hide, hbDelay
 	}
 return
 
@@ -455,6 +464,7 @@ Start:
 	IniWrite, %autoLaunchMonitor%, Settings.ini, UserSettings, autoLaunchMonitor
 	IniWrite, %instanceLaunchDelay%, Settings.ini, UserSettings, instanceLaunchDelay
 	
+	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
 	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 	
 	; Using FriendID field to provide a URL to download ids.txt is deprecated.
@@ -589,7 +599,7 @@ Start:
 		CreateStatusMessage(packStatus, ((Mains * scaleParam) + 5), 490)
 
 		if(heartBeat)
-			if((A_Index = 1 || (Mod(A_Index, 60) = 0))) {
+			if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
 				onlineAHK := "Online: "
 				offlineAHK := "Offline: "
 				Online := []
