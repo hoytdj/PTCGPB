@@ -64,3 +64,32 @@ Gdip_CropImage(pBitmap, x, y, w, h) {
 	Gdip_DeleteGraphics(G2)
 	return pBitmap2
 }
+
+; Adjust contrast level (-100 to 100)
+Gdip_CropResizeGreyscaleContrast(pBitmap, x, y, w, h, resizePercent := 100, contrast := 0) {
+	; Calculate new width and height
+	newW := w*resizePercent/100, newH := h*resizePercent/100
+
+	; Create new bitmap
+	pBitmap2 := Gdip_CreateBitmap(newW, newH), pGraphics2 := Gdip_GraphicsFromImage(pBitmap2)
+	Gdip_SetSmoothingMode(pGraphics2, 4), Gdip_SetInterpolationMode(pGraphics2, 7)
+
+	; Increase contrast and convert to grayscale using a color matrix
+	factor := (100.0 + contrast) / 100.0
+	factor := factor * factor
+
+	; Grayscale conversion with contrast applied
+	redFactor := 0.299 * factor
+	greenFactor := 0.587 * factor
+	blueFactor := 0.114 * factor
+	xFactor := 0.5 * (1 - factor)
+	colorMatrix := redFactor . "|" . redFactor . "|" . redFactor . "|0|0|" . greenFactor . "|" . greenFactor . "|" . greenFactor . "|0|0|" . blueFactor . "|" . blueFactor . "|" . blueFactor . "|0|0|0|0|0|1|0|" . xFactor . "|" . xFactor . "|" . xFactor . "|0|1"
+
+	; Draw onto pBitmap2
+	Gdip_DrawImage(pGraphics2, pBitmap, 0, 0, newW, newH, x, y, w, h, colorMatrix)
+
+	; Clean up
+	Gdip_DeleteGraphics(pGraphics2)
+
+	return pBitmap2
+}
