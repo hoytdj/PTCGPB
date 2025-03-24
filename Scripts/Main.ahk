@@ -1307,12 +1307,23 @@ GetFriendAccountsFromFile(filePath, ByRef includesIdsAndNames) {
 	return friendList
 }
 
-MatchFriendAccounts(friend1, friend2) {
-	if (friend1.Code != "" && friend2.Code != "" && SimilarityScore(friend1.Code, friend2.Code) > 0.6) {
-		return true
+MatchFriendAccounts(friend1, friend2, ByRef similarityScore := 1) {
+	if (friend1.Code != "" && friend2.Code != "") {
+		similarityScore := SimilarityScore(friend1.Code, friend2.Code)
+		if (similarityScore > 0.6)
+			return true
 	}
-	if (friend1.Name != "" && friend2.Name != "" && SimilarityScore(friend1.Name, friend2.Name) > 0.8) {
-		return true
+	if (friend1.Name != "" && friend2.Name != "") {
+		similarityScore := SimilarityScore(friend1.Name, friend2.Name)
+		if (similarityScore > 0.8) {
+			if (friend1.Code != "" && friend2.Code != "") {
+				similarityScore := (SimilarityScore(friend1.Code, friend2.Code) + SimilarityScore(friend1.Name, friend2.Name)) / 2
+				if (similarityScore > 0.7)
+					return true
+			}
+			else
+				return true
+		}
 	}
 	return false
 }
