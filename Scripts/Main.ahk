@@ -28,6 +28,8 @@ winTitle := scriptName
 pauseToggle := false
 showStatus := true
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
+DEBUG := false ; TODO: Make this false!
+
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, Instances, %A_ScriptDir%\..\Settings.ini, UserSettings, Instances
 IniRead, Delay, %A_ScriptDir%\..\Settings.ini, UserSettings, Delay, 250
@@ -130,7 +132,8 @@ pToken := Gdip_Startup()
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
-firstRun := true ; DEBUG
+if (!DEBUG)
+	firstRun := True
 
 global 99Configs := {}
 99Configs["en"] := {leftx: 123, rightx: 162}
@@ -440,10 +443,13 @@ resetWindows(){
 	return true
 }
 
-restartGameInstance(reason, RL := true){
-	global Delay, scriptName, adbShell, adbPath, adbPort
+restartGameInstance(reason, RL := true) {
+	global DEBUG, Delay, scriptName, adbShell, adbPath, adbPort
+
+	if (DEBUG)
+		return
+
 	initializeAdbShell()
-	; hoytdj DEBUG
 	CreateStatusMessage("Restarting game reason: " reason)
 
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
@@ -697,7 +703,7 @@ return
 
 ToggleTestScript()
 {
-	global GPTest, triggerTestNeeded, testStartTime, firstRun
+	global DEBUG, GPTest, triggerTestNeeded, testStartTime, firstRun
 	if(!GPTest) {
 		GPTest := true
 		triggerTestNeeded := true
@@ -712,7 +718,8 @@ ToggleTestScript()
 		totalTestTime := (A_TickCount - testStartTime) // 1000
 		if (testStartTime != "" && (totalTestTime >= 180))
 		{
-			firstRun := True ; DEBUG
+			if (!DEBUG)
+				firstRun := True
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
@@ -1065,49 +1072,19 @@ IsLeapYear(year) {
 ; Screenshot()
 ; return
 
-; friendCount := cropAndOcr("Main", 234, 172, 90, 40, True, True, 200)
-; friendCode := cropAndOcr("Main", 336, 106, 188, 20, True, True, blowUp)
-cropAndOcr(winTitle := "Main", x := 0, y := 0, width := 200, height := 200, moveWindow := True, revertWindow := True, blowupPercent := 200)
-{
-	global ocrLanguage 
-	
-    if(moveWindow) {
-		WinGetPos, srcX, srcY, srcW, srcH, %winTitle%
-        WinMove, %winTitle%, , srcX, srcY, 550, 1015
-        Delay(1)
-    }
-    hwnd := WinExist(winTitle)
-    pBitmap := from_window(hwnd) ; Gdip_BitmapFromScreen( "hwnd: " . hwnd)
-    ;;;;Gdip_SaveBitmapToFile(pBitmap, "src.jpg")
-
-    pBitmap2 := Gdip_CropImage(pBitmap, x, y, width, height)
-    pBitmap3 := Gdip_ResizeBitmap(pBitmap2, blowupPercent, true)
-    hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap3)
-    ;;hBitmap2 := ToGrayscale(hBitmap)
-
-    ;;;; ret := SavePicture(hBitmap, "biggrey1.png")
-    pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
-    text := ocr(pIRandomAccessStream, ocrLanguage)
-    ;;;; MsgBox %text%
-
-    DeleteObject(hBitmap)
-    ;;DeleteObject(hBitmap2)
-    Gdip_DisposeImage(pBitmap)
-    Gdip_DisposeImage(pBitmap2)
-    Gdip_DisposeImage(pBitmap3)
-
-    if(revertWindow && moveWindow) {
-        WinMove, %winTitle%, , srcX, srcY, srcW, srcH
-        Delay(1)
-    }
-
-    return text
+CropAndFormatForOcr(inputFile, x := 0, y := 0, width := 200, height := 200, scaleUpPercent := 200) {
+	; Get bitmap from file
+	pBitmapOrignal := Gdip_CreateBitmapFromFile(inputFile)
+	; Crop to region, Scale up the image, Convert to greyscale, Increase contrast
+	pBitmapFormatted := Gdip_CropResizeGreyscaleContrast(pBitmapOrignal, x, y, width, height, scaleUpPercent, 25)
+	; Cleanup references
+	Gdip_DisposeImage(pBitmapOrignal)
+	return pBitmapFormatted
 }
 
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ; ~~~ hoytdj Everying Below ~~~
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; TODO: Better isolate name spaces
 
 HoytdjTestScript() {
 	global triggerTestNeeded
@@ -1138,7 +1115,7 @@ RemoveNonVipFriends() {
 	}
 
 	includesIdsAndNames := false
-	vipFriendsArray :=  ParseFriendAccounts(A_ScriptDir . "\..\vip_ids.txt", includesIdsAndNames)
+	vipFriendsArray :=  GetFriendAccountsFromFile(A_ScriptDir . "\..\vip_ids.txt", includesIdsAndNames)
 	if (!vipFriendsArray.MaxIndex()) {
 		CreateStatusMessage("No accounts found in vip_ids.txt. Aborting test...")
 		return
@@ -1153,12 +1130,7 @@ RemoveNonVipFriends() {
 			Delay(1)
 
 			; Get the friend account
-			friendCode := ""
-			friendName := ""
-			parseFriendCodeResult := ParseFriendCode(friendCode)
-			if (includesIdsAndNames)
-				parseFriendNameResult := ParseFriendName(friendName)
-			parseFriendResult := parseFriendCodeResult || (includesIdsAndNames && parseFriendNameResult)
+			parseFriendResult := ParseFriendInfo(friendCode, friendName, parseFriendCodeResult, parseFriendNameResult, includesIdsAndNames)
 			friendAccount := new FriendAccount(friendCode, friendName)
 
 			; Check if this is a repeat
@@ -1224,118 +1196,53 @@ RemoveNonVipFriends() {
 	}
 }
 
-GetFriendCodeWinOCR(blowupPercent := 200) {
-	global winTitle
-	ocrText := cropAndOcr(winTitle, 336, 106, 188, 20, True, True, blowupPercent)
-	friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
-	return friendCode
-}
-
-GetFriendNameWinOCR(blowupPercent := 200) {
-	global winTitle
-	ocrText := cropAndOcr(winTitle, 122, 483, 300, 33, True, True, blowupPercent)
-	friendName := Trim(ocrText, " `t`r`n")
-	return friendName
-}
-
-GetFriendCodeTesseract() {
-	global scaleParam
-	if (scaleParam = 287) {
-		x := 170
-		y := 63
-		w := 103
-		h := 20
-	}
-	else {
-		x := 169
-		y := 72
-		w := 100
-		h := 20
-	}
-	; Parse friendCode status from screen
-	; Expected output something like "1234-5678-1234-5678"
-	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendCode")) {
-		ocrText := GetTextFromImage(capturedScreenshot)
-		friendCode := RegExReplace(Trim(ocrText, " `t`r`n"), "\D")
-		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendCode
-		return friendCode
-	}
-	return ""
-}
-
-GetFriendNameTesseract() {
-	global scaleParam
-	if (scaleParam = 287) {
-		x := 52
-		y := 255
-		w := 174
-		h := 28
-	}
-	else {
-		x := 51
-		y := 262
-		w := 174
-		h := 28
-	}
-
-	if (ScreenshotRegion(x, y, w, h, capturedScreenshot, "friendName")) {
-		ocrText := GetTextFromImage(capturedScreenshot)
-		friendName := Trim(ocrText, " `t`r`n")
-		;MsgBox % "OCR Text:`n" . ocrText . "`nClean Text:`n" . friendName
-		return friendName
-	}
-	return ""
-}
-
-ParseFriendCode(ByRef friendCode) {
-	global tesseractPath
+ParseFriendInfo(ByRef friendCode, ByRef friendName, ByRef parseFriendCodeResult, ByRef parseFriendNameResult, includesIdsAndNames := False) {
+	; Initialize variables
 	failSafe := A_TickCount
 	failSafeTime := 0
+	friendCode := ""
+	friendName := ""
 	parseFriendCodeResult := False
-	blowUp := [200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
+	parseFriendNameResult := False
+
 	Loop {
-		if (StrLen(tesseractPath) < 3) {
-			friendCode := GetFriendCodeWinOCR(blowUp[A_Index])
-		}
-		else {
-			friendCode := GetFriendCodeTesseract()
-		}
-		if (RegExMatch(friendCode, "^\d{14,17}$")) {
-			parseFriendCodeResult := True
+		; Grab screenshot via Adb
+		fullScreenshotFile := GetTempDirectory() . "\" .  winTitle . "_FriendProfile.png"
+		adbTakeScreenshot(fullScreenshotFile)
+
+		; Parse friend identifiers
+		if (!parseFriendCodeResult)
+			parseFriendCodeResult := ParseFriendInfoLoop(fullScreenshotFile, 328, 57, 197, 28, "FriendCode", "0123456789", "^\d{14,17}$", friendCode)
+		if (includesIdsAndNames && !parseFriendNameResult)
+			parseFriendNameResult := ParseFriendInfoLoop(fullScreenshotFile, 107, 427, 325, 46, "FriendName", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", "^[a-zA-Z0-9]{5,20}$", friendName)
+		if (parseFriendCodeResult && (!includesIdsAndNames || parseFriendNameResult))
 			break
-		}
+
+		; Break and fail if this take more than 5 seconds
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		if (failSafeTime > 4) {
-			parseFriendCodeResult := False
+		if (failSafeTime > 5)
 			break
-		}
 	}
-	return parseFriendCodeResult
+
+	; Return true if we were able to parse EITHER the code OR the name
+	return parseFriendCodeResult || (includesIdsAndNames && parseFriendNameResult)
 }
 
-ParseFriendName(ByRef friendName) {
-	failSafe := A_TickCount
-	failSafeTime := 0
-	parseFriendNameResult := False
+ParseFriendInfoLoop(screenshotFile, x, y, w, h, infoID, allowedChars, validPattern, ByRef output) {
+	success := False
 	blowUp := [200, 500, 1000, 2000, 100, 250, 300, 350, 400, 450, 550, 600, 700, 800, 900]
-	Loop {
-		if (StrLen(tesseractPath) < 3) {
-			friendName := GetFriendNameWinOCR(blowUp[A_Index])
-		}
-		else {
-			friendName := GetFriendNameTesseract()
-		}
-		if (RegExMatch(friendName, "^[a-zA-Z0-9]{5,20}$")) {
-			parseFriendNameResult := True
-			break
-		}
-		failSafeTime := (A_TickCount - failSafe) // 1000
-		if (failSafeTime > 4) {
-			parseFriendNameResult := False
+	Loop, % blowUp.Length() {
+		; Get the formatted pBitmap
+		pBitmap := CropAndFormatForOcr(screenshotFile, x, y, w, h, blowUp[A_Index])
+		; Run OCR
+		output := GetTextFromBitmap(pBitmap, infoID, allowedChars)
+		; Validate result
+		if (RegExMatch(output, validPattern)) {
+			success := True
 			break
 		}
 	}
-	return parseFriendNameResult
+	return success
 }
 
 class FriendAccount {
@@ -1355,7 +1262,7 @@ class FriendAccount {
 	}
 }
 
-ParseFriendAccounts(filePath, ByRef includesIdsAndNames) {
+GetFriendAccountsFromFile(filePath, ByRef includesIdsAndNames) {
 	global minStars
 	friendList := []  ; Create an empty array
 	includesIdsAndNames := false
@@ -1400,14 +1307,23 @@ ParseFriendAccounts(filePath, ByRef includesIdsAndNames) {
 	return friendList
 }
 
-MatchFriendAccounts(friend1, friend2) {
-	if (friend1.Code != "" && friend2.Code != "" && SimilarityScore(friend1.Code, friend2.Code) > 0.6)
-	{
-		return true
+MatchFriendAccounts(friend1, friend2, ByRef similarityScore := 1) {
+	if (friend1.Code != "" && friend2.Code != "") {
+		similarityScore := SimilarityScore(friend1.Code, friend2.Code)
+		if (similarityScore > 0.6)
+			return true
 	}
-	if (friend1.Name != "" && friend2.Name != "" && SimilarityScore(friend1.Name, friend2.Name) > 0.8)
-	{
-		return true
+	if (friend1.Name != "" && friend2.Name != "") {
+		similarityScore := SimilarityScore(friend1.Name, friend2.Name)
+		if (similarityScore > 0.8) {
+			if (friend1.Code != "" && friend2.Code != "") {
+				similarityScore := (SimilarityScore(friend1.Code, friend2.Code) + SimilarityScore(friend1.Name, friend2.Name)) / 2
+				if (similarityScore > 0.7)
+					return true
+			}
+			else
+				return true
+		}
 	}
 	return false
 }
@@ -1415,8 +1331,7 @@ MatchFriendAccounts(friend1, friend2) {
 IsFriendAccountInList(inputFriend, friendList, ByRef matchedFriend) {
 	matchedFriend := ""
 	for index, friend in friendList {
-		if (MatchFriendAccounts(inputFriend, friend))
-		{
+		if (MatchFriendAccounts(inputFriend, friend)) {
 			matchedFriend := friend
 			return true
 		}
@@ -1478,6 +1393,70 @@ adbGestureFriend() {
 	Delay(1)
 }
 
+adbTakeScreenshot(outputFile) {
+	global adbPath, adbPort
+	deviceAddress := "127.0.0.1:" . adbPort
+	command := """" . adbPath . """ -s " . deviceAddress . " exec-out screencap -p > """ .  outputFile . """"
+	RunWait, %ComSpec% /c "%command%", , Hide
+	return
+}
+
+GetTextFromBitmap(pBitmap, filename := "DEFAULT", charAllowList := "") {
+	global ocrLanguage, winTitle, tesseractPath
+	ocrText := ""
+	; tesseractPath := "" ; DEBUG
+
+	if FileExist(tesseractPath) {
+		; ~~~~~~~~~~~~~~~~~~~~~~~~~
+		; ~~~ Use Tesseract OCR ~~~
+		; ~~~~~~~~~~~~~~~~~~~~~~~~~
+		; Save to file
+		filepath := GetTempDirectory() . "\" . winTitle . "_" . filename . ".png"
+		saveResult := Gdip_SaveBitmapToFile(pBitmap, filepath, 100)
+		if (saveResult != 0) {
+			CreateStatusMessage("Failed to save " . filepath . " screenshot.`nError code: " . saveResult)
+			return False
+		}
+		; OCR the file directly
+		command := """" . tesseractPath . """ """ . filepath . """ -"
+		if (charAllowList != "") {
+			command := command . " -c tessedit_char_whitelist=" . charAllowList
+		}
+		command := command . " --oem 3 --psm 7"
+		ocrText := CmdRet(command)
+	}
+	else {
+		; ~~~~~~~~~~~~~~~~~~~~~~~
+		; ~~~ Use Windows OCR ~~~
+		; ~~~~~~~~~~~~~~~~~~~~~~~
+		; OCR the bitmap directly
+		hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
+		pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
+		ocrText := ocr(pIRandomAccessStream, ocrLanguage)
+		; Cleanup references
+		; ObjRelease(pIRandomAccessStream) ; TODO: do I need this?
+		DeleteObject(hBitmapFriendCode)
+		; Remove disallowed characters
+		if (charAllowList != "") {
+			allowedPattern := "[^" RegExEscape(charAllowList) "]"
+			ocrText := RegExReplace(ocrText, allowedPattern)
+		}	
+	}
+	
+	return Trim(ocrText, " `t`r`n")
+}
+
+RegExEscape(str) {
+    return RegExReplace(str, "([-[\]{}()*+?.,\^$|#\s])", "\$1")
+}
+
+GetTempDirectory() {
+	tempDir := A_ScriptDir . "\temp"
+	if !FileExist(tempDir)
+		FileCreateDir, %tempDir%
+	return tempDir
+}
+
 ; Copied from other Arturo scripts
 Delay(n) {
 	global Delay
@@ -1505,85 +1484,34 @@ DownloadFile(url, filename) {
 	return !errored
 }
 
-ScreenshotRegion(x, y, width, height, ByRef outputFilename, filename := "DEFAULT") {
-	global winTitle
-	
-	; Load bitmap from window
-	pBitmapWindow := from_window(WinExist(winTitle))
-
-	; Create new cropped bitmap
-	pBitmapRegion := Gdip_CreateBitmap(width, height)
-	gRegion := Gdip_GraphicsFromImage(pBitmapRegion)
-	Gdip_SetSmoothingMode(gRegion, 0)  ; High quality
-
-	; Draw cropped region from the original bitmap onto the new one
-	Gdip_DrawImage(gRegion, pBitmapWindow, 0, 0, width, height, x, y, width, height)
-
-	; Increase contrast and convert to grayscale using a color matrix
-	contrast := 25  ; Adjust contrast level (-100 to 100)
-	factor := (100.0 + contrast) / 100.0
-	factor := factor * factor
-
-	; Grayscale conversion with contrast applied
-	redFactor := 0.299 * factor
-	greenFactor := 0.587 * factor
-	blueFactor := 0.114 * factor
-	xFactor := 0.5 * (1 - factor)
-	colorMatrix := redFactor . "|" . redFactor . "|" . redFactor . "|0|0|" . greenFactor . "|" . greenFactor . "|" . greenFactor . "|0|0|" . blueFactor . "|" . blueFactor . "|" . blueFactor . "|0|0|0|0|0|1|0|" . xFactor . "|" . xFactor . "|" . xFactor . "|0|1"
-
-	; Apply the color matrix
-	Gdip_DrawImage(gRegion, pBitmapRegion, 0, 0, width, height, 0, 0, width, height, colorMatrix)
-
-	; Define folder and file paths
-	screenshotsDir := A_ScriptDir . "\temp"
-	if !FileExist(screenshotsDir)
-		FileCreateDir, %screenshotsDir%
-
-	; File path for saving the screenshot locally
-	screenshotFile := screenshotsDir "\" . winTitle . "_" . filename . ".png"
-
-	; Save the cropped image
-	saveResult := Gdip_SaveBitmapToFile(pBitmapRegion, screenshotFile, 100)
-	if (saveResult != 0) {
-		CreateStatusMessage("Failed to save " . filename . " screenshot.`nError code: " . saveResult)
-		saveResult := false
-	}
-	else {
-		outputFilename := screenshotFile
-		saveResult := true
-	}
-
-	; Clean up resources
-	Gdip_DeleteGraphics(gRegion)
-	Gdip_DisposeImage(pBitmapWindow)
-	Gdip_DisposeImage(pBitmapRegion)
-
-	return saveResult
-}
-
-GetTextFromImage(inputFilename) {
-	global tesseractPath
-	SplitPath, inputFilename, FileName, , , FileNameNoExt
-	; --- Call Tesseract OCR ------------------------------------------------------
-	; Tesseract is a command-line utility. It takes an input image and an output base.
-	; The OCR result is written to "FileNameNoExt.txt". Adjust parameters as desired.
-	outputBase := A_ScriptDir . "\temp\" . FileNameNoExt
-	
-	RunWait, %ComSpec% /c ""%tesseractPath%" "%inputFilename%" "%outputBase%" --oem 3 --psm 7", , Hide
-
-	outputFilename := outputBase ".txt"
-	FileRead, ocrText, %outputFilename%
-	if (ErrorLevel)
-	{
-		MsgBox, 16, Error, % "Failed to read OCR output from " . outputFilename
-	}
-
-	return ocrText
-}
-
-
 ; DEBUG
 ; F1::
 ; 	MouseGetPos, mouseX, mouseY  ; Retrieves the mouse cursor's X and Y positions
 ; 	CreateStatusMessage("Mouse coordinates - X: " . mouseX . " Y: " . mouseY )
 ; return
+
+; F1::
+; 	TestAdbForOcrScreenshot()
+; return
+
+; TestAdbForOcrScreenshot() {
+; 	global ocrLanguage, winTitle, tesseractPath
+	
+; 	; Grab screenshot via Adb
+; 	fullScreenshotFile := GetTempDirectory() . "\" .  winTitle . "_FriendProfile.png"
+; 	adbTakeScreenshot(fullScreenshotFile)
+	
+; 	; Get the formatted pBitmap
+; 	pBitmapFriendCode := CropAndFormatForOcr(fullScreenshotFile, 328, 57, 197, 28, 200)
+; 	pBitmapFriendName := CropAndFormatForOcr(fullScreenshotFile, 107, 427, 325, 46, 200)
+	
+; 	; Run OCR
+; 	friendCode := GetTextFromBitmap(pBitmapFriendCode, "FriendCode", "0123456789")
+; 	friendName := GetTextFromBitmap(pBitmapFriendName, "FriendName", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
+; 	;Cleanup references
+; 	Gdip_DisposeImage(pBitmapFriendCode)
+; 	Gdip_DisposeImage(pBitmapFriendName)
+
+; 	MsgBox % "Friend Code: " . friendCode . "`nFriend Name: " . friendName
+; }
