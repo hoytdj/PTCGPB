@@ -72,13 +72,15 @@ IniRead, packMethod, Settings.ini, UserSettings, packMethod, 0
 IniRead, TrainerCheck, Settings.ini, UserSettings, TrainerCheck, 0
 IniRead, FullArtCheck, Settings.ini, UserSettings, FullArtCheck, 0
 IniRead, RainbowCheck, Settings.ini, UserSettings, RainbowCheck, 0
+IniRead, ShinyCheck, Settings.ini, UserSettings, ShinyCheck, 0
 IniRead, CrownCheck, Settings.ini, UserSettings, CrownCheck, 0
 IniRead, ImmersiveCheck, Settings.ini, UserSettings, ImmersiveCheck, 0
 IniRead, PseudoGodPack, Settings.ini, UserSettings, PseudoGodPack, 0
 IniRead, minStars, Settings.ini, UserSettings, minStars, 0
 IniRead, Palkia, Settings.ini, UserSettings, Palkia, 0
 IniRead, Dialga, Settings.ini, UserSettings, Dialga, 0
-IniRead, Arceus, Settings.ini, UserSettings, Arceus, 1
+IniRead, Arceus, Settings.ini, UserSettings, Arceus, 0
+IniRead, Shining, Settings.ini, UserSettings, Shining, 1
 IniRead, Mew, Settings.ini, UserSettings, Mew, 0
 IniRead, Pikachu, Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, Settings.ini, UserSettings, Charizard, 0
@@ -145,11 +147,6 @@ Gui, Add, DropDownList, x20 y315 w200 vSelectedMonitorIndex Choose%SelectedMonit
 Gui, Add, Text, x20 y345 c4169E1, Folder Path:
 Gui, Add, Edit, vfolderPath w200 x20 y365 h20 -E0x200 Background2A2A2A cWhite, %folderPath%
 
-;if(slowMotion)
-	;Gui, Add, Checkbox, Checked vslowMotion x270 y375, Base Game Compatibility
-;else
-	;Gui, Add, Checkbox, vslowMotion x270 y375, Base Game Compatibility
-
 Gui, Add, Text, x20 y395 c4169E1, OCR:
 
 ; ========== Language Pack list ==========
@@ -194,7 +191,8 @@ Gui, Add, DropDownList, vclientLanguage choose%defaultClientLang% x165 y390 w50 
 
 Gui, Add, Text, x20 y425 c4169E1, Launch All Mumu Delay:
 Gui, Add, Edit, vinstanceLaunchDelay w50 x175 y425 h20 -E0x200 Background2A2A2A cWhite Center, %instanceLaunchDelay%
-Gui, Add, Checkbox, % (autoLaunchMonitor ? "Checked" : "") " vautoLaunchMonitor x35 y455 cWhite", Auto Launch Monitor
+Gui, Add, Checkbox, % (autoLaunchMonitor ? "Checked" : "") " vautoLaunchMonitor x35 y450 c4169E1", Auto Launch Monitor
+Gui, Add, Checkbox, % (slowMotion ? "Checked" : "") " vslowMotion x35 y470 c4169E1", Base Game Compatibility
 
 
 
@@ -221,9 +219,10 @@ Gui, Add, Checkbox, % (nukeAccount ? "Checked" : "") " vnukeAccount x280 y95 c39
 
 ; ========== Pack Selection Section ==========
 Gui, Add, GroupBox, x255 y120 w240 h110 cFFD700, Pack Selection ; Gold
-Gui, Add, Checkbox, % (Arceus ? "Checked" : "") " vArceus x280 y145 cFFD700", Arceus
-Gui, Add, Checkbox, % (Palkia ? "Checked" : "") " vPalkia x280 y165 cFFD700", Palkia
-Gui, Add, Checkbox, % (Dialga ? "Checked" : "") " vDialga x280 y185 cFFD700", Dialga
+Gui, Add, Checkbox, % (Shining ? "Checked" : "") " vShining x280 y145 cFFD700", Shining
+Gui, Add, Checkbox, % (Arceus ? "Checked" : "") " vArceus x280 y165 cFFD700", Arceus
+Gui, Add, Checkbox, % (Palkia ? "Checked" : "") " vPalkia x280 y185 cFFD700", Palkia
+Gui, Add, Checkbox, % (Dialga ? "Checked" : "") " vDialga x280 y205 cFFD700", Dialga
 Gui, Add, Checkbox, % (Pikachu ? "Checked" : "") " vPikachu x365 y145 cFFD700", Pikachu
 Gui, Add, Checkbox, % (Charizard ? "Checked" : "") " vCharizard x365 y165 cFFD700", Charizard
 Gui, Add, Checkbox, % (Mewtwo ? "Checked" : "") " vMewtwo x365 y185 cFFD700", Mewtwo
@@ -231,12 +230,13 @@ Gui, Add, Checkbox, % (Mew ? "Checked" : "") " vMew x365 y205 cFFD700", Mew
 
 ; ========== Card Detection Section ==========
 Gui, Add, GroupBox, x255 y230 w240 h155 cFF4500, Card Detection ; Orange Red
-Gui, Add, Checkbox, % (FullArtCheck ? "Checked" : "") " vFullArtCheck x280 y255 cFF4500", Single Full Art
-Gui, Add, Checkbox, % (TrainerCheck ? "Checked" : "") " vTrainerCheck x280 y275 cFF4500", Single Trainer
-Gui, Add, Checkbox, % (RainbowCheck ? "Checked" : "") " vRainbowCheck x280 y295 cFF4500", Single Rainbow
-Gui, Add, Checkbox, % (PseudoGodPack ? "Checked" : "") " vPseudoGodPack x280 y315 cFF4500", Double 2 Star
-Gui, Add, Checkbox, % (CrownCheck ? "Checked" : "") " vCrownCheck x280 y335 cFF4500", Save Crowns
-Gui, Add, Checkbox, % (ImmersiveCheck ? "Checked" : "") " vImmersiveCheck x280 y355 cFF4500", Save Immersives
+Gui, Add, Checkbox, % (FullArtCheck ? "Checked" : "") " vFullArtCheck x270 y255 cFF4500", Single Full Art
+Gui, Add, Checkbox, % (TrainerCheck ? "Checked" : "") " vTrainerCheck x385 y255 cFF4500", Single Trainer
+Gui, Add, Checkbox, % (RainbowCheck ? "Checked" : "") " vRainbowCheck x270 y275 cFF4500", Single Rainbow
+Gui, Add, Checkbox, % (ShinyCheck ? "Checked" : "") " vShinyCheck x385 y275 cFF4500", Single Shiny
+Gui, Add, Checkbox, % (PseudoGodPack ? "Checked" : "") " vPseudoGodPack x270 y305 cFF4500", Double 2 Star
+Gui, Add, Checkbox, % (CrownCheck ? "Checked" : "") " vCrownCheck x270 y335 cFF4500", Save Crowns
+Gui, Add, Checkbox, % (ImmersiveCheck ? "Checked" : "") " vImmersiveCheck x270 y355 cFF4500", Save Immersives
 
 
 
@@ -458,6 +458,7 @@ Start:
 	IniWrite, %TrainerCheck%, Settings.ini, UserSettings, TrainerCheck
 	IniWrite, %FullArtCheck%, Settings.ini, UserSettings, FullArtCheck
 	IniWrite, %RainbowCheck%, Settings.ini, UserSettings, RainbowCheck
+	IniWrite, %ShinyCheck%, Settings.ini, UserSettings, ShinyCheck
 	IniWrite, %CrownCheck%, Settings.ini, UserSettings, CrownCheck
 	IniWrite, %ImmersiveCheck%, Settings.ini, UserSettings, ImmersiveCheck
 	IniWrite, %PseudoGodPack%, Settings.ini, UserSettings, PseudoGodPack
@@ -465,6 +466,7 @@ Start:
 	IniWrite, %Palkia%, Settings.ini, UserSettings, Palkia
 	IniWrite, %Dialga%, Settings.ini, UserSettings, Dialga
 	IniWrite, %Arceus%, Settings.ini, UserSettings, Arceus
+	IniWrite, %Shining%, Settings.ini, UserSettings, Shining
 	IniWrite, %Mew%, Settings.ini, UserSettings, Mew
 	IniWrite, %Pikachu%, Settings.ini, UserSettings, Pikachu
 	IniWrite, %Charizard%, Settings.ini, UserSettings, Charizard
@@ -579,6 +581,8 @@ Start:
 		typeMsg .= " (Menu Delete)"
 
 	selectMsg := "\nSelect: "
+	if(Shining)
+		selectMsg .= "Shining, "
 	if(Arceus)
 		selectMsg .= "Arceus, "
 	if(Palkia)
