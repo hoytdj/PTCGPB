@@ -16,7 +16,7 @@ CoordMode, Pixel, Screen
 DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
-global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
+global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS
 global DeadCheck
 global sendAccountXml
 
@@ -52,13 +52,15 @@ IniRead, packMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, packMethod, 0
 IniRead, TrainerCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, TrainerCheck, 0
 IniRead, FullArtCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, FullArtCheck, 0
 IniRead, RainbowCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, RainbowCheck, 0
+IniRead, ShinyCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, ShinyCheck, 0
 IniRead, CrownCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, CrownCheck, 0
 IniRead, ImmersiveCheck, %A_ScriptDir%\..\Settings.ini, UserSettings, ImmersiveCheck, 0
 IniRead, PseudoGodPack, %A_ScriptDir%\..\Settings.ini, UserSettings, PseudoGodPack, 0
 IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
 IniRead, Palkia, %A_ScriptDir%\..\Settings.ini, UserSettings, Palkia, 0
 IniRead, Dialga, %A_ScriptDir%\..\Settings.ini, UserSettings, Dialga, 0
-IniRead, Arceus, %A_ScriptDir%\..\Settings.ini, UserSettings, Arceus, 1
+IniRead, Arceus, %A_ScriptDir%\..\Settings.ini, UserSettings, Arceus, 0
+IniRead, Shining, %A_ScriptDir%\..\Settings.ini, UserSettings, Shining, 1
 IniRead, Mew, %A_ScriptDir%\..\Settings.ini, UserSettings, Mew, 0
 IniRead, Pikachu, %A_ScriptDir%\..\Settings.ini, UserSettings, Pikachu, 0
 IniRead, Charizard, %A_ScriptDir%\..\Settings.ini, UserSettings, Charizard, 0
@@ -68,7 +70,7 @@ IniRead, DeadCheck, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck, 0
 IniRead, ocrLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, ocrLanguage, en
 IniRead, sendAccountXml, %A_ScriptDir%\..\Settings.ini, UserSettings, sendAccountXml, 0
 
-pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus"]
+pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
 packArray := []  ; Initialize an empty array
 
@@ -1096,7 +1098,7 @@ menuDelete() {
 	Sleep,%Delay%
 	FindImageAndClick(24, 158, 57, 189, , "Account", 140, 440, 2000) ;wait for other menu
 	Sleep,%Delay%
-	FindImageAndClick(56, 312, 108, 334, , "Account2", 79, 256, 1000) ;wait for account menu
+	FindImageAndClick(56, 435, 108, 460, , "Account2", 79, 256, 1000) ;wait for account menu
 	Sleep,%Delay%
 
 	failSafe := A_TickCount
@@ -1116,7 +1118,7 @@ menuDelete() {
 					adbClick(pos1, pos2)
 				}
 				else {
-					adbClick(145, 446)
+					adbClick(230, 506)
 				}
 				Delay(1)
 				failSafeTime := (A_TickCount - failSafe) // 1000
@@ -1168,7 +1170,7 @@ menuDeleteStart() {
 		}
 		else if(FindOrLoseImage(20, 120, 50, 150, , "Menu", 0, failSafeTime)) { ; if the clicks in the top right open up the game settings menu then continue to delete account
 			Sleep,%Delay%
-			FindImageAndClick(56, 312, 108, 334, , "Account2", 79, 256, 1000) ;wait for account menu
+			FindImageAndClick(56, 435, 108, 460, , "Account2", 79, 256, 1000) ;wait for account menu
 			Sleep,%Delay%
 			failSafe := A_TickCount
 			failSafeTime := 0
@@ -1184,7 +1186,7 @@ menuDeleteStart() {
 						adbClick(pos1, pos2)
 					}
 					else {
-						adbClick(145, 446)
+						adbClick(230, 506)
 					}
 					Delay(1)
 					failSafeTime := (A_TickCount - failSafe) // 1000
@@ -1295,6 +1297,7 @@ CheckPack() {
 	foundTrainer := false
 	foundRainbow := false
 	foundFullArt := false
+	foundShiny := false
 	foundCrown := false
 	foundImmersive := false
 	foundTS := false
@@ -1315,6 +1318,11 @@ CheckPack() {
 		if(foundFullArt)
 			foundTS := "Full Art"
 	}
+	if(ShinyCheck && !foundTS) {
+		foundShiny := FindBorders("shiny2star")
+		if(ShinyCheck)
+			foundTS := "Shiny"
+	}
 	if(ImmersiveCheck && !foundTS) {
 		foundImmersive := FindBorders("immersive")
 		if(foundImmersive)
@@ -1326,11 +1334,11 @@ CheckPack() {
 			foundTS := "Crown"
 	}
 	If(PseudoGodPack && !foundTS) {
-		2starCount := FindBorders("trainer") + FindBorders("rainbow") + FindBorders("fullart")
+		2starCount := FindBorders("trainer") + FindBorders("rainbow") + FindBorders("fullart") + FindBorders("shiny2star")
 		if(2starCount > 1)
 			foundTS := "Double two star"
 	}
-	if(foundGP || foundTrainer || foundRainbow || foundFullArt || foundImmersive || foundCrown || 2starCount > 1) {
+	if(foundGP || foundTrainer || foundRainbow || foundFullArt || foundShiny || foundImmersive || foundCrown || 2starCount > 1) {
 		if(loadedAccount) {
 			FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
 			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
@@ -1393,7 +1401,14 @@ FindBorders(prefix) {
 		,[196, 284, 249, 286]
 		,[70, 399, 123, 401]
 		,[155, 399, 208, 401]]
-		
+	if (prefix = "shiny1star" || prefix = "shiny2star") {
+		; TODO: Need references images for these coordinates (right side, bottom corner)
+		borderCoords := [[90, 261, 93, 283]
+		,[173, 261, 176, 283]
+		,[255, 261, 258, 283]
+		,[130, 376, 133, 398]
+		,[215, 376, 218, 398]]
+	}
 	; 100% scale changes
 	if (scaleParam = 287) {
 		borderCoords := [[30, 277, 85, 281]
@@ -1401,6 +1416,9 @@ FindBorders(prefix) {
 		,[195, 277, 250, 281]
 		,[70, 394, 125, 398]
 		,[156, 394, 211, 398]]
+		if (prefix = "shiny1star" || prefix = "shiny2star") {
+			;TODO: scale 100
+		}
 	}
 	pBitmap := from_window(WinExist(winTitle))
 	; imagePath := "C:\Users\Arturo\Desktop\PTCGP\GPs\" . Clipboard . ".png"
@@ -1474,7 +1492,7 @@ FindGodPack() {
 				invalidGP := true
 			}
 			if(!invalidGP && minStars > 0) {
-				starCount := 5 - FindBorders("1star")
+				starCount := 5 - FindBorders("1star") - FindBorders("shiny1star")
 				if(starCount < minStars) {
 					CreateStatusMessage("Does not meet minimum 2 star threshold.")
 					invalidGP := true
@@ -1511,7 +1529,7 @@ GodPackFound(validity) {
 	Randmax := Praise.Length()
 	Random, rand, 1, Randmax
 	Interjection := Praise[rand]
-	starCount := 5 - FindBorders("1star")
+	starCount := 5 - FindBorders("1star") - FindBorders("shiny1star")
 	screenShot := Screenshot(validity)
 	accountFile := saveAccount(validity, accountFullPath)
 	logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGetting friend code then sendind discord message."
@@ -1770,10 +1788,10 @@ adbInputEvent(event) {
 	adbShell.StdIn.WriteLine("input keyevent " . event)
 }
 
-adbSwipeUp() {
+adbSwipeUp(speed) {
 	global adbShell, adbPath, adbPort
 	;initializeAdbShell()
-	adbShell.StdIn.WriteLine("input swipe 309 816 309 355 60")
+	adbShell.StdIn.WriteLine("input swipe 266 770 266 355 " . speed)
 	waitadb()
 }
 
@@ -2543,7 +2561,7 @@ DoTutorial() {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		adbSwipeUp()
+		adbSwipeUp(60)
 		Sleep, 10
 		if (FindOrLoseImage(120, 70, 150, 95, , "SwipeUp", 0, failSafeTime)){
 			if(setSpeed > 1) {
@@ -2714,24 +2732,40 @@ DoTutorial() {
 SelectPack(HG := false) {
 	global openPack, packArray
 	packy := 196
-	if(openPack = "Mew") {
-		packx := 80
+	if(openPack = "Shining") {
+		packx := 145 ;TODO verify that shining is where arceus was
 	} else if(openPack = "Arceus") {
 		packx := 145
+		;packx := 200 ;TODO replace and verify that arceus went to where dialga was
+	} else if(openPack = "Mew") {   ;TODO remove and verify that mew is not in home screen
+		packx := 80   ;TODO remove and verify that mew is not in home screen
 	} else {
-		packx := 200
+		packx := 200 
+		;packx := 80 ;TODO replace and verify that dialga went to where mew was
 	}
 	FindImageAndClick(233, 400, 264, 428, , "Points", packx, packy)
-	if(openPack = "Pikachu" || openPack = "Mewtwo" || openPack = "Charizard") {
+	if(openPack = "Pikachu" || openPack = "Mewtwo" || openPack = "Charizard") { ;TODO remove
+	;if(openPack = "Pikachu" || openPack = "Mewtwo" || openPack = "Charizard" || openPack = "Mew") { ;TODO uncomment
+		FindImageAndClick(115, 140, 160, 155, , "SelectExpansion", 245, 475)
 		packy := 442
+		if(openPack = "Pikachu" || openPack = "Mewtwo" || openPack = "Charizard"){
+			;Sleep, 500 ; TODO uncomment 
+			;adbSwipeUp(160) ; TODO uncomment 
+			;Sleep, 500 ; TODO uncomment 
+			;TODO find new y. maybe not even needed
+		}
 		if(openPack = "Pikachu"){
             packx := 245
+            ; packx := 125 ;TODO replace and verify 
         } else if(openPack = "Mewtwo"){
-            packx := 205
+            packx := 205 
+            ; packx := 85 ;TODO replace and verify 
         } else if(openPack = "Charizard"){
-            packx := 165
+            packx := 165 
+            ; packx := 45 ;TODO replace and verify 
+        } else if(openPack = "Mew"){
+            packx := 205 ;TODO verify that mew went to where mewtwo was
         }
-		FindImageAndClick(115, 140, 160, 155, , "SelectExpansion", 245, 475)
 		FindImageAndClick(233, 400, 264, 428, , "Points", packx, packy)
 	} else if(openPack = "Palkia") {
 		Delay(2)
