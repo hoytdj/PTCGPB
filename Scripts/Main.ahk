@@ -1298,6 +1298,12 @@ GetFriendAccountsFromFile(filePath, ByRef includesIdsAndNames) {
 			friendCode := Trim(line)
 		}
 
+		friendCode := RegExReplace(friendCode, "\D") ; Clean the string (just in case)
+		if (!RegExMatch(friendCode, "^\d{14,17}$")) ; Only accept valid IDs
+			friendCode := ""
+		if (friendCode = "" && friendName = "")
+			continue
+
 		; Trim spaces and create a FriendAccount object
 		if (twoStarCount == "" || twoStarCount >= minStars) {
 			friend := new FriendAccount(friendCode, friendName)
