@@ -17,8 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b
-global DeadCheck
-global sendAccountXml
+global DeadCheck, sendAccountXml
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -717,6 +716,11 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			Y1 := 153
 			X2 := 159
 			Y2 := 162
+		} else if (imageName = "DeleteAll") { ; 100% for Deleteall offset
+			X1 := 200
+			Y1 := 340
+			X2 := 265
+			Y2 := 530
 		}
 	}
 	;bboxAndPause(X1, Y1, X2, Y2)
@@ -1120,7 +1124,7 @@ menuDelete() {
 		Loop {
 			clickButton := FindOrLoseImage(75, 340, 195, 530, 40, "Button2", 0, failSafeTime)
 			if(!clickButton) {
-				clickImage := FindOrLoseImage(140, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime)
+				clickImage := FindOrLoseImage(200, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime) ; fix https://discord.com/channels/1330305075393986703/1354775917288882267/1355090394307887135
 				if(clickImage) {
 					StringSplit, pos, clickImage, `,  ; Split at ", "
 					if (scaleParam = 287) {
@@ -1188,7 +1192,7 @@ menuDeleteStart() {
 			Loop {
 				clickButton := FindOrLoseImage(75, 340, 195, 530, 80, "Button", 0, failSafeTime)
 				if(!clickButton) {
-					clickImage := FindOrLoseImage(140, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime)
+					clickImage := FindOrLoseImage(200, 340, 250, 530, 60, "DeleteAll", 0, failSafeTime)
 					if(clickImage) {
 						StringSplit, pos, clickImage, `,  ; Split at ", "
 						if (scaleParam = 287) {
@@ -1303,7 +1307,7 @@ SetTextAndResize(controlHwnd, newText) {
 }
 
 CheckPack() {
-	global scriptName, DeadCheck, CheckShiningPackOnly
+	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck
 	foundGP := false ;check card border to find godpacks
 	foundTrainer := false
 	foundRainbow := false
@@ -1352,7 +1356,7 @@ CheckPack() {
 		}
 	}
 	if(foundGP || foundTrainer || foundRainbow || foundFullArt || foundShiny || foundImmersive || foundCrown || 2starCount > 1) {
-		if(!(InvalidCheck && (foundShiny || foundImmersive || foundCrown) || foundGP)) {
+		if(!(InvalidCheck && (foundShiny || foundImmersive || foundCrown)) || foundGP) {
 			if(loadedAccount) {
 				FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
 				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
@@ -1378,7 +1382,7 @@ FoundStars(star) {
 	Sleep, 8000
 	fcScreenshot := Screenshot("FRIENDCODE")
 
-	if(star = "Crown" || star = "Immersive")
+	if(star = "Crown" || star = "Immersive" || star = "Shiny")
 		RemoveFriends()
 	else {
 		; If we're doing the inject method, try to OCR our Username
@@ -1404,7 +1408,7 @@ FoundStars(star) {
 	CreateStatusMessage(logMessage)
 	LogToFile(logMessage, "GPlog.txt")
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
-	if(star != "Crown" && star != "Immersive")
+	if(star != "Crown" && star != "Immersive" && star != "Shiny")
 		ChooseTag()
 }
 
@@ -1426,13 +1430,18 @@ FindBorders(prefix) {
 	}
 	; 100% scale changes
 	if (scaleParam = 287) {
-		borderCoords := [[30, 277, 85, 281]
-		,[112, 277, 167, 281]
-		,[195, 277, 250, 281]
-		,[70, 394, 125, 398]
-		,[156, 394, 211, 398]]
 		if (prefix = "shiny1star" || prefix = "shiny2star") {
-			;TODO: scale 100
+			borderCoords := [[91, 253, 95, 278]
+			,[175, 253, 179, 278]  
+			,[259, 253, 263, 278]
+			,[132, 370, 136, 395]
+			,[218, 371, 222, 394]]
+		} else {
+			borderCoords := [[30, 277, 85, 281]
+			,[112, 277, 167, 281]
+			,[195, 277, 250, 281]
+			,[70, 394, 125, 398]
+			,[156, 394, 211, 398]]
 		}
 	}
 	pBitmap := from_window(WinExist(winTitle))

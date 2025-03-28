@@ -145,6 +145,17 @@ global 99Configs := {}
 99Configs["jp"] := {leftx: 84, rightx: 127}
 99Configs["ko"] := {leftx: 65, rightx: 100}
 99Configs["cn"] := {leftx: 63, rightx: 102}
+if (scaleParam = 287) {
+	99Configs["en"] := {leftx: 123, rightx: 162}
+	99Configs["es"] := {leftx: 73, rightx: 105}
+	99Configs["fr"] := {leftx: 61, rightx: 93}
+	99Configs["de"] := {leftx: 77, rightx: 108}
+	99Configs["it"] := {leftx: 66, rightx: 97}
+	99Configs["pt"] := {leftx: 133, rightx: 165}
+	99Configs["jp"] := {leftx: 88, rightx: 122}
+	99Configs["ko"] := {leftx: 69, rightx: 105}
+	99Configs["cn"] := {leftx: 63, rightx: 102}
+}
 
 99Path := "99" . clientLanguage
 99Leftx := 99Configs[clientLanguage].leftx
