@@ -333,10 +333,10 @@ Gui, Add, Edit, vvipIdsURL w460 x270 y485 h20 -E0x200 Background2A2A2A cWhite, %
 ; ==============================
 
 ; ========== Add-On Settings Section ==========
-Gui, Add, GroupBox, x5 y495 w740 h95 cWhite, Extra Settings
+Gui, Add, GroupBox, x5 y515 w740 h50 cWhite, Extra Settings
 
-Gui, Add, Text, x270 y535 cWhite, Tesseract Path:
-Gui, Add, Edit, vtesseractPath w300 x270 y555 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
+Gui, Add, Text, x15 y535 cWhite, Tesseract Path:
+Gui, Add, Edit, vtesseractPath w300 x115 y534 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License]
 Return
