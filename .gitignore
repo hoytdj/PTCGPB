@@ -2,6 +2,7 @@ json/*
 !json/1.txt
 Accounts/*
 !Accounts/*.ahk
+!Accounts/Saved/1.txt
 Logs/*
 !Logs/1.txt
 Screenshots/*
@@ -16,4 +17,5 @@ HeartBeat.ini
 Settings.ini
 /Scripts/sample
 usernames.txt
+vip_ids.txt
 *.bak
