@@ -1,17 +1,5 @@
 ; SOURCE: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=72674
 
-HBitmapFromScreen(X, Y, W, H) {
-	HDC := DllCall("GetDC", "Ptr", 0, "UPtr")
-	HBM := DllCall("CreateCompatibleBitmap", "Ptr", HDC, "Int", W, "Int", H, "UPtr")
-	PDC := DllCall("CreateCompatibleDC", "Ptr", HDC, "UPtr")
-	DllCall("SelectObject", "Ptr", PDC, "Ptr", HBM)
-	DllCall("BitBlt", "Ptr", PDC, "Int", 0, "Int", 0, "Int", W, "Int", H
-						 , "Ptr", HDC, "Int", X, "Int", Y, "UInt", 0x00CC0020)
-	DllCall("DeleteDC", "Ptr", PDC)
-	DllCall("ReleaseDC", "Ptr", 0, "Ptr", HDC)
-	Return HBM
-}
-
 HBitmapToRandomAccessStream(hBitmap) {
 	static IID_IRandomAccessStream := "{905A0FE1-BC53-11DF-8C49-001E4FC686DA}"
 		  , IID_IPicture            := "{7BF80980-BF32-101A-8BBB-00AA00300CAB}"
