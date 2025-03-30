@@ -20,7 +20,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
-global triggerTestNeeded, testStartTime, firstRun, minStars, minStarsA2b, vipIdsURL
+global triggerTestNeeded, testStartTime, firstRun, minStars, minStarsA2b, vipIdsURL, tesseractPath
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -1554,19 +1554,46 @@ GetTextFromBitmap(pBitmap, charAllowList := "") {
 	; Returns:
 	;   (String) - The OCR-extracted text, with disallowed characters removed.
 	; -----------------------------------------------------------------------------
-	global ocrLanguage
+	global ocrLanguage, winTitle, tesseractPath
 	ocrText := ""
-	; OCR the bitmap directly
-	hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
-	pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
-	ocrText := ocr(pIRandomAccessStream, ocrLanguage)
-	; Cleanup references
-	; ObjRelease(pIRandomAccessStream) ; TODO: do I need this?
-	DeleteObject(hBitmapFriendCode)
-	; Remove disallowed characters
-	if (charAllowList != "") {
-		allowedPattern := "[^" RegExEscape(charAllowList) "]"
-		ocrText := RegExReplace(ocrText, allowedPattern)
+
+	if FileExist(tesseractPath) {
+		; ~~~~~~~~~~~~~~~~~~~~~~~~~
+		; ~~~ Use Tesseract OCR ~~~
+		; ~~~~~~~~~~~~~~~~~~~~~~~~~
+		; Save to file
+		filepath := GetTempDirectory() . "\" . winTitle . "_" . filename . ".png"
+		saveResult := Gdip_SaveBitmapToFile(pBitmap, filepath, 100)
+		if (saveResult != 0) {
+			CreateStatusMessage("Failed to save " . filepath . " screenshot.`nError code: " . saveResult)
+			return False
+		}
+		; OCR the file directly
+		command := """" . tesseractPath . """ """ . filepath . """ -"
+		if (charAllowList != "") {
+			command := command . " -c tessedit_char_whitelist=" . charAllowList
+		}
+		command := command . " --oem 3 --psm 7"
+		ocrText := CmdRet(command)
+	}
+	else {
+		; ~~~~~~~~~~~~~~~~~~~~~~~
+		; ~~~ Use Windows OCR ~~~
+		; ~~~~~~~~~~~~~~~~~~~~~~~
+		global ocrLanguage
+		ocrText := ""
+		; OCR the bitmap directly
+		hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
+		pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
+		ocrText := ocr(pIRandomAccessStream, ocrLanguage)
+		; Cleanup references
+		; ObjRelease(pIRandomAccessStream) ; TODO: do I need this?
+		DeleteObject(hBitmapFriendCode)
+		; Remove disallowed characters
+		if (charAllowList != "") {
+			allowedPattern := "[^" RegExEscape(charAllowList) "]"
+			ocrText := RegExReplace(ocrText, allowedPattern)
+		}
 	}
 
 	return Trim(ocrText, " `t`r`n")
@@ -1624,29 +1651,3 @@ DownloadFile(url, filename) {
 	}
 	return !errored
 }
-
-; F1::
-; 	TestAdbForOcrScreenshot()
-; return
-
-; TestAdbForOcrScreenshot() {
-; 	global ocrLanguage, winTitle, tesseractPath
-	
-; 	; Grab screenshot via Adb
-; 	fullScreenshotFile := GetTempDirectory() . "\" .  winTitle . "_FriendProfile.png"
-; 	adbTakeScreenshot(fullScreenshotFile)
-	
-; 	; Get the formatted pBitmap
-; 	pBitmapFriendCode := CropAndFormatForOcr(fullScreenshotFile, 328, 57, 197, 28, 200)
-; 	pBitmapFriendName := CropAndFormatForOcr(fullScreenshotFile, 107, 427, 325, 46, 200)
-	
-; 	; Run OCR
-; 	friendCode := GetTextFromBitmap(pBitmapFriendCode, "FriendCode", "0123456789")
-; 	friendName := GetTextFromBitmap(pBitmapFriendName, "FriendName", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-
-; 	;Cleanup references
-; 	Gdip_DisposeImage(pBitmapFriendCode)
-; 	Gdip_DisposeImage(pBitmapFriendName)
-
-; 	MsgBox % "Friend Code: " . friendCode . "`nFriend Name: " . friendName
-; }
