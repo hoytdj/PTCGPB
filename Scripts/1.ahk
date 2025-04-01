@@ -481,9 +481,75 @@ TradeTutorial() {
 }
 
 AddFriends(renew := false, getFC := false) {
-	global FriendID, friendIds, waitTime, friendCode, scriptName
+	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
-	friendIDs := ReadFile("ids")
+	
+	; Modify the reading of IDs to consider associations with packages
+	rawFriendIDs := ReadFile("ids")
+	friendIDs := [] ; Initialize an empty array to store friend IDs
+	
+	if (rawFriendIDs) {
+		CreateStatusMessage("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
+		CreateStatusMessage("Checking for IDs in ids.txt")
+		for index, value in rawFriendIDs {
+			; Skip empty lines
+			if (value = "") {
+				continue
+			}
+			
+			CreateStatusMessage("Processing line: " . value)
+			
+			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,...")
+			if (InStr(value, "|")) {
+				parts := StrSplit(value, "|")
+				id := Trim(parts[1])
+				
+				; If the ID is not valid (not 16 digits), skip it
+				if (StrLen(id) != 16) {
+					CreateStatusMessage("ID " . id . " is invalid (wrong length)")
+					continue
+				}
+				
+				boosterList := Trim(parts[2])
+				boosters := StrSplit(boosterList, ",")
+				
+				CreateStatusMessage("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
+				
+				; Checks if the current booster is in the list
+				desiredBooster := false
+				for _, pack in boosters {
+					trimmedPack := Trim(pack)
+					CreateStatusMessage("Checking if " . trimmedPack . " = " . openPack)
+					
+					; Case-insensitive comparison
+					if (trimmedPack = openPack) {
+						desiredBooster := true
+						CreateStatusMessage("Match found!")
+						break
+					}
+				}
+				
+				if (desiredBooster) {
+					friendIDs.Push(id)
+					CreateStatusMessage("ADDING: " . id . " wants the booster " . openPack)
+				} else {
+					CreateStatusMessage("SKIPPING: " . id . " doesn't want booster " . openPack)
+				}
+			} else {
+				; If there is no list of boosters, check if it's a valid ID (length = 16)
+				if (StrLen(value) = 16) {
+					; If no boosters are specified, add the ID (it accepts all boosters)
+					friendIDs.Push(value)
+					CreateStatusMessage("ADDING: " . value . " (accepts all boosters)")
+				} else {
+					CreateStatusMessage("SKIPPING: " . value . " is invalid (wrong length)")
+				}
+			}
+		}
+	}
+	
+	CreateStatusMessage("Final list contains " . friendIDs.MaxIndex() . " friends")
+	
 	count := 0
 	friended := true
 	failSafe := A_TickCount
@@ -1820,9 +1886,10 @@ ReadFile(filename, numbers := false) {
 
 	values := []
 	for _, val in StrSplit(Trim(content), "`n") {
-		cleanVal := RegExReplace(val, "[^a-zA-Z0-9]") ; Remove non-alphanumeric characters
-		if (cleanVal != "")
-			values.Push(cleanVal)
+		; Don't strip non-alphanumeric characters - we need to keep the | and ,
+		trimmedVal := Trim(val)
+		if (trimmedVal != "")
+			values.Push(trimmedVal)
 	}
 
 	return values.MaxIndex() ? values : false
@@ -2595,9 +2662,9 @@ DoTutorial() {
 		if (FindOrLoseImage(225, 273, 235, 290, , "Pack", 1, failSafeTime)){
 			if(setSpeed > 1) {
 				if(setSpeed = 3)
-						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click 3x
+						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click mod settings
 				else
-						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click 2x
+						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click mod settings
 			}
 			adbClick(41, 296)
 				break
