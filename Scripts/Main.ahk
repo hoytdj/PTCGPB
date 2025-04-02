@@ -1137,7 +1137,9 @@ RemoveNonVipFriends() {
 				repeatFriendAccounts := 0
 			}
 			if (repeatFriendAccounts > 2) {
-				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
+				CreateStatusMessage("End of list - parsed the same friend codes multiple times.")
+				Delay(2)
+				CreateStatusMessage("Ready to test.")
 				adbClick(143, 507)
 				return
 			}
