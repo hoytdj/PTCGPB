@@ -471,6 +471,208 @@ RemoveFriends() {
 	friended := false
 }
 
+RemoveFriendsFiltered() {
+	global friendIDs, stopToggle, friended, foundTS, openPack
+	failSafe := A_TickCount
+	failSafeTime := 0
+	Loop {
+		adbClick(143, 518)
+		if(FindOrLoseImage(120, 500, 155, 530, , "Social", 0, failSafeTime))
+			break
+		else if(FindOrLoseImage(175, 165, 255, 235, , "Hourglass3", 0)) {
+			Delay(3)
+			adbClick(146, 441) ; 146 440
+			Delay(3)
+			adbClick(146, 441)
+			Delay(3)
+			adbClick(146, 441)
+			Delay(3)
+
+			FindImageAndClick(98, 184, 151, 224, , "Hourglass1", 168, 438, 500, 5) ;stop at hourglasses tutorial 2
+			Delay(1)
+
+			adbClick(203, 436) ; 203 436
+		}
+		Sleep, 500
+		failSafeTime := (A_TickCount - failSafe) // 1000
+		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
+	}
+	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
+	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
+	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
+	
+	; Get the raw friend IDs data for pack type checking
+	; We only need this to check for "Only for SR" and specific pack types
+	; But we'll use the already filtered friendIDs list from AddFriends
+	rawFriendIDs := ReadFile("ids")
+	filteredIDs := []
+	
+	if (!friendIDs) {
+		; If we don't have friendIDs, there's nothing to filter
+		RemoveFriends()
+		return
+	}
+	
+	; Process each friend ID to check if it matches the detected pack type (foundTS)
+	CreateStatusMessage("Filtering friends based on pack type: " . foundTS)
+	
+	for index, id in friendIDs {
+		shouldKeep := false
+		onlySRMode := false  ; Flag to track if this is a "Only for SR"
+		hasGodPackTag := false ; Flag to track if this friend wants GodPack
+		
+		; Look for this ID's preferences in the rawFriendIDs
+		for _, rawLine in rawFriendIDs {
+			if (InStr(rawLine, id)) {
+				; Check if the line has pack type information
+				if (InStr(rawLine, "|")) {
+					parts := StrSplit(rawLine, "|")
+					
+					; If we have at least 3 parts (ID | Boosters | Pack Types)
+					if (parts.MaxIndex() >= 3) {
+						packTypeList := Trim(parts[3])
+						
+						; Check for "GodPack" in the pack types
+						hasGodPackTag := InStr(packTypeList, "GodPack")
+						
+						; Special check for "Only for SR" tag
+						if (InStr(packTypeList, "Only for SR")) {
+							onlySRMode := true
+							CreateStatusMessage("Found 'Only for SR' tag for " . id)
+							
+							; Special case: If this is a God Pack and friend wants God Packs
+							if (foundTS = "God Pack" && hasGodPackTag) {
+								shouldKeep := true
+								CreateStatusMessage("Keeping friend " . id . " (Has 'Only for SR' + 'GodPack' tags and this is a God Pack)")
+								break
+							}
+							
+							; If current pack is Shining, check if foundTS matches desired pack types
+							if (openPack = "Shining") {
+								; Check if the specific foundTS (packType) exists in their pack types list
+								packTypeMatch := false
+								packTypes := StrSplit(packTypeList, ",")
+								
+								for _, packType in packTypes {
+									trimmedPackType := Trim(packType)
+									; Skip the "Only for SR" text in the comparison
+									if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
+										packTypeMatch := true
+										CreateStatusMessage("pack type match found: " . trimmedPackType)
+										break
+									}
+								}
+								
+								if (packTypeMatch) {
+									shouldKeep := true
+									CreateStatusMessage("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
+								} else {
+									CreateStatusMessage("Will remove friend " . id . " (Only for SR + Shining booster but doesn't want " . foundTS . ")")
+								}
+							} else {
+								CreateStatusMessage("Will remove friend " . id . " (Only for SR but not Shining booster)")
+							}
+							break
+						}
+						
+						; If not in "Only for SR" mode, do the regular check for pack type
+						if (!onlySRMode) {
+							packType := StrSplit(packTypeList, ",")
+							
+							; Check if foundTS is in the desired pack types
+							for _, packType in packType {
+								trimmedPackType := Trim(packType)
+								if (trimmedPackType = foundTS) {
+									shouldKeep := true
+									CreateStatusMessage("Keeping friend " . id . " (wants " . foundTS . ")")
+									break
+								}
+							}
+						}
+					} else {
+						; No pack type information, so keep anyway
+						shouldKeep := true
+						CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
+					}
+				} else {
+					; No separator, assume they accept any pack type
+					shouldKeep := true
+					CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
+				}
+				break
+			}
+		}
+		
+		if (!shouldKeep) {
+			; This friend doesn't want this pack type, add to filtered list for removal
+			filteredIDs.Push(id)
+			if (onlySRMode && hasGodPackTag && foundTS = "God Pack") {
+				CreateStatusMessage("UNEXPECTED: Friend " . id . " has Only for SR + GodPack but wasn't kept")
+			} else if (onlySRMode && openPack = "Shining") {
+				CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
+			} else if (onlySRMode) {
+				CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
+			} else {
+				CreateStatusMessage("Will remove friend " . id . " (doesn't want " . foundTS . ")")
+			}
+		}
+	}
+	
+	; If we have no IDs to remove, just exit
+	if (filteredIDs.MaxIndex() = 0) {
+		CreateStatusMessage("No friends to remove based on pack type filter")
+		friended := false
+		return
+	}
+	
+	; Process filtered IDs for removal
+	for index, value in filteredIDs {
+		failSafe := A_TickCount
+		failSafeTime := 0
+		Loop {
+			adbInput(value)
+			Delay(1)
+			if(FindOrLoseImage(205, 430, 255, 475, , "Search", 0, failSafeTime)) {
+				FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
+				EraseInput()
+			} else if(FindOrLoseImage(205, 430, 255, 475, , "Search2", 0, failSafeTime)) {
+				break
+			}
+			failSafeTime := (A_TickCount - failSafe) // 1000
+			CreateStatusMessage("In failsafe for RemoveFriendsFiltered-1. " . failSafeTime "/45 seconds")
+		}
+		failSafe := A_TickCount
+		failSafeTime := 0
+		Loop {
+			adbClick(232, 453)
+			if(FindOrLoseImage(165, 250, 190, 275, , "Send", 0, failSafeTime)) {
+				break
+			} else if(FindOrLoseImage(165, 250, 190, 275, , "Accepted", 0, failSafeTime)) {
+				FindImageAndClick(135, 355, 160, 385, , "Remove", 193, 258, 500)
+				FindImageAndClick(165, 250, 190, 275, , "Send", 200, 372, 2000)
+				break
+			} else if(FindOrLoseImage(165, 240, 255, 270, , "Withdraw", 0, failSafeTime)) {
+				FindImageAndClick(165, 250, 190, 275, , "Send", 243, 258, 2000)
+				break
+			}
+			Sleep, 750
+			failSafeTime := (A_TickCount - failSafe) // 1000
+			CreateStatusMessage("In failsafe for RemoveFriendsFiltered-2. " . failSafeTime "/45 seconds")
+		}
+		if(index != filteredIDs.maxIndex()) {
+			FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
+			FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
+			EraseInput(index, filteredIDs.MaxIndex())
+		}
+	}
+	
+	if(stopToggle) {
+		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+		ExitApp
+	}
+	friended := false
+}
+
 TradeTutorial() {
 	if(FindOrLoseImage(100, 120, 175, 145, , "Trade", 0)) {
 		FindImageAndClick(15, 455, 40, 475, , "Add2", 188, 449)
@@ -499,7 +701,7 @@ AddFriends(renew := false, getFC := false) {
 			
 			CreateStatusMessage("Processing line: " . value)
 			
-			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,...")
+			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
 			if (InStr(value, "|")) {
 				parts := StrSplit(value, "|")
 				id := Trim(parts[1])
@@ -834,8 +1036,8 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			}
 			LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
 			Reload
+			}
 		}
-	}
 	if(imageName = "Points" || imageName = "Home") { ;look for level up ok "button"
 		LevelUp()
 	}
@@ -1477,8 +1679,14 @@ FoundStars(star) {
 	CreateStatusMessage(logMessage)
 	LogToFile(logMessage, "GPlog.txt")
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
-	if(star != "Crown" && star != "Immersive" && star != "Shiny")
+	
+	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
 		ChooseTag()
+		; Use the filtered removal function
+		RemoveFriendsFiltered()
+	} else {
+		RemoveFriends()
+	}
 }
 
 FindBorders(prefix) {
@@ -1636,14 +1844,14 @@ FindGodPack() {
 }
 
 GodPackFound(validity) {
-	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack
+	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS
 
 	if(validity = "Valid") {
 		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 		Praise := ["Congrats!", "Congratulations!", "GG!", "Whoa!", "Praise Helix! ༼ つ ◕_◕ ༽つ", "Way to go!", "You did it!", "Awesome!", "Nice!", "Cool!", "You deserve it!", "Keep going!", "This one has to be live!", "No duds, no duds, no duds!", "Fantastic!", "Bravo!", "Excellent work!", "Impressive!", "You're amazing!", "Well done!", "You're crushing it!", "Keep up the great work!", "You're unstoppable!", "Exceptional!", "You nailed it!", "Hats off to you!", "Sweet!", "Kudos!", "Phenomenal!", "Boom! Nailed it!", "Marvelous!", "Outstanding!", "Legendary!", "Youre a rock star!", "Unbelievable!", "Keep shining!", "Way to crush it!", "You're on fire!", "Killing it!", "Top-notch!", "Superb!", "Epic!", "Cheers to you!", "Thats the spirit!", "Magnificent!", "Youre a natural!", "Gold star for you!", "You crushed it!", "Incredible!", "Shazam!", "You're a genius!", "Top-tier effort!", "This is your moment!", "Powerful stuff!", "Wicked awesome!", "Props to you!", "Big win!", "Yesss!", "Champion vibes!", "Spectacular!"]
 		invalid := ""
 	} else {
-		Praise := ["Uh-oh!", "Oops!", "Not quite!", "Better luck next time!", "Yikes!", "That didn’t go as planned.", "Try again!", "Almost had it!", "Not your best effort.", "Keep practicing!", "Oh no!", "Close, but no cigar.", "You missed it!", "Needs work!", "Back to the drawing board!", "Whoops!", "That’s rough!", "Don’t give up!", "Ouch!", "Swing and a miss!", "Room for improvement!", "Could be better.", "Not this time.", "Try harder!", "Missed the mark.", "Keep at it!", "Bummer!", "That’s unfortunate.", "So close!", "Gotta do better!"]
+		Praise := ["Uh-oh!", "Oops!", "Not quite!", "Better luck next time!", "Yikes!", "That didn't go as planned.", "Try again!", "Almost had it!", "Not your best effort.", "Keep practicing!", "Oh no!", "Close, but no cigar.", "You missed it!", "Needs work!", "Back to the drawing board!", "Whoops!", "That's rough!", "Don't give up!", "Ouch!", "Swing and a miss!", "Room for improvement!", "Could be better.", "Not this time.", "Try harder!", "Missed the mark.", "Keep at it!", "Bummer!", "That's unfortunate.", "So close!", "Gotta do better!"]
 		invalid := validity
 	}
 	Randmax := Praise.Length()
@@ -1689,8 +1897,14 @@ GodPackFound(validity) {
 	if(validity = "Valid") {
 		LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		ChooseTag()
+		
+		; Use the filtered removal function for valid God Packs
+		RemoveFriendsFiltered()
 	} else {
 		LogToDiscord(logMessage, screenShot, false, accountFullPath, fcScreenshot)
+		
+		; Use the regular removal for invalid packs
+		RemoveFriends()
 	}
 }
 
