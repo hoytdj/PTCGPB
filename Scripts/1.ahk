@@ -16,7 +16,7 @@ CoordMode, Pixel, Screen
 DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
-global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b
+global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
 global DeadCheck, sendAccountXml
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -472,7 +472,14 @@ RemoveFriends() {
 }
 
 RemoveFriendsFiltered() {
-	global friendIDs, stopToggle, friended, foundTS, openPack
+	global friendIDs, stopToggle, friended, foundTS, openPack, rawFriendIDs
+	
+	if (!friendIDs) {
+		CreateStatusMessage("No friends to filter - friendIDs is empty")
+		friended := false
+		return
+	}
+	
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
@@ -501,25 +508,22 @@ RemoveFriendsFiltered() {
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
 	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
 	
-	; Get the raw friend IDs data for pack type checking
-	; We only need this to check for "Only for SR" and specific pack types
-	; But we'll use the already filtered friendIDs list from AddFriends
-	rawFriendIDs := ReadFile("ids")
+	; Use the global rawFriendIDs variable instead of reading the file again
 	filteredIDs := []
-	
-	if (!friendIDs) {
-		; If we don't have friendIDs, there's nothing to filter
-		RemoveFriends()
-		return
-	}
 	
 	; Process each friend ID to check if it matches the detected pack type (foundTS)
 	CreateStatusMessage("Filtering friends based on pack type: " . foundTS)
 	
+	; If this is a GodPack, don't remove anyone out - everyone wants GodPacks
+	if (foundTS = "God Pack") {
+		CreateStatusMessage("Found God Pack")
+		friended := false
+		return
+	}
+	
 	for index, id in friendIDs {
 		shouldKeep := false
 		onlySRMode := false  ; Flag to track if this is a "Only for SR"
-		hasGodPackTag := false ; Flag to track if this friend wants GodPack
 		
 		; Look for this ID's preferences in the rawFriendIDs
 		for _, rawLine in rawFriendIDs {
@@ -532,30 +536,20 @@ RemoveFriendsFiltered() {
 					if (parts.MaxIndex() >= 3) {
 						packTypeList := Trim(parts[3])
 						
-						; Check for "GodPack" in the pack types
-						hasGodPackTag := InStr(packTypeList, "GodPack")
-						
-						; Special check for "Only for SR" tag
+						 ; Special check for "Only for SR" tag
 						if (InStr(packTypeList, "Only for SR")) {
 							onlySRMode := true
 							CreateStatusMessage("Found 'Only for SR' tag for " . id)
 							
-							; Special case: If this is a God Pack and friend wants God Packs
-							if (foundTS = "God Pack" && hasGodPackTag) {
-								shouldKeep := true
-								CreateStatusMessage("Keeping friend " . id . " (Has 'Only for SR' + 'GodPack' tags and this is a God Pack)")
-								break
-							}
-							
-							; If current pack is Shining, check if foundTS matches desired pack types
+							 ; If current pack is Shining, check if foundTS matches desired pack types
 							if (openPack = "Shining") {
-								; Check if the specific foundTS (packType) exists in their pack types list
+								 ; Check if the specific foundTS (packType) exists in their pack types list
 								packTypeMatch := false
 								packTypes := StrSplit(packTypeList, ",")
 								
 								for _, packType in packTypes {
 									trimmedPackType := Trim(packType)
-									; Skip the "Only for SR" text in the comparison
+									 ; Skip the "Only for SR" text in the comparison
 									if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
 										packTypeMatch := true
 										CreateStatusMessage("pack type match found: " . trimmedPackType)
@@ -575,12 +569,12 @@ RemoveFriendsFiltered() {
 							break
 						}
 						
-						; If not in "Only for SR" mode, do the regular check for pack type
+						 ; If not in "Only for SR" mode, do the regular check for pack type
 						if (!onlySRMode) {
-							packType := StrSplit(packTypeList, ",")
+							packTypes := StrSplit(packTypeList, ",")
 							
-							; Check if foundTS is in the desired pack types
-							for _, packType in packType {
+							 ; Check if foundTS is in the desired pack types
+							for _, packType in packTypes {
 								trimmedPackType := Trim(packType)
 								if (trimmedPackType = foundTS) {
 									shouldKeep := true
@@ -590,12 +584,12 @@ RemoveFriendsFiltered() {
 							}
 						}
 					} else {
-						; No pack type information, so keep anyway
+						 ; No pack type information, so keep anyway
 						shouldKeep := true
 						CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
 					}
 				} else {
-					; No separator, assume they accept any pack type
+					 ; No separator, assume they accept any pack type
 					shouldKeep := true
 					CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
 				}
@@ -604,11 +598,9 @@ RemoveFriendsFiltered() {
 		}
 		
 		if (!shouldKeep) {
-			; This friend doesn't want this pack type, add to filtered list for removal
+			 ; This friend doesn't want this pack type, add to filtered list for removal
 			filteredIDs.Push(id)
-			if (onlySRMode && hasGodPackTag && foundTS = "God Pack") {
-				CreateStatusMessage("UNEXPECTED: Friend " . id . " has Only for SR + GodPack but wasn't kept")
-			} else if (onlySRMode && openPack = "Shining") {
+			if (onlySRMode && openPack = "Shining") {
 				CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
 			} else if (onlySRMode) {
 				CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
@@ -618,14 +610,14 @@ RemoveFriendsFiltered() {
 		}
 	}
 	
-	; If we have no IDs to remove, just exit
+	 ; If we have no IDs to remove, just exit
 	if (filteredIDs.MaxIndex() = 0) {
 		CreateStatusMessage("No friends to remove based on pack type filter")
 		friended := false
 		return
 	}
 	
-	; Process filtered IDs for removal
+	 ; Process filtered IDs for removal
 	for index, value in filteredIDs {
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -683,10 +675,10 @@ TradeTutorial() {
 }
 
 AddFriends(renew := false, getFC := false) {
-	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack
+	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 	
-	; Modify the reading of IDs to consider associations with packages
+	; Modify the reading of IDs to store in global variable
 	rawFriendIDs := ReadFile("ids")
 	friendIDs := [] ; Initialize an empty array to store friend IDs
 	
@@ -1684,9 +1676,6 @@ FoundStars(star) {
 		ChooseTag()
 		; Use the filtered removal function
 		RemoveFriendsFiltered()
-	} else {
-		RemoveFriends()
-	}
 }
 
 FindBorders(prefix) {
@@ -1897,14 +1886,8 @@ GodPackFound(validity) {
 	if(validity = "Valid") {
 		LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		ChooseTag()
-		
-		; Use the filtered removal function for valid God Packs
-		RemoveFriendsFiltered()
 	} else {
 		LogToDiscord(logMessage, screenShot, false, accountFullPath, fcScreenshot)
-		
-		; Use the regular removal for invalid packs
-		RemoveFriends()
 	}
 }
 
