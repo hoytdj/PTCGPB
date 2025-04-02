@@ -1676,6 +1676,7 @@ FoundStars(star) {
 		ChooseTag()
 		; Use the filtered removal function
 		RemoveFriendsFiltered()
+	}
 }
 
 FindBorders(prefix) {
