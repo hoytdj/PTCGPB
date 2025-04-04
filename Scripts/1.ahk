@@ -2175,12 +2175,9 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 		RetryCount := 0
 		Loop {
 			try {
-				 ; Escape special characters in message
-				escapedMessage := EscapeJSON(discordPing . message)
-				
-				; Base command with properly formatted JSON
+				; Base command
 				curlCommand := "curl -k "
-					. "-F ""payload_json={""content"":""" . escapedMessage . """}"" "
+					. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
 				
 				; If an screenshot or xml file is provided, send it
 				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
@@ -2209,19 +2206,14 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 						curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
 					if (sendAccountXml)
 						curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
-					}
-				
-				; Add the webhook URL
+				}
+				; Add the webhook
 				curlCommand := curlCommand . discordWebhookURL
-				
-				; Debug to file
-				LogToFile("Discord curl command: " . curlCommand, "DiscordDebug.txt")
-				
-				; Send the message using curl (remove Hide to see errors)
-				RunWait, %curlCommand%
+				; Send the message using curl
+				RunWait, %curlCommand%,, Hide
 				break
 			}
-			catch e {
+			catch {
 				RetryCount++
 				LogToFile("Discord error: " . e.message, "DiscordDebug.txt")
 				if (RetryCount >= MaxRetries) {
@@ -2234,21 +2226,6 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 		}
 	}
 }
-
-; Helper function to escape JSON strings
-EscapeJSON(str) {
-    ; Replace backslashes first to avoid double-escaping
-    str := StrReplace(str, "\", "\\")
-    
-    ; Replace other special characters
-    str := StrReplace(str, """", "\""")
-    str := StrReplace(str, "`n", "\n")
-    str := StrReplace(str, "`r", "\r")
-    str := StrReplace(str, "`t", "\t")
-    
-    return str
-}
-
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
