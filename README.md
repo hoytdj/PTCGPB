@@ -1,6 +1,8 @@
 # Hoytdj's Pokemon Trading Card Game Pocket Bot
 This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/Arturo-1212/PTCGPB). _Thanks for all the hard work Arturo!_ After any new releases of the main bot, this bot will be updated as soon as possible.
 
+Check the wiki for instructions on how to install: https://github.com/Arturo-1212/PTCGPB/wiki/Pokemon-TCG-Pocket-Bot
+
 **IMPORTANT:** Tesseract OCR is required for this to work.
 * Download/install Tesseract OCR from here: [Tesseract OCR Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
 * I recommend you install Tesseract OCR under `C:\Program Files\Tesseract-OCR`. If you install it elsewhere, you **must** manually open your `Settings.ini` file and add the full path to your Tesseract executable. For example: `tesseractPath=C:\Program Files\Tesseract-OCR\tesseract.exe`
