@@ -1137,10 +1137,11 @@ RemoveNonVipFriends() {
 				repeatFriendAccounts := 0
 			}
 			if (repeatFriendAccounts > 2) {
-				CreateStatusMessage("End of list - parsed the same friend codes multiple times.`nReady to test.")
-				adbClick(143, 507)
-				return
-			}
+                CreateStatusMessage("End of list - parsed the same friend codes multiple times.")
+                Delay(2)
+                CreateStatusMessage("Ready to test.")
+                adbClick(143, 507)
+                return 
 			matchedFriend := ""
 			isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
 			if (isVipResult || !parseFriendResult) {
