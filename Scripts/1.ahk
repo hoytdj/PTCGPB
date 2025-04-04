@@ -2180,7 +2180,7 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 				
 				; Base command with properly formatted JSON
 				curlCommand := "curl -k "
-					. "-F ""payload_json={\"content\":\"" . escapedMessage . "\"}"" "
+					. "-F ""payload_json={""content"":""" . escapedMessage . """}"" "
 				
 				; If an screenshot or xml file is provided, send it
 				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
