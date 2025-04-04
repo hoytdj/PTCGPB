@@ -3159,6 +3159,9 @@ DoWonderPick() {
 		adbClick(146, 494)
 		if(FindOrLoseImage(233, 486, 272, 519, , "Skip", 0, failSafeTime) || FindOrLoseImage(240, 80, 265, 100, , "WonderPick", 0, failSafeTime))
 			break
+		if(FindOrLoseImage(160, 330, 200, 370, , "Card", 0, failSafeTime)) {
+			adbClick(183, 350) ; click card
+		}
 		delay(1)
 		failSafeTime := (A_TickCount - failSafe) // 1000
 		CreateStatusMessage("In failsafe for Shop. " . failSafeTime "/45 seconds")

@@ -1,6 +1,8 @@
 # Hoytdj's Pokemon Trading Card Game Pocket Bot
 This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/Arturo-1212/PTCGPB). _Thanks for all the hard work Arturo!_ After any new releases of the main bot, this bot will be updated as soon as possible.
 
+Check the wiki for instructions on how to install: https://github.com/Arturo-1212/PTCGPB/wiki/Pokemon-TCG-Pocket-Bot
+
 **IMPORTANT:** Tesseract OCR is required for this to work.
 * Download/install Tesseract OCR from here: [Tesseract OCR Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
 * I recommend you install Tesseract OCR under `C:\Program Files\Tesseract-OCR`. If you install it elsewhere, you **must** manually open your `Settings.ini` file and add the full path to your Tesseract executable. For example: `tesseractPath=C:\Program Files\Tesseract-OCR\tesseract.exe`
@@ -46,4 +48,17 @@ _A note from Arturo (which I echo):_
 _The bot will always be free and I will update it as long as this method is viable. I've spent many hours creating the PTCGPB, and if it’s helped you complete your collection, consider buying me a coffee to keep me going and adding new features!_
 https://buymeacoffee.com/aarturoo
 
-_Thanks for your support, and let’s keep those god packs coming!_ 😄
+*Thanks for your support, and let’s keep those god packs coming!* 😄
+
+# **__Arturo's Pokemon Trading Card Game Pocket Bot__**
+*Special thanks to all [contributors](https://github.com/Arturo-1212/PTCGPB/graphs/contributors)! Thanks to everyone else who has helped test or has contributed their suggestions to make the bot better!*
+
+**__What does this do?__**
+- This rerolls accounts from creation to opening the first 3 packs looking for god packs. After finishing the tutorial it will add your main account and friends before opening a pack so if it finds a god pack it appears in your wonder pick.
+
+Join the discord for an updated guide: https://discord.gg/C9Nyf7P4sT Translations are being worked on so if there isn't an updated guide in your language then use the express install English guide: https://discord.com/channels/1330305075393986703/1335717204989055087
+
+_A guide will be posted here in the future. For now, join the Discord!_
+
+## License
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
