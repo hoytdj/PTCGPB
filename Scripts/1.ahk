@@ -2175,14 +2175,18 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 		RetryCount := 0
 		Loop {
 			try {
-				; Base command
+				 ; Escape special characters in message
+				escapedMessage := EscapeJSON(discordPing . message)
+				
+				; Base command with properly formatted JSON
 				curlCommand := "curl -k "
-					. "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
+					. "-F ""payload_json={\"content\":\"" . escapedMessage . "\"}"" "
 				
 				; If an screenshot or xml file is provided, send it
 				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
 				sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
 				sendAccountXml := xmlFile != "" && FileExist(xmlFile)
+				
 				if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
 					fileIndex := 0
 					if (sendScreenshot1) {
@@ -2205,15 +2209,21 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 						curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
 					if (sendAccountXml)
 						curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
-				}
-				; Add the webhook
+					}
+				
+				; Add the webhook URL
 				curlCommand := curlCommand . discordWebhookURL
-				; Send the message using curl
-				RunWait, %curlCommand%,, Hide
+				
+				; Debug to file
+				LogToFile("Discord curl command: " . curlCommand, "DiscordDebug.txt")
+				
+				; Send the message using curl (remove Hide to see errors)
+				RunWait, %curlCommand%
 				break
 			}
-			catch {
+			catch e {
 				RetryCount++
+				LogToFile("Discord error: " . e.message, "DiscordDebug.txt")
 				if (RetryCount >= MaxRetries) {
 					CreateStatusMessage("Failed to send discord message.")
 					break
@@ -2224,6 +2234,21 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 		}
 	}
 }
+
+; Helper function to escape JSON strings
+EscapeJSON(str) {
+    ; Replace backslashes first to avoid double-escaping
+    str := StrReplace(str, "\", "\\")
+    
+    ; Replace other special characters
+    str := StrReplace(str, """", "\""")
+    str := StrReplace(str, "`n", "\n")
+    str := StrReplace(str, "`r", "\r")
+    str := StrReplace(str, "`t", "\t")
+    
+    return str
+}
+
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
