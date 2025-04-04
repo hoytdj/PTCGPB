@@ -24,7 +24,7 @@ https://buymeacoffee.com/aarturoo
 
 Join the discord for an updated guide: https://discord.gg/C9Nyf7P4sT Translations are being worked on so if there isn't an updated guide in your language then use the express install English guide: https://discord.com/channels/1330305075393986703/1335717204989055087
 
-_A guide will be posted here in the future. For now, join the Discord!_
+Check the wiki for instructions on how to install: https://github.com/Arturo-1212/PTCGPB/wiki/Pokemon-TCG-Pocket-Bot
 
 ## License
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
