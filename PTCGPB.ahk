@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "hoytdj"
 repoName := "PTCGPB"
-localVersion := "v1.5.3"
+localVersion := "v1.5.4"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -107,6 +107,7 @@ IniRead, minStarsA2b, Settings.ini, UserSettings, minStarsA2b, 0
 IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 IniRead, tesseractPath, Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
+IniRead, applyRoleFilters, Settings.ini, UserSettings, applyRoleFilters, 0
 
 ; Create a stylish GUI with custom colors and modern look
 Gui, Color, 1E1E1E, 333333 ; Dark theme background
@@ -345,10 +346,14 @@ Gui, Add, Edit, vvipIdsURL w460 x270 y485 h20 -E0x200 Background2A2A2A cWhite, %
 ; ==============================
 
 ; ========== Add-On Settings Section ==========
-Gui, Add, GroupBox, x5 y515 w740 h50 cWhite, Extra Settings
+sectionColor := "cWhite"
+Gui, Add, GroupBox, x5 y515 w740 h50 %sectionColor%, Extra Settings
 
-Gui, Add, Text, x15 y535 cWhite, Tesseract Path:
+Gui, Add, Text, x15 y535 %sectionColor%, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w300 x115 y534 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
+Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x455 y535 " . sectionColor, Use Role-Based Filters
+
+
 
 Gui, Show, , %localVersion% PTCGPB Bot Setup [Non-Commercial 4.0 International License]
 Return
@@ -535,6 +540,7 @@ Start:
 	IniWrite, %heartBeatDelay%, Settings.ini, UserSettings, heartBeatDelay
 	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 	IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
+	IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
 	
 	; Using FriendID field to provide a URL to download ids.txt is deprecated.
 	if (inStr(FriendID, "http")) {

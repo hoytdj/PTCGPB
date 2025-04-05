@@ -17,7 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
-global DeadCheck, sendAccountXml
+global DeadCheck, sendAccountXml, applyRoleFilters
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -79,6 +79,8 @@ IniRead, minStarsA2Dialga, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars
 IniRead, minStarsA2Palkia, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2Palkia, 0
 IniRead, minStarsA2a, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2a, 0
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
+
+IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRoleFilters, 0
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
@@ -515,6 +517,7 @@ RemoveFriendsFiltered() {
 	CreateStatusMessage("Filtering friends based on pack type: " . foundTS)
 	
 	; If this is a GodPack, don't remove anyone out - everyone wants GodPacks
+	; TODO: I think this should move up to the top
 	if (foundTS = "God Pack") {
 		CreateStatusMessage("Found God Pack")
 		friended := false
@@ -675,7 +678,7 @@ TradeTutorial() {
 }
 
 AddFriends(renew := false, getFC := false) {
-	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs
+	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs, applyRoleFilters
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 	
 	; Modify the reading of IDs to store in global variable
@@ -694,9 +697,9 @@ AddFriends(renew := false, getFC := false) {
 			CreateStatusMessage("Processing line: " . value)
 			
 			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
-			if (InStr(value, "|")) {
+			if (InStr(value, "|") && applyRoleFilters) {
 				parts := StrSplit(value, "|")
-				id := Trim(parts[1])
+				id := RegExReplace(parts[1], "[^a-zA-Z0-9]") 
 				
 				; If the ID is not valid (not 16 digits), skip it
 				if (StrLen(id) != 16) {
@@ -726,17 +729,21 @@ AddFriends(renew := false, getFC := false) {
 				if (desiredBooster) {
 					friendIDs.Push(id)
 					CreateStatusMessage("ADDING: " . id . " wants the booster " . openPack)
-				} else {
+				}
+				else {
 					CreateStatusMessage("SKIPPING: " . id . " doesn't want booster " . openPack)
 				}
-			} else {
+			}
+			else {
+				id := RegExReplace(value, "\|.*|[^a-zA-Z0-9]")
 				; If there is no list of boosters, check if it's a valid ID (length = 16)
-				if (StrLen(value) = 16) {
+				if (StrLen(id) = 16) {
 					; If no boosters are specified, add the ID (it accepts all boosters)
-					friendIDs.Push(value)
-					CreateStatusMessage("ADDING: " . value . " (accepts all boosters)")
-				} else {
-					CreateStatusMessage("SKIPPING: " . value . " is invalid (wrong length)")
+					friendIDs.Push(id)
+					CreateStatusMessage("ADDING: " . id . " (accepts all boosters)")
+				}
+				else {
+					CreateStatusMessage("SKIPPING: " . id . " is invalid (wrong length)")
 				}
 			}
 		}
@@ -1635,7 +1642,7 @@ CheckPack() {
 }
 
 FoundStars(star) {
-	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack
+	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, applyRoleFilters
 	screenShot := Screenshot(star)
 	accountFile := saveAccount(star, accountFullPath)
 	friendCode := getFriendCode()
@@ -1675,7 +1682,8 @@ FoundStars(star) {
 	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
 		ChooseTag()
 		; Use the filtered removal function
-		RemoveFriendsFiltered()
+		if (applyRoleFilters)
+			RemoveFriendsFiltered()
 	}
 }
 
