@@ -1,7 +1,3 @@
-; ; Include error capturing at the beginning
-; #Include %A_ScriptDir%\ErrorCapture.ahk
-; ; Include debug tooling
-; #Include %A_ScriptDir%\Debug.ahk
 
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
@@ -212,10 +208,6 @@ if(!injectMethod || !loadedAccount)
 pToken := Gdip_Startup()
 packs := 0
 
-; ; Initialize the debug system
-; InitializeDebugSystem()
-
-; SendStatusToDebugGUI() ; Send initial status
 
 if(DeadCheck==1) {
 	;LogToDiscord("Sup dudes. Not sure what happened, but a script died and I'm doing a menu delete and starting over.")
@@ -2251,7 +2243,6 @@ from_window(ByRef image) {
 ~+F6::Pause
 ~+F7::ToggleStop()
 ~+F8::ToggleStatusMessages()
-;~+F10::ShowInstanceDebugGui()
 ;~F9::restartGameInstance("F9")
 
 ToggleStatusMessages() {
