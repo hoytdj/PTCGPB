@@ -30,6 +30,7 @@ dateChange := false
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
 
 ; Trainer, Rainbow, Full Art, Shiny, Immersive, Crown, Double two star
+; TODO: Be sure these are false before release!
 MockGodPack := false ; DEBUG
 MockSinglePack := false ; DEBUG - e.g., "Trainer"
 
@@ -535,13 +536,14 @@ RemoveFriendsFiltered() {
 		
 		; Look for this ID's preferences in the rawFriendIDs
 		for _, rawLine in rawFriendIDs {
+			; TODO: This is an arrow anti-pattern - may want to clean it up
 			if (InStr(rawLine, id)) {
 				; Check if the line has pack type information
 				if (InStr(rawLine, "|")) {
 					parts := StrSplit(rawLine, "|")
 					
 					; If we have at least 3 parts (ID | Boosters | Pack Types)
-					if (parts.MaxIndex() >= 3) {
+					if (parts.MaxIndex() >= 3 && Trim(parts[3]) != "") {
 						packTypeList := Trim(parts[3])
 						
 						 ; Special check for "Only for SR" tag
@@ -619,7 +621,7 @@ RemoveFriendsFiltered() {
 	}
 	
 	 ; If we have no IDs to remove, just exit
-	if (filteredIDs.MaxIndex() = 0) {
+	if (filteredIDs.MaxIndex() = "") {
 		CreateStatusMessage("No friends to remove based on pack type filter")
 		friended := false
 		return
@@ -717,17 +719,23 @@ AddFriends(renew := false, getFC := false) {
 				
 				CreateStatusMessage("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
 				
-				; Checks if the current booster is in the list
-				desiredBooster := false
-				for _, pack in boosters {
-					trimmedPack := Trim(pack)
-					CreateStatusMessage("Checking if " . trimmedPack . " = " . openPack)
-					
-					; Case-insensitive comparison
-					if (trimmedPack = openPack) {
-						desiredBooster := true
-						CreateStatusMessage("Match found!")
-						break
+				if (boosters.MaxIndex() = "") {
+					; If booster list is blank assume they want everything
+					desiredBooster := true
+				}
+				else {
+					; Checks if the current booster is in the list
+					desiredBooster := false
+					for _, pack in boosters {
+						trimmedPack := Trim(pack)
+						CreateStatusMessage("Checking if " . trimmedPack . " = " . openPack)
+						
+						; Case-insensitive comparison
+						if (trimmedPack = openPack) {
+							desiredBooster := true
+							CreateStatusMessage("Match found!")
+							break
+						}
 					}
 				}
 				
