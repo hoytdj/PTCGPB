@@ -89,7 +89,6 @@ IniRead, minStarsA2a, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2a, 
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
 
 IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRoleFilters, 0
-
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
 packArray := []  ; Initialize an empty array
@@ -396,8 +395,8 @@ RemoveFriends(filterByPreference := false) {
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
 	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
 	
-	; Determine which IDs to process based on filtering setting
-	idsToProcess := []
+	; Use the global rawFriendIDs variable instead of reading the file again
+	filteredIDs := []
 	
 	if (filterByPreference) {
 		; If this is a GodPack, don't remove anyone - everyone wants GodPacks
@@ -482,7 +481,7 @@ RemoveFriends(filterByPreference := false) {
 		
 			if (!shouldKeep) {
 				; This friend doesn't want this pack type, add to filtered list for removal
-				idsToProcess.Push(id)
+				filteredIDs.Push(id)
 				if (onlySRMode && openPack = "Shining") {
 					CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
 				} else if (onlySRMode) {
@@ -494,18 +493,18 @@ RemoveFriends(filterByPreference := false) {
 		}
 
 		; If no friends to remove, exit
-		if (idsToProcess.MaxIndex() = 0) {
+		if (filteredIDs.MaxIndex() = 0) {
 			CreateStatusMessage("No friends to remove based on pack type filter")
 			friended := false
 			return
 		}
 	} else {
 		; If not filtering, process all friends
-		idsToProcess := friendIDs
+		filteredIDs := friendIDs
 	}
 	
-	; Process all the IDs that need to be removed
-	for index, value in idsToProcess {
+	 ; Process filtered IDs for removal
+	for index, value in filteredIDs {
 		failSafe := A_TickCount
 		failSafeTime := 0
 		Loop {
@@ -539,10 +538,10 @@ RemoveFriends(filterByPreference := false) {
 			CreateStatusMessage("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
 		}
 		
-		if(index != idsToProcess.maxIndex()) {
+		if(index != filteredIDs.maxIndex()) {
 			FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
 			FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-			EraseInput(index, idsToProcess.MaxIndex())
+			EraseInput(index, filteredIDs.MaxIndex())
 		}
 	}
 	
@@ -584,7 +583,7 @@ AddFriends(renew := false, getFC := false) {
 			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
 			if (InStr(value, "|") && applyRoleFilters) {
 				parts := StrSplit(value, "|")
-				id := RegExReplace(parts[1], "[^a-zA-Z0-9]") 
+				id := RegExReplace(parts[1], "[^a-zA-Z0-9]")
 				
 				; If the ID is not valid (not 16 digits), skip it
 				if (StrLen(id) != 16) {
@@ -877,8 +876,8 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			}
 			LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
 			Reload
-			}
 		}
+	}
 	if(imageName = "Points" || imageName = "Home") { ;look for level up ok "button"
 		LevelUp()
 	}
@@ -2069,7 +2068,6 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 			}
 			catch {
 				RetryCount++
-				LogToFile("Discord error: " . e.message, "DiscordDebug.txt")
 				if (RetryCount >= MaxRetries) {
 					CreateStatusMessage("Failed to send discord message.")
 					break
@@ -2717,9 +2715,9 @@ DoTutorial() {
 		if (FindOrLoseImage(225, 273, 235, 290, , "Pack", 1, failSafeTime)){
 			if(setSpeed > 1) {
 				if(setSpeed = 3)
-						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click mod settings
+						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click 3x
 				else
-						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click mod settings
+						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click 2x
 			}
 			adbClick(41, 296)
 				break
