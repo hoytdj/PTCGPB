@@ -17,7 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
-global DeadCheck, sendAccountXml, applyRoleFilters, mockGodPack
+global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -29,7 +29,9 @@ friended := false
 dateChange := false
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
 
-mockGodPack := false ; DEBUG
+; Trainer, Rainbow, Full Art, Shiny, Immersive, Crown, Double two star
+MockGodPack := false ; DEBUG
+MockSinglePack := false ; DEBUG - e.g., "Trainer"
 
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, waitTime, %A_ScriptDir%\..\Settings.ini, UserSettings, waitTime, 5
@@ -1537,16 +1539,18 @@ SetTextAndResize(controlHwnd, newText) {
 }
 
 CheckPack() {
-	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck
+	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck, MockSinglePack
 	foundGP := false ;check card border to find godpacks
-	foundTrainer := false
-	foundRainbow := false
-	foundFullArt := false
-	foundShiny := false
-	foundCrown := false
-	foundImmersive := false
-	foundTS := false
+	foundTrainer := (MockSinglePack == "Trainer")
+	foundRainbow := (MockSinglePack == "Rainbow")
+	foundFullArt := (MockSinglePack == "Full Art")
+	foundShiny := (MockSinglePack == "Shiny")
+	foundCrown := (MockSinglePack == "Crown")
+	foundImmersive := (MockSinglePack == "Immersive")
+	2starCount := (MockSinglePack == "Double two star") ? 2 : 0
+	foundTS := (MockSinglePack != "") ? MockSinglePack : false
 	foundGP := FindGodPack()
+
 	;msgbox 1 foundGP:%foundGP%, TC:%TrainerCheck%, RC:%RainbowCheck%, FAC:%FullArtCheck%, FTS:%foundTS%
 	if(!CheckShiningPackOnly || openPack = "Shining") {
 		if(TrainerCheck && !foundTS) {
@@ -1763,7 +1767,7 @@ FindGodPack() {
 			}
 		}
 
-		if (mockGodPack)
+		if (MockGodPack)
 			normalBorders := false
 
 		Gdip_DisposeImage(pBitmap)
