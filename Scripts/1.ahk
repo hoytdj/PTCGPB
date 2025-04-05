@@ -17,7 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
-global DeadCheck, sendAccountXml
+global DeadCheck, sendAccountXml, applyRoleFilters, mockGodPack
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -28,6 +28,9 @@ showStatus := true
 friended := false
 dateChange := false
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
+
+mockGodPack := false ; DEBUG
+
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, waitTime, %A_ScriptDir%\..\Settings.ini, UserSettings, waitTime, 5
 IniRead, Delay, %A_ScriptDir%\..\Settings.ini, UserSettings, Delay, 250
@@ -79,6 +82,8 @@ IniRead, minStarsA2Dialga, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars
 IniRead, minStarsA2Palkia, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2Palkia, 0
 IniRead, minStarsA2a, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2a, 0
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
+
+IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRoleFilters, 0
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
@@ -515,6 +520,7 @@ RemoveFriendsFiltered() {
 	CreateStatusMessage("Filtering friends based on pack type: " . foundTS)
 	
 	; If this is a GodPack, don't remove anyone out - everyone wants GodPacks
+	; TODO: I think this should move up to the top
 	if (foundTS = "God Pack") {
 		CreateStatusMessage("Found God Pack")
 		friended := false
@@ -675,7 +681,7 @@ TradeTutorial() {
 }
 
 AddFriends(renew := false, getFC := false) {
-	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs
+	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs, applyRoleFilters
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 	
 	; Modify the reading of IDs to store in global variable
@@ -694,9 +700,9 @@ AddFriends(renew := false, getFC := false) {
 			CreateStatusMessage("Processing line: " . value)
 			
 			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
-			if (InStr(value, "|")) {
+			if (InStr(value, "|") && applyRoleFilters) {
 				parts := StrSplit(value, "|")
-				id := Trim(parts[1])
+				id := RegExReplace(parts[1], "[^a-zA-Z0-9]") 
 				
 				; If the ID is not valid (not 16 digits), skip it
 				if (StrLen(id) != 16) {
@@ -726,23 +732,30 @@ AddFriends(renew := false, getFC := false) {
 				if (desiredBooster) {
 					friendIDs.Push(id)
 					CreateStatusMessage("ADDING: " . id . " wants the booster " . openPack)
-				} else {
+				}
+				else {
 					CreateStatusMessage("SKIPPING: " . id . " doesn't want booster " . openPack)
 				}
-			} else {
+			}
+			else {
+				id := RegExReplace(value, "\|.*|[^a-zA-Z0-9]")
 				; If there is no list of boosters, check if it's a valid ID (length = 16)
-				if (StrLen(value) = 16) {
+				if (StrLen(id) = 16) {
 					; If no boosters are specified, add the ID (it accepts all boosters)
-					friendIDs.Push(value)
-					CreateStatusMessage("ADDING: " . value . " (accepts all boosters)")
-				} else {
-					CreateStatusMessage("SKIPPING: " . value . " is invalid (wrong length)")
+					friendIDs.Push(id)
+					CreateStatusMessage("ADDING: " . id . " (accepts all boosters)")
+				}
+				else {
+					CreateStatusMessage("SKIPPING: " . id . " is invalid (wrong length)")
 				}
 			}
 		}
 	}
 	
 	CreateStatusMessage("Final list contains " . friendIDs.MaxIndex() . " friends")
+	; Handle single FriendID, rather than ids.txt file
+	if (friendIDs.MaxIndex() = "" && FriendID != "")
+		friendIDs.Push(FriendID)
 	
 	count := 0
 	friended := true
@@ -798,20 +811,35 @@ AddFriends(renew := false, getFC := false) {
 				return friendCode
 			}
 			FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-			if(!friendIDs) {
+			;randomize friend id list to not back up mains if running in groups since they'll be sent in a random order.
+			n := friendIDs.MaxIndex()
+			Loop % n
+			{
+				i := n - A_Index + 1
+				Random, j, 1, %i%
+				; Force string assignment with quotes
+				temp := friendIDs[i] . ""  ; Concatenation ensures string type
+				friendIDs[i] := friendIDs[j] . ""
+				friendIDs[j] := temp . ""
+			}
+			for index, value in friendIDs {
+				if (StrLen(value) != 16) {
+					; Wrong id value
+					continue
+				}
 				failSafe := A_TickCount
 				failSafeTime := 0
 				Loop {
-					adbInput(FriendID)
+					adbInput(value)
 					Delay(1)
 					if(FindOrLoseImage(205, 430, 255, 475, , "Search", 0, failSafeTime)) {
 						FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-						EraseInput(1,1)
+						EraseInput()
 					} else if(FindOrLoseImage(205, 430, 255, 475, , "Search2", 0, failSafeTime)) {
 						break
 					}
 					failSafeTime := (A_TickCount - failSafe) // 1000
-					CreateStatusMessage("In failsafe for AddFriends1. " . failSafeTime "/45 seconds")
+					CreateStatusMessage("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
 				}
 				failSafe := A_TickCount
 				failSafeTime := 0
@@ -829,8 +857,6 @@ AddFriends(renew := false, getFC := false) {
 						if(renew){
 							FindImageAndClick(135, 355, 160, 385, , "Remove", 193, 258, 500)
 							FindImageAndClick(165, 250, 190, 275, , "Send", 200, 372, 500)
-							if(!friended)
-								ExitApp
 							Delay(2)
 							adbClick(243, 258)
 						}
@@ -838,71 +864,12 @@ AddFriends(renew := false, getFC := false) {
 					}
 					Sleep, 750
 					failSafeTime := (A_TickCount - failSafe) // 1000
-					CreateStatusMessage("In failsafe for AddFriends2. " . failSafeTime "/45 seconds")
+					CreateStatusMessage("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
 				}
-				n := 1 ;how many friends added needed to return number for remove friends
-			}
-			else {
-				;randomize friend id list to not back up mains if running in groups since they'll be sent in a random order.
-				n := friendIDs.MaxIndex()
-				Loop % n
-				{
-					i := n - A_Index + 1
-					Random, j, 1, %i%
-					; Force string assignment with quotes
-					temp := friendIDs[i] . ""  ; Concatenation ensures string type
-					friendIDs[i] := friendIDs[j] . ""
-					friendIDs[j] := temp . ""
-				}
-				for index, value in friendIDs {
-					if (StrLen(value) != 16) {
-						; Wrong id value
-						continue
-					}
-					failSafe := A_TickCount
-					failSafeTime := 0
-					Loop {
-						adbInput(value)
-						Delay(1)
-						if(FindOrLoseImage(205, 430, 255, 475, , "Search", 0, failSafeTime)) {
-							FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-							EraseInput()
-						} else if(FindOrLoseImage(205, 430, 255, 475, , "Search2", 0, failSafeTime)) {
-							break
-						}
-						failSafeTime := (A_TickCount - failSafe) // 1000
-						CreateStatusMessage("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
-					}
-					failSafe := A_TickCount
-					failSafeTime := 0
-					Loop {
-						adbClick(232, 453)
-						if(FindOrLoseImage(165, 250, 190, 275, , "Send", 0, failSafeTime)) {
-							adbClick(243, 258)
-							Delay(2)
-							break
-						}
-						else if(FindOrLoseImage(165, 240, 255, 270, , "Withdraw", 0, failSafeTime)) {
-							break
-						}
-						else if(FindOrLoseImage(165, 250, 190, 275, , "Accepted", 0, failSafeTime)) {
-							if(renew){
-								FindImageAndClick(135, 355, 160, 385, , "Remove", 193, 258, 500)
-								FindImageAndClick(165, 250, 190, 275, , "Send", 200, 372, 500)
-								Delay(2)
-								adbClick(243, 258)
-							}
-							break
-						}
-						Sleep, 750
-						failSafeTime := (A_TickCount - failSafe) // 1000
-						CreateStatusMessage("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
-					}
-					if(index != friendIDs.maxIndex()) {
-						FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
-						FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-						EraseInput(index, n)
-					}
+				if(index != friendIDs.maxIndex()) {
+					FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
+					FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
+					EraseInput(index, n)
 				}
 			}
 			FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500)
@@ -1635,7 +1602,7 @@ CheckPack() {
 }
 
 FoundStars(star) {
-	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack
+	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, applyRoleFilters
 	screenShot := Screenshot(star)
 	accountFile := saveAccount(star, accountFullPath)
 	friendCode := getFriendCode()
@@ -1675,7 +1642,8 @@ FoundStars(star) {
 	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
 		ChooseTag()
 		; Use the filtered removal function
-		RemoveFriendsFiltered()
+		if (applyRoleFilters)
+			RemoveFriendsFiltered()
 	}
 }
 
@@ -1794,6 +1762,10 @@ FindGodPack() {
 				break
 			}
 		}
+
+		if (mockGodPack)
+			normalBorders := false
+
 		Gdip_DisposeImage(pBitmap)
 		if(normalBorders) {
 			CreateStatusMessage("Not a God Pack ")
@@ -2085,7 +2057,7 @@ ReadFile(filename, numbers := false) {
 	values := []
 	for _, val in StrSplit(Trim(content), "`n") {
 		; Don't strip non-alphanumeric characters - we need to keep the | and ,
-		trimmedVal := Trim(val)
+		trimmedVal := Trim(val, " `t`n`r")
 		if (trimmedVal != "")
 			values.Push(trimmedVal)
 	}
