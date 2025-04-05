@@ -1151,39 +1151,41 @@ RemoveNonVipFriends() {
                 CreateStatusMessage("Ready to test.")
                 adbClick(143, 507)
                 return 
-			matchedFriend := ""
-			isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
-			if (isVipResult || !parseFriendResult) {
-				; If we couldn't parse the friend, skip removal
-				if (!parseFriendResult) {
-					CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
-					LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
-				}
-				; If it's a VIP friend, skip removal
-				if (isVipResult)
-					CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
-				Sleep, 1500 ; Time to read
-				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
-				Delay(2)
-				if (friendIndex < 2)
-					friendIndex++
-				else {
-					adbSwipeFriend()
-					;adbGestureFriend()
-					friendIndex := 0
-				}
-			}
-			else {
-				; If NOT a VIP remove the friend
-				CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
-				LogToFile("Friend removed: " . friendAccount.ToString() . ". No VIP match found.", "GPTestLog.txt")
-				Sleep, 1500 ; Time to read
-				FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
-				FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
-				Delay(1)
-				FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
-				Delay(3)
-			}
+            }
+            
+            matchedFriend := ""
+            isVipResult := IsFriendAccountInList(friendAccount, vipFriendsArray, matchedFriend)
+            if (isVipResult || !parseFriendResult) {
+                ; If we couldn't parse the friend, skip removal
+                if (!parseFriendResult) {
+                    CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
+                    LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
+                }
+                ; If it's a VIP friend, skip removal
+                if (isVipResult)
+                    CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
+                Sleep, 1500 ; Time to read
+                FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
+                Delay(2)
+                if (friendIndex < 2)
+                    friendIndex++
+                else {
+                    adbSwipeFriend()
+                    ;adbGestureFriend()
+                    friendIndex := 0
+                }
+            }
+            else {
+                ; If NOT a VIP remove the friend
+                CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
+                LogToFile("Friend removed: " . friendAccount.ToString() . ". No VIP match found.", "GPTestLog.txt")
+                Sleep, 1500 ; Time to read
+                FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
+                FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
+                Delay(1)
+                FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
+                Delay(3)
+            }
 		}
 		else {
 			; If on social screen, we're stuck between friends, micro scroll
