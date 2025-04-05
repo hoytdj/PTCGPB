@@ -1,3 +1,8 @@
+; ; Include error capturing at the beginning
+; #Include %A_ScriptDir%\ErrorCapture.ahk
+; ; Include debug tooling
+; #Include %A_ScriptDir%\Debug.ahk
+
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
 
@@ -208,6 +213,11 @@ if(!injectMethod || !loadedAccount)
 pToken := Gdip_Startup()
 packs := 0
 
+; ; Initialize the debug system
+; InitializeDebugSystem()
+
+; SendStatusToDebugGUI() ; Send initial status
+
 if(DeadCheck==1) {
 	;LogToDiscord("Sup dudes. Not sure what happened, but a script died and I'm doing a menu delete and starting over.")
 	friended:= true
@@ -349,137 +359,10 @@ if(DeadCheck==1) {
 }
 return
 
-RemoveFriends() {
-	global friendIDs, stopToggle, friended
-	failSafe := A_TickCount
-	failSafeTime := 0
-	Loop {
-		adbClick(143, 518)
-		if(FindOrLoseImage(120, 500, 155, 530, , "Social", 0, failSafeTime))
-			break
-		else if(FindOrLoseImage(175, 165, 255, 235, , "Hourglass3", 0)) {
-			Delay(3)
-			adbClick(146, 441) ; 146 440
-			Delay(3)
-			adbClick(146, 441)
-			Delay(3)
-			adbClick(146, 441)
-			Delay(3)
-
-			FindImageAndClick(98, 184, 151, 224, , "Hourglass1", 168, 438, 500, 5) ;stop at hourglasses tutorial 2
-			Delay(1)
-
-			adbClick(203, 436) ; 203 436
-		}
-		Sleep, 500
-		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
-	}
-	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
-	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
-	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-	if(!friendIDs) {
-		failSafe := A_TickCount
-		failSafeTime := 0
-		Loop {
-			adbInput(FriendID)
-			Delay(1)
-			if(FindOrLoseImage(205, 430, 255, 475, , "Search", 0, failSafeTime)) {
-				FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-				EraseInput(1,1)
-			} else if(FindOrLoseImage(205, 430, 255, 475, , "Search2", 0, failSafeTime)) {
-				break
-			}
-			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for AddFriends1. " . failSafeTime "/45 seconds")
-		}
-		failSafe := A_TickCount
-		failSafeTime := 0
-		Loop {
-			adbClick(232, 453)
-			if(FindOrLoseImage(165, 250, 190, 275, , "Send", 0, failSafeTime)) {
-				break
-			} else if(FindOrLoseImage(165, 250, 190, 275, , "Accepted", 0, failSafeTime)) {
-				FindImageAndClick(135, 355, 160, 385, , "Remove", 193, 258, 500)
-				FindImageAndClick(165, 250, 190, 275, , "Send", 200, 372, 2000)
-				break
-			} else if(FindOrLoseImage(165, 240, 255, 270, , "Withdraw", 0, failSafeTime)) {
-				FindImageAndClick(165, 250, 190, 275, , "Send", 243, 258, 2000)
-				break
-			}
-			Sleep, 750
-			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for AddFriends2. " . failSafeTime "/45 seconds")
-		}
-		n := 1 ;how many friends added needed to return number for remove friends
-	} else {
-		;randomize friend id list to not back up mains if running in groups since they'll be sent in a random order.
-		n := friendIDs.MaxIndex()
-		Loop % n
-		{
-			i := n - A_Index + 1
-			Random, j, 1, %i%
-			; Force string assignment with quotes
-			temp := friendIDs[i] . ""  ; Concatenation ensures string type
-			friendIDs[i] := friendIDs[j] . ""
-			friendIDs[j] := temp . ""
-		}
-		for index, value in friendIDs {
-			if (StrLen(value) != 16) {
-				; Wrong id value
-				continue
-			}
-			failSafe := A_TickCount
-			failSafeTime := 0
-			Loop {
-				adbInput(value)
-				Delay(1)
-				if(FindOrLoseImage(205, 430, 255, 475, , "Search", 0, failSafeTime)) {
-					FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-					EraseInput()
-				} else if(FindOrLoseImage(205, 430, 255, 475, , "Search2", 0, failSafeTime)) {
-					break
-				}
-				failSafeTime := (A_TickCount - failSafe) // 1000
-				CreateStatusMessage("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
-			}
-			failSafe := A_TickCount
-			failSafeTime := 0
-			Loop {
-				adbClick(232, 453)
-				if(FindOrLoseImage(165, 250, 190, 275, , "Send", 0, failSafeTime)) {
-					break
-				} else if(FindOrLoseImage(165, 250, 190, 275, , "Accepted", 0, failSafeTime)) {
-					FindImageAndClick(135, 355, 160, 385, , "Remove", 193, 258, 500)
-					FindImageAndClick(165, 250, 190, 275, , "Send", 200, 372, 500)
-					break
-				} else if(FindOrLoseImage(165, 240, 255, 270, , "Withdraw", 0, failSafeTime)) {
-					FindImageAndClick(165, 250, 190, 275, , "Send", 243, 258, 2000)
-					break
-				}
-				Sleep, 750
-				failSafeTime := (A_TickCount - failSafe) // 1000
-				CreateStatusMessage("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
-			}
-			if(index != friendIDs.maxIndex()) {
-				FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
-				FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-				EraseInput(index, n)
-			}
-		}
-	}
-	if(stopToggle)
-	{
-		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
-		ExitApp
-	}
-	friended := false
-}
-
-RemoveFriendsFiltered() {
+RemoveFriends(filterByPreference := false) {
 	global friendIDs, stopToggle, friended, foundTS, openPack, rawFriendIDs
-	
-	if (!friendIDs) {
+	; Early exit if no friends to process
+	if (filterByPreference && !friendIDs) {
 		CreateStatusMessage("No friends to filter - friendIDs is empty")
 		friended := false
 		return
@@ -513,118 +396,116 @@ RemoveFriendsFiltered() {
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
 	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
 	
-	; Use the global rawFriendIDs variable instead of reading the file again
-	filteredIDs := []
+	; Determine which IDs to process based on filtering setting
+	idsToProcess := []
 	
-	; Process each friend ID to check if it matches the detected pack type (foundTS)
-	CreateStatusMessage("Filtering friends based on pack type: " . foundTS)
+	if (filterByPreference) {
+		; If this is a GodPack, don't remove anyone - everyone wants GodPacks
+		; TODO: I think this should move up to the tope 
+		if (foundTS = "God Pack") {
+			CreateStatusMessage("Found God Pack")
+			friended := false
+			return
+		}
 	
-	; If this is a GodPack, don't remove anyone out - everyone wants GodPacks
-	; TODO: I think this should move up to the top
-	if (foundTS = "God Pack") {
-		CreateStatusMessage("Found God Pack")
-		friended := false
-		return
-	}
-	
-	for index, id in friendIDs {
-		shouldKeep := false
-		onlySRMode := false  ; Flag to track if this is a "Only for SR"
-		
-		; Look for this ID's preferences in the rawFriendIDs
-		for _, rawLine in rawFriendIDs {
-			if (InStr(rawLine, id)) {
-				; Check if the line has pack type information
-				if (InStr(rawLine, "|")) {
-					parts := StrSplit(rawLine, "|")
-					
-					; If we have at least 3 parts (ID | Boosters | Pack Types)
-					if (parts.MaxIndex() >= 3) {
-						packTypeList := Trim(parts[3])
+		for index, id in friendIDs {
+			shouldKeep := false
+			onlySRMode := false 
+			
+			; Look for this ID's preferences in rawFriendIDs
+			for _, rawLine in rawFriendIDs {
+				if (InStr(rawLine, id)) {
+					; Check if the line has pack type information
+					if (InStr(rawLine, "|")) {
+						parts := StrSplit(rawLine, "|")
 						
-						 ; Special check for "Only for SR" tag
-						if (InStr(packTypeList, "Only for SR")) {
-							onlySRMode := true
-							CreateStatusMessage("Found 'Only for SR' tag for " . id)
+						; If we have at least 3 parts (ID | Boosters | Pack Types)
+						if (parts.MaxIndex() >= 3) {
+							packTypeList := Trim(parts[3])
 							
-							 ; If current pack is Shining, check if foundTS matches desired pack types
-							if (openPack = "Shining") {
-								 ; Check if the specific foundTS (packType) exists in their pack types list
-								packTypeMatch := false
+							; Special check for "Only for SR" tag
+							if (InStr(packTypeList, "Only for SR")) {
+								onlySRMode := true
+								CreateStatusMessage("Found 'Only for SR' tag for " . id)
+								
+								; If current pack is Shining, check if foundTS matches desired pack types
+								if (openPack = "Shining") {
+									; Check if the specific foundTS (packType) exists in their pack types list
+									packTypeMatch := false
+									packTypes := StrSplit(packTypeList, ",")
+									
+									for _, packType in packTypes {
+										trimmedPackType := Trim(packType)
+										; Skip the "Only for SR" text in the comparison
+										if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
+											packTypeMatch := true
+											CreateStatusMessage("pack type match found: " . trimmedPackType)
+											break
+										}
+									}
+									
+									if (packTypeMatch) {
+										shouldKeep := true
+										CreateStatusMessage("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
+									}
+								}
+								break
+							}
+						
+							; If not in "Only for SR" mode, do the regular check for pack type
+							if (!onlySRMode) {
 								packTypes := StrSplit(packTypeList, ",")
 								
+								; Check if foundTS is in the desired pack types
 								for _, packType in packTypes {
 									trimmedPackType := Trim(packType)
-									 ; Skip the "Only for SR" text in the comparison
-									if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
-										packTypeMatch := true
-										CreateStatusMessage("pack type match found: " . trimmedPackType)
+									if (trimmedPackType = foundTS) {
+										shouldKeep := true
+										CreateStatusMessage("Keeping friend " . id . " (wants " . foundTS . ")")
 										break
 									}
 								}
-								
-								if (packTypeMatch) {
-									shouldKeep := true
-									CreateStatusMessage("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
-								} else {
-									CreateStatusMessage("Will remove friend " . id . " (Only for SR + Shining booster but doesn't want " . foundTS . ")")
-								}
-							} else {
-								CreateStatusMessage("Will remove friend " . id . " (Only for SR but not Shining booster)")
 							}
-							break
-						}
-						
-						 ; If not in "Only for SR" mode, do the regular check for pack type
-						if (!onlySRMode) {
-							packTypes := StrSplit(packTypeList, ",")
-							
-							 ; Check if foundTS is in the desired pack types
-							for _, packType in packTypes {
-								trimmedPackType := Trim(packType)
-								if (trimmedPackType = foundTS) {
-									shouldKeep := true
-									CreateStatusMessage("Keeping friend " . id . " (wants " . foundTS . ")")
-									break
-								}
-							}
+						} else {
+							; No pack type information, so keep anyway
+							shouldKeep := true
+							CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
 						}
 					} else {
-						 ; No pack type information, so keep anyway
+						; No separator, assume they accept any pack type
 						shouldKeep := true
-						CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
+						CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
 					}
-				} else {
-					 ; No separator, assume they accept any pack type
-					shouldKeep := true
-					CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
+					break
 				}
-				break
 			}
-		}
 		
-		if (!shouldKeep) {
-			 ; This friend doesn't want this pack type, add to filtered list for removal
-			filteredIDs.Push(id)
-			if (onlySRMode && openPack = "Shining") {
-				CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
-			} else if (onlySRMode) {
-				CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
-			} else {
-				CreateStatusMessage("Will remove friend " . id . " (doesn't want " . foundTS . ")")
+			if (!shouldKeep) {
+				; This friend doesn't want this pack type, add to filtered list for removal
+				idsToProcess.Push(id)
+				if (onlySRMode && openPack = "Shining") {
+					CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
+				} else if (onlySRMode) {
+					CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
+				} else {
+					CreateStatusMessage("Will remove friend " . id . " (doesn't want " . foundTS . ")")
+				}
 			}
 		}
+
+		; If no friends to remove, exit
+		if (idsToProcess.MaxIndex() = 0) {
+			CreateStatusMessage("No friends to remove based on pack type filter")
+			friended := false
+			return
+		}
+	} else {
+		; If not filtering, process all friends
+		idsToProcess := friendIDs
 	}
 	
-	 ; If we have no IDs to remove, just exit
-	if (filteredIDs.MaxIndex() = 0) {
-		CreateStatusMessage("No friends to remove based on pack type filter")
-		friended := false
-		return
-	}
-	
-	 ; Process filtered IDs for removal
-	for index, value in filteredIDs {
+	; Process all the IDs that need to be removed
+	for index, value in idsToProcess {
 		failSafe := A_TickCount
 		failSafeTime := 0
 		Loop {
@@ -637,7 +518,7 @@ RemoveFriendsFiltered() {
 				break
 			}
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for RemoveFriendsFiltered-1. " . failSafeTime "/45 seconds")
+			CreateStatusMessage("In failsafe for RemoveFriends-1. " . failSafeTime "/45 seconds")
 		}
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -655,12 +536,13 @@ RemoveFriendsFiltered() {
 			}
 			Sleep, 750
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for RemoveFriendsFiltered-2. " . failSafeTime "/45 seconds")
+			CreateStatusMessage("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
 		}
-		if(index != filteredIDs.maxIndex()) {
+		
+		if(index != idsToProcess.maxIndex()) {
 			FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
 			FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-			EraseInput(index, filteredIDs.MaxIndex())
+			EraseInput(index, idsToProcess.MaxIndex())
 		}
 	}
 	
@@ -1643,7 +1525,7 @@ FoundStars(star) {
 		ChooseTag()
 		; Use the filtered removal function
 		if (applyRoleFilters)
-			RemoveFriendsFiltered()
+			RemoveFriends(true)
 	}
 }
 
@@ -2371,6 +2253,7 @@ from_window(ByRef image) {
 ~+F6::Pause
 ~+F7::ToggleStop()
 ~+F8::ToggleStatusMessages()
+;~+F10::ShowInstanceDebugGui()
 ;~F9::restartGameInstance("F9")
 
 ToggleStatusMessages() {

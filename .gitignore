@@ -17,5 +17,6 @@ HeartBeat.ini
 Settings.ini
 /Scripts/sample
 usernames.txt
+ids.txt
 vip_ids.txt
 *.bak
