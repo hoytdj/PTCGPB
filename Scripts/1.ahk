@@ -18,7 +18,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
-global DeadCheck, sendAccountXml, applyRoleFilters, mockGodPack
+global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -30,7 +30,10 @@ friended := false
 dateChange := false
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
 
-mockGodPack := false ; DEBUG
+; Trainer, Rainbow, Full Art, Shiny, Immersive, Crown, Double two star
+; TODO: Be sure these are false before release!
+MockGodPack := false ; DEBUG
+MockSinglePack := false ; DEBUG - e.g., "Trainer"
 
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, waitTime, %A_ScriptDir%\..\Settings.ini, UserSettings, waitTime, 5
@@ -85,6 +88,7 @@ IniRead, minStarsA2a, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2a, 
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
 
 IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRoleFilters, 0
+
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
 packArray := []  ; Initialize an empty array
@@ -207,7 +211,6 @@ if(!injectMethod || !loadedAccount)
 
 pToken := Gdip_Startup()
 packs := 0
-
 
 if(DeadCheck==1) {
 	;LogToDiscord("Sup dudes. Not sure what happened, but a script died and I'm doing a menu delete and starting over.")
@@ -355,6 +358,7 @@ RemoveFriends(filterByPreference := false) {
 	; Early exit if no friends to process
 	if (filterByPreference && !friendIDs) {
 		CreateStatusMessage("No friends to filter - friendIDs is empty")
+		LogToFile("No friends to filter - friendIDs is empty")
 		friended := false
 		return
 	}
@@ -382,6 +386,7 @@ RemoveFriends(filterByPreference := false) {
 		Sleep, 500
 		failSafeTime := (A_TickCount - failSafe) // 1000
 		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
+		LogToFile("In failsafe for Social. " . failSafeTime "/90 seconds")
 	}
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
@@ -392,9 +397,10 @@ RemoveFriends(filterByPreference := false) {
 	
 	if (filterByPreference) {
 		; If this is a GodPack, don't remove anyone - everyone wants GodPacks
-		; TODO: I think this should move up to the tope 
+		; TODO: I think this should move up to the top
 		if (foundTS = "God Pack") {
 			CreateStatusMessage("Found God Pack")
+			LogToFile("Found God Pack")
 			friended := false
 			return
 		}
@@ -418,6 +424,7 @@ RemoveFriends(filterByPreference := false) {
 							if (InStr(packTypeList, "Only for SR")) {
 								onlySRMode := true
 								CreateStatusMessage("Found 'Only for SR' tag for " . id)
+								LogToFile("Found 'Only for SR' tag for " . id)
 								
 								; If current pack is Shining, check if foundTS matches desired pack types
 								if (openPack = "Shining") {
@@ -431,6 +438,7 @@ RemoveFriends(filterByPreference := false) {
 										if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
 											packTypeMatch := true
 											CreateStatusMessage("pack type match found: " . trimmedPackType)
+											LogToFile("pack type match found: " . trimmedPackType)
 											break
 										}
 									}
@@ -438,6 +446,7 @@ RemoveFriends(filterByPreference := false) {
 									if (packTypeMatch) {
 										shouldKeep := true
 										CreateStatusMessage("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
+										LogToFile("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
 									}
 								}
 								break
@@ -453,6 +462,7 @@ RemoveFriends(filterByPreference := false) {
 									if (trimmedPackType = foundTS) {
 										shouldKeep := true
 										CreateStatusMessage("Keeping friend " . id . " (wants " . foundTS . ")")
+										LogToFile("Keeping friend " . id . " (wants " . foundTS . ")")
 										break
 									}
 								}
@@ -461,11 +471,13 @@ RemoveFriends(filterByPreference := false) {
 							; No pack type information, so keep anyway
 							shouldKeep := true
 							CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
+							LogToFile("Friend " . id . " has no pack type info, keeping anyway")
 						}
 					} else {
 						; No separator, assume they accept any pack type
 						shouldKeep := true
 						CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
+						LogToFile("Keeping friend " . id . " (accepts all pack types)")
 					}
 					break
 				}
@@ -476,10 +488,13 @@ RemoveFriends(filterByPreference := false) {
 				filteredIDs.Push(id)
 				if (onlySRMode && openPack = "Shining") {
 					CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
+					LogToFile("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
 				} else if (onlySRMode) {
 					CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
+					LogToFile("Will remove friend " . id . " (Only wants SR cards)")
 				} else {
 					CreateStatusMessage("Will remove friend " . id . " (doesn't want " . foundTS . ")")
+					LogToFile("Will remove friend " . id . " (doesn't want " . foundTS . ")")
 				}
 			}
 		}
@@ -487,14 +502,11 @@ RemoveFriends(filterByPreference := false) {
 		; If no friends to remove, exit
 		if (filteredIDs.MaxIndex() = 0) {
 			CreateStatusMessage("No friends to remove based on pack type filter")
+			LogToFile("No friends to remove based on pack type filter")
 			friended := false
 			return
 		}
-	} else {
-		; If not filtering, process all friends
-		filteredIDs := friendIDs
-	}
-	
+	} 
 	 ; Process filtered IDs for removal
 	for index, value in filteredIDs {
 		failSafe := A_TickCount
@@ -510,6 +522,7 @@ RemoveFriends(filterByPreference := false) {
 			}
 			failSafeTime := (A_TickCount - failSafe) // 1000
 			CreateStatusMessage("In failsafe for RemoveFriends-1. " . failSafeTime "/45 seconds")
+			LogToFile("In failsafe for RemoveFriends-1. " . failSafeTime "/45 seconds")
 		}
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -528,6 +541,7 @@ RemoveFriends(filterByPreference := false) {
 			Sleep, 750
 			failSafeTime := (A_TickCount - failSafe) // 1000
 			CreateStatusMessage("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
+			LogToFile("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
 		}
 		
 		if(index != filteredIDs.maxIndex()) {
@@ -563,7 +577,9 @@ AddFriends(renew := false, getFC := false) {
 	
 	if (rawFriendIDs) {
 		CreateStatusMessage("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
+		LogToFile("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
 		CreateStatusMessage("Checking for IDs in ids.txt")
+		LogToFile("Checking for IDs in ids.txt")
 		for index, value in rawFriendIDs {
 			; Skip empty lines
 			if (value = "") {
@@ -571,6 +587,7 @@ AddFriends(renew := false, getFC := false) {
 			}
 			
 			CreateStatusMessage("Processing line: " . value)
+			LogToFile("Processing line: " . value)
 			
 			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
 			if (InStr(value, "|") && applyRoleFilters) {
@@ -580,6 +597,7 @@ AddFriends(renew := false, getFC := false) {
 				; If the ID is not valid (not 16 digits), skip it
 				if (StrLen(id) != 16) {
 					CreateStatusMessage("ID " . id . " is invalid (wrong length)")
+					LogToFile("ID " . id . " is invalid (wrong length)")
 					continue
 				}
 				
@@ -587,17 +605,20 @@ AddFriends(renew := false, getFC := false) {
 				boosters := StrSplit(boosterList, ",")
 				
 				CreateStatusMessage("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
+				LogToFile("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
 				
 				; Checks if the current booster is in the list
 				desiredBooster := false
 				for _, pack in boosters {
 					trimmedPack := Trim(pack)
 					CreateStatusMessage("Checking if " . trimmedPack . " = " . openPack)
+					LogToFile("Checking if " . trimmedPack . " = " . openPack)
 					
 					; Case-insensitive comparison
 					if (trimmedPack = openPack) {
 						desiredBooster := true
 						CreateStatusMessage("Match found!")
+						LogToFile("Match found!")
 						break
 					}
 				}
@@ -605,9 +626,11 @@ AddFriends(renew := false, getFC := false) {
 				if (desiredBooster) {
 					friendIDs.Push(id)
 					CreateStatusMessage("ADDING: " . id . " wants the booster " . openPack)
+					LogToFile("ADDING: " . id . " wants the booster " . openPack)
 				}
 				else {
 					CreateStatusMessage("SKIPPING: " . id . " doesn't want booster " . openPack)
+					LogToFile("SKIPPING: " . id . " doesn't want booster " . openPack)
 				}
 			}
 			else {
@@ -617,15 +640,18 @@ AddFriends(renew := false, getFC := false) {
 					; If no boosters are specified, add the ID (it accepts all boosters)
 					friendIDs.Push(id)
 					CreateStatusMessage("ADDING: " . id . " (accepts all boosters)")
+					LogToFile("ADDING: " . id . " (accepts all boosters)")
 				}
 				else {
 					CreateStatusMessage("SKIPPING: " . id . " is invalid (wrong length)")
+					LogToFile("SKIPPING: " . id . " is invalid (wrong length)")
 				}
 			}
 		}
 	}
 	
 	CreateStatusMessage("Final list contains " . friendIDs.MaxIndex() . " friends")
+	LogToFile("Final list contains " . friendIDs.MaxIndex() . " friends")
 	; Handle single FriendID, rather than ids.txt file
 	if (friendIDs.MaxIndex() = "" && FriendID != "")
 		friendIDs.Push(FriendID)
@@ -673,6 +699,7 @@ AddFriends(renew := false, getFC := false) {
 				}
 				failSafeTime := (A_TickCount - failSafe) // 1000
 				CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
+				LogToFile("In failsafe for Social. " . failSafeTime "/90 seconds")
 			}
 			FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 			FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
@@ -713,6 +740,7 @@ AddFriends(renew := false, getFC := false) {
 					}
 					failSafeTime := (A_TickCount - failSafe) // 1000
 					CreateStatusMessage("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
+					LogToFile("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
 				}
 				failSafe := A_TickCount
 				failSafeTime := 0
@@ -738,6 +766,7 @@ AddFriends(renew := false, getFC := false) {
 					Sleep, 750
 					failSafeTime := (A_TickCount - failSafe) // 1000
 					CreateStatusMessage("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
+					LogToFile("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
 				}
 				if(index != friendIDs.maxIndex()) {
 					FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
@@ -749,10 +778,12 @@ AddFriends(renew := false, getFC := false) {
 			FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500)
 		}
 		CreateStatusMessage("Waiting for friends to accept request. `n" . count . "/" . waitTime . " seconds.")
+		LogToFile("Waiting for friends to accept request. " . count . "/" . waitTime . " seconds.")
 		sleep, 1000
 		count++
 	}
 	return n ;return added friends so we can dynamically update the .txt in the middle of a run without leaving friends at the end
+	LogToFile("Added " . n . " friends.")
 }
 
 ChooseTag() {
@@ -1340,7 +1371,6 @@ menuDeleteStart() {
 LogToFile(message, logFile := "") {
 	global scriptName
 	if(logFile = "") {
-		return ;step logs no longer needed and i'm too lazy to go through the script and remove them atm...
 		logFile := A_ScriptDir . "\..\Logs\Logs" . scriptName . ".txt"
 	}
 	else
@@ -1410,16 +1440,18 @@ SetTextAndResize(controlHwnd, newText) {
 }
 
 CheckPack() {
-	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck
+	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck, MockSinglePack
 	foundGP := false ;check card border to find godpacks
-	foundTrainer := false
-	foundRainbow := false
-	foundFullArt := false
-	foundShiny := false
-	foundCrown := false
-	foundImmersive := false
-	foundTS := false
+	foundTrainer := (MockSinglePack == "Trainer")
+	foundRainbow := (MockSinglePack == "Rainbow")
+	foundFullArt := (MockSinglePack == "Full Art")
+	foundShiny := (MockSinglePack == "Shiny")
+	foundCrown := (MockSinglePack == "Crown")
+	foundImmersive := (MockSinglePack == "Immersive")
+	2starCount := (MockSinglePack == "Double two star") ? 2 : 0
+	foundTS := (MockSinglePack != "") ? MockSinglePack : false
 	foundGP := FindGodPack()
+
 	;msgbox 1 foundGP:%foundGP%, TC:%TrainerCheck%, RC:%RainbowCheck%, FAC:%FullArtCheck%, FTS:%foundTS%
 	if(!CheckShiningPackOnly || openPack = "Shining") {
 		if(TrainerCheck && !foundTS) {
@@ -1636,7 +1668,7 @@ FindGodPack() {
 			}
 		}
 
-		if (mockGodPack)
+		if (MockGodPack)
 			normalBorders := false
 
 		Gdip_DisposeImage(pBitmap)
@@ -2028,7 +2060,6 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 				sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
 				sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
 				sendAccountXml := xmlFile != "" && FileExist(xmlFile)
-				
 				if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
 					fileIndex := 0
 					if (sendScreenshot1) {
