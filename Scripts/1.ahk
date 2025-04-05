@@ -2093,7 +2093,7 @@ ReadFile(filename, numbers := false) {
 	values := []
 	for _, val in StrSplit(Trim(content), "`n") {
 		; Don't strip non-alphanumeric characters - we need to keep the | and ,
-		trimmedVal := Trim(val)
+		trimmedVal := Trim(val, " `t`n`r")
 		if (trimmedVal != "")
 			values.Push(trimmedVal)
 	}
