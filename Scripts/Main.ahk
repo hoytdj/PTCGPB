@@ -1,3 +1,4 @@
+#Include %A_ScriptDir%\Include\Logger_Module.ahk
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
 
@@ -21,6 +22,9 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
 global triggerTestNeeded, testStartTime, firstRun, minStars, minStarsA2b, vipIdsURL, tesseractPath
+global statusLastMessage := {}
+global statusLastUpdateTime := {}
+global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -56,6 +60,10 @@ IniRead, clientLanguage, %A_ScriptDir%\..\Settings.ini, UserSettings, clientLang
 IniRead, minStars, %A_ScriptDir%\..\Settings.ini, UserSettings, minStars, 0
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
 IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
+IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
+
+InitLogger()
+LogDebug("Script started: " . scriptName)
 
 adbPort := findAdbPorts(folderPath)
 
@@ -236,6 +244,7 @@ Loop {
 }
 return
 
+; Modified from original Main.ahk to match the logger usage in 1.ahk
 FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
 	global winTitle, Variation, failSafe
 	if(searchVariation = "")
@@ -244,6 +253,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	confirmed := false
 
 	CreateStatusMessage(imageName)
+	LogDebug("Looking for image: " . imageName)
 	pBitmap := from_window(WinExist(winTitle))
 	Path = %imagePath%%imageName%.png
 	pNeedle := GetNeedle(Path)
@@ -287,6 +297,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	Gdip_DisposeImage(pBitmap)
 	if (vRet = 1) {
 		CreateStatusMessage("At home page. Opening app..." )
+		LogWarning("At home page during image search. Opening app...")
 		restartGameInstance("At the home page during: `n" imageName)
 	}
 	if(imageName = "Country" || imageName = "Social")
@@ -297,6 +308,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		FSTime := 180
 	if (safeTime >= FSTime) {
 		CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		LogError("Instance " . scriptName . " has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
 		restartGameInstance("Instance " . scriptName . " has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
@@ -345,7 +357,10 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		clickTime := A_TickCount
 	}
 	CreateStatusMessage(imageName)
+	LogDebug("Looking for image: " . imageName . " to click")
 
+	messageTime := 0
+	firstTime := true
 	Loop { ; Main loop
 		Sleep, 10
 		if(click) {
@@ -375,9 +390,17 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				FSTime := 45
 				if (ElapsedTime >= FSTime || safeTime >= FSTime) {
 					CreateStatusMessage("Instance " . scriptName . " has been stuck for 90s. Killing it...")
+					LogError("Instance " . scriptName . " has been stuck for 90s looking for " . imageName . ". Killing it...")
 					restartGameInstance("Instance " . scriptName . " has been stuck at " . imageName) ; change to reset the instance and delete data then reload script
 					StartSkipTime := A_TickCount
 					failSafe := A_TickCount
+				}
+			} else {
+				ElapsedTime := (A_TickCount - StartSkipTime) // 1000
+				if(ElapsedTime - messageTime > 0.5 || firstTime) {
+					LogDebug("Looking for " . imageName . " for " . ElapsedTime . "/" . FSTime . " seconds")
+					messageTime := ElapsedTime
+					firstTime := false
 				}
 			}
 		}
@@ -390,7 +413,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("Error message in " scriptName " Clicking retry..." )
-			LogToFile("Error message in " scriptName " Clicking retry..." )
+			LogError("Error message in " scriptName " Clicking retry..." )
 			adbClick(82, 389)
 			Sleep, %Delay%
 			adbClick(139, 386)
@@ -404,6 +427,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("At home page. Opening app..." )
+			LogWarning("At home page during image search. Opening app...")
 			restartGameInstance("Found myself at the home page during: `n" imageName)
 		}
 
@@ -426,6 +450,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 resetWindows(){
 	global Columns, winTitle, SelectedMonitorIndex, scaleParam
 	CreateStatusMessage("Arranging window positions and sizes")
+	LogDebug("Arranging window positions and sizes")
 	RetryCount := 0
 	MaxRetries := 10
 	Loop
@@ -448,9 +473,12 @@ resetWindows(){
 			break
 		}
 		catch {
-			if (RetryCount > MaxRetries)
+			if (RetryCount > MaxRetries) {
 				CreateStatusMessage("Pausing. Can't find window " . winTitle)
-			Pause
+				LogError("Pausing. Can't find window " . winTitle)
+				Pause
+			}
+			RetryCount++
 		}
 		Sleep, 1000
 	}
@@ -465,6 +493,7 @@ restartGameInstance(reason, RL := true) {
 
 	initializeAdbShell()
 	CreateStatusMessage("Restarting game reason: " reason)
+	LogWarning("Restarting game reason: " . reason)
 
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 	;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
@@ -473,55 +502,82 @@ restartGameInstance(reason, RL := true) {
 
 	Sleep, 3000
 	if(RL) {
-		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
-		LogToDiscord("Restarted game for instance " scriptName " Reason: " reason, , discordUserId)
+		LogRestart("Restarted game for instance " . scriptName . " Reason: " . reason)
+		LogToDiscord("Restarted game for instance " . scriptName . " Reason: " . reason, , discordUserId)
 		Reload
 	}
 }
 
+; Replace LogToFile with Logger functions - this function is kept for backwards compatibility
 LogToFile(message, logFile := "") {
 	global scriptName
 	if(logFile = "") {
-		return ;step logs no longer needed and i'm too lazy to go through the script and remove them atm...
-		logFile := A_ScriptDir . "\..\Logs\Logs" . scriptName . ".txt"
+		; No longer needed as we use the Logger module
+		return
 	}
-	else
-		logFile := A_ScriptDir . "\..\Logs\" . logFile
-	FormatTime, readableTime, %A_Now%, MMMM dd, yyyy HH:mm:ss
-	FileAppend, % "[" readableTime "] " message "`n", %logFile%
+	else if(logFile = "Restart.txt") {
+		LogRestart(message)
+	}
+	else if(logFile = "GPTestLog.txt") {
+		LogInfo(message) ; Regular info log for GP test operations
+	}
+	else {
+		LogDebug(message)
+	}
 }
 
-CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80) {
-	global scriptName, winTitle, StatusText
-	static hwnds := {}
-	if(!showStatus)
-		return
-	try {
-		; Check if GUI with this name already exists
-		if !hwnds.HasKey(GuiName) {
-			WinGetPos, xpos, ypos, Width, Height, %winTitle%
-			X := X + xpos + 5
-			Y := Y + ypos
-			if(!X)
-				X := 0
-			if(!Y)
-				Y := 0
+CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
+    global scriptName, winTitle, StatusText, showStatus
+    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
+    static hwnds = {}
+    
+    if(!showStatus) {
+        return
+    }
+    
+    ; Create a unique key for this GuiName/position combination
+    messageKey := GuiName . ":" . X . ":" . Y
+    currentTime := A_TickCount / 1000
+    
+    ; If the same message was displayed recently in the same location, check interval
+    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
+        ; Only update if enough time has passed since the last update
+        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
+            return
+        }
+    }
+    
+    ; Update our record of this message
+    statusLastMessage[messageKey] := Message
+    statusLastUpdateTime[messageKey] := currentTime
+    
+    try {
+        ; Check if GUI with this name already exists
+        GuiName := GuiName+scriptName
+        if !hwnds.HasKey(GuiName) {
+            WinGetPos, xpos, ypos, Width, Height, %winTitle%
+            X := X + xpos + 5
+            Y := Y + ypos
+            if(!X)
+                X := 0
+            if(!Y)
+                Y := 0
 
-			; Create a new GUI with the given name, position, and message
-			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-			hwnds[GuiName] := hCtrl
-			OwnerWND := WinExist(winTitle)
-			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-		}
-		SetTextAndResize(hwnds[GuiName], Message)
-		Gui, %GuiName%:Show, NoActivate AutoSize
-	}
+            ; Create a new GUI with the given name, position, and message
+            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+            hwnds[GuiName] := hCtrl
+            OwnerWND := WinExist(winTitle)
+            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+        }
+        SetTextAndResize(hwnds[GuiName], Message)
+        Gui, %GuiName%:Show, NoActivate AutoSize
+    }
 }
 
 ;Modified from https://stackoverflow.com/a/49354127
@@ -686,12 +742,14 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
+	LogInfo("Pausing...")
 	Pause, On
 return
 
 ; Resume Script
 ResumeScript:
 	CreateStatusMessage("Resuming...")
+	LogInfo("Resuming...")
 	Pause, Off
 	StartSkipTime := A_TickCount ;reset stuck timers
 	failSafe := A_TickCount
@@ -700,6 +758,7 @@ return
 ; Stop Script
 StopScript:
 	CreateStatusMessage("Stopping script...")
+	LogInfo("Stopping script...")
 ExitApp
 return
 
@@ -723,6 +782,7 @@ ToggleTestScript()
 		triggerTestNeeded := true
 		testStartTime := A_TickCount
 		CreateStatusMessage("In GP Test Mode")
+		LogInfo("In GP Test Mode")
 		StartSkipTime := A_TickCount ;reset stuck timers
 		failSafe := A_TickCount
 	}
@@ -737,6 +797,7 @@ ToggleTestScript()
 			testStartTime := ""
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
+		LogInfo("Exiting GP Test Mode")
 	}
 }
 
@@ -1093,6 +1154,7 @@ IsLeapYear(year) {
 GPTestScript() {
 	global triggerTestNeeded
 	triggerTestNeeded := false
+	LogInfo("Starting GP Test Script")
 	RemoveNonVipFriends()
 }
 
@@ -1101,6 +1163,8 @@ RemoveNonVipFriends() {
 	global GPTest, vipIdsURL, failSafe
 	failSafe := A_TickCount
 	failSafeTime := 0
+	LogInfo("RemoveNonVipFriends called")
+	
 	; Get us to the Social screen. Won't be super resilient but should be more consistent for most cases.
 	Loop {
 		adbClick(143, 518)
@@ -1109,6 +1173,7 @@ RemoveNonVipFriends() {
 		Delay(5)
 		failSafeTime := (A_TickCount - failSafe) // 1000
 		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
+		LogDebug("In failsafe for Social. " . failSafeTime "/90 seconds")
 	}
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	Delay(3)
