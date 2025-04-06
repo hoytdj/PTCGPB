@@ -339,8 +339,16 @@ if(DeadCheck==1) {
 		if(!injectMethod || !loadedAccount) {
 			if(!nukeAccount) {
 				saveAccount("All")
+				
+				; Reset throttling here as well to ensure it happens in both code paths
+				ResetLogThrottling()
+				
 				restartGameInstance("New Run", false)
 			}
+		}
+		else {
+			; Add a reset here for the inject method path that doesn't restart the game
+			ResetLogThrottling()
 		}
 
 		CreateStatusMessage("New Run")
@@ -356,6 +364,7 @@ if(DeadCheck==1) {
 		seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
 		mminutes := Floor(totalSeconds / 60) ; Total minutes
 		sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
+		CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
 		LogInfo("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
 		if(stopToggle)
 			ExitApp
@@ -1227,6 +1236,10 @@ menuDelete() {
 	sleep, %Delay%
 	failSafe := A_TickCount
 	failSafeTime := 0
+	
+	; Flush any pending log messages before menu delete operations
+	FlushLogMessages()
+	
 	LogInfo("Menu Delete...")
 	Loop
 	{
@@ -1680,7 +1693,7 @@ FindGodPack() {
 		Gdip_DisposeImage(pBitmap)
 		if(normalBorders) {
 			CreateStatusMessage("Not a God Pack ")
-			LogDebug("Not a God Pack ")
+			LogInfo("Not a God Pack ")
 			packs += 1
 			break
 		} else {
@@ -1719,6 +1732,10 @@ FindGodPack() {
 }
 
 GodPackFound(validity) {
+	
+	; Flush any pending log messages before reporting a God Pack
+	FlushLogMessages()
+	
 	LogInfo("God Pack found ")
 	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS
 
@@ -2864,7 +2881,6 @@ DoTutorial() {
 			}
 		failSafeTime := (A_TickCount - failSafe) // 1000
 		LogDebug("In failsafe for Pack. ")
-		Delay(1)
 	}
 
 	FindImageAndClick(0, 98, 116, 125, 5, "Opening", 239, 497) ;skip through cards until results opening screen
@@ -3415,4 +3431,3 @@ getChangeDateTime() {
 	pToken := Gdip_Startup()
 	Screenshot()
 return
-*/

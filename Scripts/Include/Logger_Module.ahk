@@ -16,6 +16,7 @@ global logThrottleEnabled := true          ; Enable/disable throttling
 global logLastMessages := {}               ; Store last message for each level
 global logMessageCounter := {}             ; Count occurrences of each message
 global logMessageFirstTime := {}           ; Store timestamp of first occurrence
+global logRunCounter := 0                  ; Track run count to reset throttling between runs
 
 ; Initialize the logger
 InitLogger() {
@@ -37,36 +38,66 @@ InitLogger() {
 
 ; Check if a message should be throttled
 ShouldThrottleMessage(message, level) {
-    global logThrottleEnabled, logLastMessages, logMessageCounter, logMessageFirstTime
+    global logThrottleEnabled, logLastMessages, logMessageCounter, logMessageFirstTime, logRunCounter
     
     if (!logThrottleEnabled || level >= LOG_ERROR)
         return false  ; Don't throttle for errors or critical messages
     
-    ; Unique key for this message and level combination
-    key := level . ":" . message
+    ; Create keys with run counter to separate different runs
+    messageKey := logRunCounter . "|" . level . "|" . message
+    levelKey := logRunCounter . "|" . level
+    
+    ; Check if this is the first message at this level for this run
+    if (!logLastMessages.HasKey(levelKey)) {
+        ; First message at this level for this run
+        logLastMessages[levelKey] := message
+        logMessageCounter[messageKey] := 1
+        logMessageFirstTime[messageKey] := A_TickCount // 1000
+        return false  ; Don't throttle the first occurrence
+    }
     
     ; If there's a different previous message for this level
-    if (logLastMessages.HasKey(level) && logLastMessages[level] != message) {
-        ; We need to log the last occurrence of the previous message
-        oldKey := level . ":" . logLastMessages[level]
-        if (logMessageCounter.HasKey(oldKey) && logMessageCounter[oldKey] > 1) {
+    if (logLastMessages[levelKey] != message) {
+        ; Log the last occurrence of the previous message
+        prevMessageKey := logRunCounter . "|" . level . "|" . logLastMessages[levelKey]
+        if (logMessageCounter.HasKey(prevMessageKey) && logMessageCounter[prevMessageKey] > 1) {
             ; Log the previous message with count
-            oldMsg := logLastMessages[level] . " (repeated " . logMessageCounter[oldKey] . " times)"
+            oldMsg := logLastMessages[levelKey] . " (repeated " . logMessageCounter[prevMessageKey] . " times)"
             _ActuallyLogMessage(oldMsg, level)
         }
+        
+        ; Update to the new message
+        logLastMessages[levelKey] := message
+        logMessageCounter[messageKey] := 1
+        logMessageFirstTime[messageKey] := A_TickCount // 1000
+        return false  ; Don't throttle this new message
     }
     
-    ; Update counter for this message
-    if (logMessageCounter.HasKey(key)) {
-        logMessageCounter[key] += 1
-        return true  ; Throttle all but the first occurrence
-    } else {
+    ; Same message as before, update counter
+    if (!logMessageCounter.HasKey(messageKey)) {
         ; First time seeing this message
-        logMessageCounter[key] := 1
-        logMessageFirstTime[key] := A_TickCount // 1000
-        logLastMessages[level] := message
-        return false  ; Allow logging the first occurrence
+        logMessageCounter[messageKey] := 1
+        logMessageFirstTime[messageKey] := A_TickCount // 1000
+        return false  ; Don't throttle the first occurrence
+    } else {
+        ; We've seen this message before, throttle it
+        logMessageCounter[messageKey] += 1
+        return true
     }
+}
+
+; Reset throttling for a new run
+ResetLogThrottling() {
+    global logLastMessages, logMessageCounter, logMessageFirstTime, logRunCounter
+    
+    ; Flush any pending messages
+    FlushLogMessages()
+    
+    ; Increment run counter
+    logRunCounter += 1
+    
+    ; Log the reset event
+    Log("Log throttling reset for new run: " . logRunCounter, LOG_INFO)
 }
 
 _ActuallyLogMessage(message, level, logCategory := "") {
@@ -104,13 +135,11 @@ _ActuallyLogMessage(message, level, logCategory := "") {
     
     ; Write to log file
     FileAppend, % logEntry "`n", %logFile%
-    
 }
 
 ; Main logging function
 Log(message, level := 20, logCategory := "") {
     global scriptName, debugMode, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_CRITICAL, logMinLevel, logBasePath
-    global logThrottleCount
     
     ; Skip logging if below minimum level
     if (level < logMinLevel)
@@ -123,8 +152,6 @@ Log(message, level := 20, logCategory := "") {
     ; Log the message using our helper function
     _ActuallyLogMessage(message, level, logCategory)
 }
-
-
 
 ; Convenience functions for different log levels
 LogDebug(message, logCategory := "") {
@@ -167,19 +194,21 @@ LogGPTest(message, level := 20) {
 }
 
 FlushLogMessages() {
-    global logLastMessages, logMessageCounter
+    global logLastMessages, logMessageCounter, logRunCounter
     
     ; Log last occurrence of each throttled message
-    for level, message in logLastMessages {
-        key := level . ":" . message
-        if (logMessageCounter.HasKey(key) && logMessageCounter[key] > 1) {
-            ; Log the last occurrence with count
-            _ActuallyLogMessage(message . " (repeated " . logMessageCounter[key] . " times)", level)
+    for key, message in logLastMessages {
+        if (InStr(key, logRunCounter . "|")) {
+            parts := StrSplit(key, "|")
+            if (parts.MaxIndex() >= 2) {
+                level := parts[2]
+                messageKey := key . "|" . message
+                
+                if (logMessageCounter.HasKey(messageKey) && logMessageCounter[messageKey] > 1) {
+                    ; Log the last occurrence with count
+                    _ActuallyLogMessage(message . " (repeated " . logMessageCounter[messageKey] . " times)", level)
+                }
+            }
         }
     }
-    
-    ; Clear the records
-    logLastMessages := {}
-    logMessageCounter := {}
-    logMessageFirstTime := {}
 }
