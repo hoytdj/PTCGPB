@@ -1,8 +1,6 @@
-
+#Include %A_ScriptDir%\Include\Logger_Module.ahk
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
-
-; BallCity - 2025.20.25 - Add OCR library for Username if Inject is on
 #Include *i %A_ScriptDir%\Include\OCR.ahk
 
 #SingleInstance on
@@ -19,6 +17,9 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
 global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
+global statusLastMessage := {}
+global statusLastUpdateTime := {}
+global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -88,6 +89,10 @@ IniRead, minStarsA2a, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2a, 
 IniRead, minStarsA2b, %A_ScriptDir%\..\Settings.ini, UserSettings, minStarsA2b, 0
 
 IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRoleFilters, 0
+IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
+
+InitLogger()
+LogDebug("Script started: " . scriptName)
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
@@ -112,10 +117,14 @@ adbPath := folderPath . "\MuMuPlayerGlobal-12.0\shell\adb.exe"
 if !FileExist(adbPath) ;if international mumu file path isn't found look for chinese domestic path
 	adbPath := folderPath . "\MuMu Player 12\shell\adb.exe"
 
-if !FileExist(adbPath)
+if !FileExist(adbPath) {
+	LogError("Folder path not found: " . folderPath)
 	MsgBox Double check your folder path! It should be the one that contains the MuMuPlayer 12 folder! `nDefault is just C:\Program Files\Netease
+	ExitApp
+}
 
 if(!adbPort) {
+	LogError("Invalid ADB port")
 	Msgbox, Invalid port... Check the common issues section in the readme/github guide.
 	ExitApp
 }
@@ -163,13 +172,13 @@ Loop {
 	catch {
 		RetryCount++
 		if (RetryCount >= MaxRetries) {
-			CreateStatusMessage("Failed to create button gui.")
+			LogError("Failed to create button gui.")
 			break
 		}
 		Sleep, 1000
 	}
 	Delay(1)
-	CreateStatusMessage("Trying to create button gui...")
+	LogDebug("Trying to create button gui...")
 }
 
 if (!godPack)
@@ -241,6 +250,7 @@ if(DeadCheck==1) {
 		While(((CurrentTime - StartTime >= 0) && (CurrentTime - StartTime <= randomTime)) || ((EndTime - CurrentTime >= 0) && (EndTime - CurrentTime <= randomTime)))
 		{
 			CreateStatusMessage("I need a break... Sleeping until " . changeDate + randomTime . " `nto avoid being kicked out from the date change")
+			LogInfo("I need a break... Sleeping until " . changeDate + randomTime . " to avoid being kicked out from the date change")
 			FormatTime, CurrentTime,, HHmm ; Update the current time after sleep
 			Sleep, 5000
 			dateChange := true
@@ -334,6 +344,7 @@ if(DeadCheck==1) {
 		}
 
 		CreateStatusMessage("New Run")
+		LogInfo("New Run")
 		rerolls++
 		if(!loadedAccount)
 			if(deleteMethod = "5 Pack" || packMethod)
@@ -345,8 +356,7 @@ if(DeadCheck==1) {
 		seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
 		mminutes := Floor(totalSeconds / 60) ; Total minutes
 		sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
-		CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
-		LogToFile("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
+		LogInfo("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
 		if(stopToggle)
 			ExitApp
 	}
@@ -354,11 +364,12 @@ if(DeadCheck==1) {
 return
 
 RemoveFriends(filterByPreference := false) {
+	LogInfo("RemoveFriends called with filterByPreference: " . filterByPreference)
 	global friendIDs, stopToggle, friended, foundTS, openPack, rawFriendIDs
 	; Early exit if no friends to process
 	if (filterByPreference && !friendIDs) {
 		CreateStatusMessage("No friends to filter - friendIDs is empty")
-		LogToFile("No friends to filter - friendIDs is empty")
+		LogDebug("No friends to filter - friendIDs is empty")
 		friended := false
 		return
 	}
@@ -385,8 +396,7 @@ RemoveFriends(filterByPreference := false) {
 		}
 		Sleep, 500
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
-		LogToFile("In failsafe for Social. " . failSafeTime "/90 seconds")
+		LogDebug("In failsafe for Social. ")
 	}
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
@@ -400,7 +410,7 @@ RemoveFriends(filterByPreference := false) {
 		; TODO: I think this should move up to the top
 		if (foundTS = "God Pack") {
 			CreateStatusMessage("Found God Pack")
-			LogToFile("Found God Pack")
+			LogGP("Found God Pack")
 			friended := false
 			return
 		}
@@ -423,8 +433,7 @@ RemoveFriends(filterByPreference := false) {
 							; Special check for "Only for SR" tag
 							if (InStr(packTypeList, "Only for SR")) {
 								onlySRMode := true
-								CreateStatusMessage("Found 'Only for SR' tag for " . id)
-								LogToFile("Found 'Only for SR' tag for " . id)
+								LogDebug("Found 'Only for SR' tag for " . id)
 								
 								; If current pack is Shining, check if foundTS matches desired pack types
 								if (openPack = "Shining") {
@@ -437,16 +446,14 @@ RemoveFriends(filterByPreference := false) {
 										; Skip the "Only for SR" text in the comparison
 										if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
 											packTypeMatch := true
-											CreateStatusMessage("pack type match found: " . trimmedPackType)
-											LogToFile("pack type match found: " . trimmedPackType)
+											LogDebug("Pack type match found: " . trimmedPackType)
 											break
 										}
 									}
 									
 									if (packTypeMatch) {
 										shouldKeep := true
-										CreateStatusMessage("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
-										LogToFile("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
+										LogDebug("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
 									}
 								}
 								break
@@ -461,8 +468,7 @@ RemoveFriends(filterByPreference := false) {
 									trimmedPackType := Trim(packType)
 									if (trimmedPackType = foundTS) {
 										shouldKeep := true
-										CreateStatusMessage("Keeping friend " . id . " (wants " . foundTS . ")")
-										LogToFile("Keeping friend " . id . " (wants " . foundTS . ")")
+										LogDebug("Keeping friend " . id . " (wants " . foundTS . ")")
 										break
 									}
 								}
@@ -470,14 +476,12 @@ RemoveFriends(filterByPreference := false) {
 						} else {
 							; No pack type information, so keep anyway
 							shouldKeep := true
-							CreateStatusMessage("Friend " . id . " has no pack type info, keeping anyway")
-							LogToFile("Friend " . id . " has no pack type info, keeping anyway")
+							LogDebug("Friend " . id . " has no pack type info, keeping anyway")
 						}
 					} else {
 						; No separator, assume they accept any pack type
 						shouldKeep := true
-						CreateStatusMessage("Keeping friend " . id . " (accepts all pack types)")
-						LogToFile("Keeping friend " . id . " (accepts all pack types)")
+						LogDebug("Keeping friend " . id . " (accepts all pack types)")
 					}
 					break
 				}
@@ -487,14 +491,11 @@ RemoveFriends(filterByPreference := false) {
 				; This friend doesn't want this pack type, add to filtered list for removal
 				filteredIDs.Push(id)
 				if (onlySRMode && openPack = "Shining") {
-					CreateStatusMessage("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
-					LogToFile("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
+					LogDebug("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
 				} else if (onlySRMode) {
-					CreateStatusMessage("Will remove friend " . id . " (Only wants SR cards)")
-					LogToFile("Will remove friend " . id . " (Only wants SR cards)")
+					LogDebug("Will remove friend " . id . " (Only wants SR cards)")
 				} else {
-					CreateStatusMessage("Will remove friend " . id . " (doesn't want " . foundTS . ")")
-					LogToFile("Will remove friend " . id . " (doesn't want " . foundTS . ")")
+					LogDebug("Will remove friend " . id . " (doesn't want " . foundTS . ")")
 				}
 			}
 		}
@@ -502,7 +503,7 @@ RemoveFriends(filterByPreference := false) {
 		; If no friends to remove, exit
 		if (filteredIDs.MaxIndex() = 0) {
 			CreateStatusMessage("No friends to remove based on pack type filter")
-			LogToFile("No friends to remove based on pack type filter")
+			LogInfo("No friends to remove based on pack type filter")
 			friended := false
 			return
 		}
@@ -521,8 +522,7 @@ RemoveFriends(filterByPreference := false) {
 				break
 			}
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for RemoveFriends-1. " . failSafeTime "/45 seconds")
-			LogToFile("In failsafe for RemoveFriends-1. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for RemoveFriends-1. ")
 		}
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -540,8 +540,7 @@ RemoveFriends(filterByPreference := false) {
 			}
 			Sleep, 750
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
-			LogToFile("In failsafe for RemoveFriends-2. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for RemoveFriends-2. ")
 		}
 		
 		if(index != filteredIDs.maxIndex()) {
@@ -555,11 +554,13 @@ RemoveFriends(filterByPreference := false) {
 		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 		ExitApp
 	}
+	LogInfo("Removed " . filteredIDs.MaxIndex() . " friends")
 	friended := false
 }
 
 TradeTutorial() {
 	if(FindOrLoseImage(100, 120, 175, 145, , "Trade", 0)) {
+		LogDebug("Trade tutorial detected, handling...")
 		FindImageAndClick(15, 455, 40, 475, , "Add2", 188, 449)
 		Sleep, 1000
 		FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
@@ -570,24 +571,22 @@ TradeTutorial() {
 AddFriends(renew := false, getFC := false) {
 	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs, applyRoleFilters
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
-	
+	LogInfo("AddFriends called with renew: " . renew . ", getFC: " . getFC)
 	; Modify the reading of IDs to store in global variable
 	rawFriendIDs := ReadFile("ids")
 	friendIDs := [] ; Initialize an empty array to store friend IDs
 	
 	if (rawFriendIDs) {
-		CreateStatusMessage("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
-		LogToFile("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
+		LogDebug("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
 		CreateStatusMessage("Checking for IDs in ids.txt")
-		LogToFile("Checking for IDs in ids.txt")
+		LogDebug("Checking for IDs in ids.txt")
 		for index, value in rawFriendIDs {
 			; Skip empty lines
 			if (value = "") {
 				continue
 			}
 			
-			CreateStatusMessage("Processing line: " . value)
-			LogToFile("Processing line: " . value)
+			LogDebug("Processing line: " . value)
 			
 			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
 			if (InStr(value, "|") && applyRoleFilters) {
@@ -597,40 +596,35 @@ AddFriends(renew := false, getFC := false) {
 				; If the ID is not valid (not 16 digits), skip it
 				if (StrLen(id) != 16) {
 					CreateStatusMessage("ID " . id . " is invalid (wrong length)")
-					LogToFile("ID " . id . " is invalid (wrong length)")
+					LogWarning("ID " . id . " is invalid (wrong length)")
 					continue
 				}
 				
 				boosterList := Trim(parts[2])
 				boosters := StrSplit(boosterList, ",")
 				
-				CreateStatusMessage("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
-				LogToFile("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
+				LogDebug("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
 				
 				; Checks if the current booster is in the list
 				desiredBooster := false
 				for _, pack in boosters {
 					trimmedPack := Trim(pack)
-					CreateStatusMessage("Checking if " . trimmedPack . " = " . openPack)
-					LogToFile("Checking if " . trimmedPack . " = " . openPack)
+					LogDebug("Checking if " . trimmedPack . " = " . openPack)
 					
 					; Case-insensitive comparison
 					if (trimmedPack = openPack) {
 						desiredBooster := true
-						CreateStatusMessage("Match found!")
-						LogToFile("Match found!")
+						LogDebug("Match found!")
 						break
 					}
 				}
 				
 				if (desiredBooster) {
 					friendIDs.Push(id)
-					CreateStatusMessage("ADDING: " . id . " wants the booster " . openPack)
-					LogToFile("ADDING: " . id . " wants the booster " . openPack)
+					LogDebug("ADDING: " . id . " wants the booster " . openPack)
 				}
 				else {
-					CreateStatusMessage("SKIPPING: " . id . " doesn't want booster " . openPack)
-					LogToFile("SKIPPING: " . id . " doesn't want booster " . openPack)
+					LogDebug("SKIPPING: " . id . " doesn't want booster " . openPack)
 				}
 			}
 			else {
@@ -639,19 +633,16 @@ AddFriends(renew := false, getFC := false) {
 				if (StrLen(id) = 16) {
 					; If no boosters are specified, add the ID (it accepts all boosters)
 					friendIDs.Push(id)
-					CreateStatusMessage("ADDING: " . id . " (accepts all boosters)")
-					LogToFile("ADDING: " . id . " (accepts all boosters)")
+					LogDebug("ADDING: " . id . " (accepts all boosters)")
 				}
 				else {
-					CreateStatusMessage("SKIPPING: " . id . " is invalid (wrong length)")
-					LogToFile("SKIPPING: " . id . " is invalid (wrong length)")
+					LogWarning("SKIPPING: " . id . " is invalid (wrong length)")
 				}
 			}
 		}
 	}
 	
-	CreateStatusMessage("Final list contains " . friendIDs.MaxIndex() . " friends")
-	LogToFile("Final list contains " . friendIDs.MaxIndex() . " friends")
+	LogInfo("Final list contains " . friendIDs.MaxIndex() . " friends")
 	; Handle single FriendID, rather than ids.txt file
 	if (friendIDs.MaxIndex() = "" && FriendID != "")
 		friendIDs.Push(FriendID)
@@ -698,8 +689,7 @@ AddFriends(renew := false, getFC := false) {
 					adbClick(203, 436) ; 203 436
 				}
 				failSafeTime := (A_TickCount - failSafe) // 1000
-				CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
-				LogToFile("In failsafe for Social. " . failSafeTime "/90 seconds")
+				LogDebug("In failsafe for Social. ")
 			}
 			FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 			FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
@@ -739,8 +729,7 @@ AddFriends(renew := false, getFC := false) {
 						break
 					}
 					failSafeTime := (A_TickCount - failSafe) // 1000
-					CreateStatusMessage("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
-					LogToFile("In failsafe for AddFriends3. " . failSafeTime "/45 seconds")
+					LogDebug("In failsafe for AddFriends3. ")
 				}
 				failSafe := A_TickCount
 				failSafeTime := 0
@@ -765,8 +754,7 @@ AddFriends(renew := false, getFC := false) {
 					}
 					Sleep, 750
 					failSafeTime := (A_TickCount - failSafe) // 1000
-					CreateStatusMessage("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
-					LogToFile("In failsafe for AddFriends4. " . failSafeTime "/45 seconds")
+					LogDebug("In failsafe for AddFriends4. ")
 				}
 				if(index != friendIDs.maxIndex()) {
 					FindImageAndClick(205, 430, 255, 475, , "Search2", 150, 50, 1500)
@@ -777,13 +765,12 @@ AddFriends(renew := false, getFC := false) {
 			FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 500)
 			FindImageAndClick(20, 500, 55, 530, , "Home", 40, 516, 500)
 		}
-		CreateStatusMessage("Waiting for friends to accept request. `n" . count . "/" . waitTime . " seconds.")
-		LogToFile("Waiting for friends to accept request. " . count . "/" . waitTime . " seconds.")
+		LogDebug("Waiting for friends to accept request. " . count . "/" . waitTime . " seconds.")
 		sleep, 1000
 		count++
 	}
+	LogInfo("Added " . n . " friends.")
 	return n ;return added friends so we can dynamically update the .txt in the middle of a run without leaving friends at the end
-	LogToFile("Added " . n . " friends.")
 }
 
 ChooseTag() {
@@ -800,7 +787,7 @@ ChooseTag() {
 
 EraseInput(num := 0, total := 0) {
 	if(num)
-		CreateStatusMessage("Removing friend ID " . num . "/" . total)
+		LogDebug("Removing friend ID " . num . "/" . total)
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
@@ -813,12 +800,11 @@ EraseInput(num := 0, total := 0) {
 			break
 	}
 	failSafeTime := (A_TickCount - failSafe) // 1000
-	CreateStatusMessage("In failsafe for EraseInput. " . failSafeTime "/45 seconds")
-	LogToFile("In failsafe for Erase. " . failSafeTime "/45 seconds")
+	LogDebug("In failsafe for Erase. ")
 }
 
 FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
-	global winTitle, failSafe
+    global winTitle, failSafe, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 	if(slowMotion) {
 		if(imageName = "Platin" || imageName = "One" || imageName = "Two" || imageName = "Three")
 			return true
@@ -829,6 +815,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	confirmed := false
 
 	CreateStatusMessage(imageName)
+	LogDebug("Looking for image: " . imageName)
 	pBitmap := from_window(WinExist(winTitle))
 	Path = %imagePath%%imageName%.png
 	pNeedle := GetNeedle(Path)
@@ -876,6 +863,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 225, 300, 242, 314, searchVariation)
 	if (vRet = 1) {
 		CreateStatusMessage("At home page. Opening app..." )
+		LogWarning("At home page during image search. Opening app...")
 		restartGameInstance("At the home page during: `n" imageName)
 	}
 	if(imageName = "Social" || imageName = "Add") {
@@ -893,11 +881,12 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 			adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 			waitadb()
 			CreateStatusMessage("Loaded deleted account. Deleting XML." )
+			LogError("Loaded deleted account. Deleting XML.")
 			if(loadedAccount) {
 				FileDelete, %loadedAccount%
 				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			}
-			LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
+			LogRestart("Restarted game for instance " . scriptName . " Reason: No save data found")
 			Reload
 		}
 	}
@@ -910,6 +899,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		FSTime := 45
 	if (safeTime >= FSTime) {
 		CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		LogError("Instance " . scriptName . " has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
 		restartGameInstance("Instance " . scriptName . " has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
@@ -918,7 +908,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 }
 
 FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
-	global winTitle, failSafe, confirmed, slowMotion
+    global winTitle, failSafe, confirmed, slowMotion, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 
 	if(slowMotion) {
 		if(imageName = "Platin" || imageName = "One" || imageName = "Two" || imageName = "Three")
@@ -1001,6 +991,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		clickTime := A_TickCount
 	}
 	CreateStatusMessage(imageName)
+	LogDebug("Looking for image: " . imageName . " to click")
 
 	messageTime := 0
 	firstTime := true
@@ -1036,13 +1027,14 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				FSTime := 45
 			if(!skip) {
 				if(ElapsedTime - messageTime > 0.5 || firstTime) {
-					CreateStatusMessage("Looking for " . imageName . " for " . ElapsedTime . "/" . FSTime . " seconds")
+					LogDebug("Looking for " . imageName . " for " . ElapsedTime . "/" . FSTime . " seconds")
 					messageTime := ElapsedTime
 					firstTime := false
 				}
 			}
 			if (ElapsedTime >= FSTime || safeTime >= FSTime) {
 				CreateStatusMessage("Instance " . scriptName . " has been stuck for 90s. Killing it...")
+				LogError("Instance " . scriptName . " has been stuck for 90s looking for " . imageName . ". Killing it...")
 				restartGameInstance("Instance " . scriptName . " has been stuck at `n" . imageName) ; change to reset the instance and delete data then reload script
 				StartSkipTime := A_TickCount
 				failSafe := A_TickCount
@@ -1054,7 +1046,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
 		if (vRet = 1) {
 			CreateStatusMessage("Error message in " . scriptName " Clicking retry..." )
-			LogToFile("Error message in " scriptName " Clicking retry..." )
+			LogError("Error message in " . scriptName . " Clicking retry..." )
 			adbClick(82, 389)
 			Delay(1)
 			adbClick(139, 386)
@@ -1066,6 +1058,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 225, 300, 242, 314, searchVariation)
 		if (vRet = 1) {
 			CreateStatusMessage("At home page. Opening app..." )
+			LogWarning("At home page during image search. Opening app...")
 			restartGameInstance("Found myself at the home page during: `n" imageName)
 		}
 		if(imageName = "Social" || imageName = "Country" || imageName = "Account2" || imageName = "Account") { ;only look for deleted account on start up.
@@ -1080,11 +1073,12 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 				waitadb()
 				CreateStatusMessage("Loaded deleted account. Deleting XML." )
+				LogError("Loaded deleted account. Deleting XML.")
 				if(loadedAccount) {
 					FileDelete, %loadedAccount%
 					IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 				}
-				LogToFile("Restarted game for instance " scriptName " Reason: No save data found", "Restart.txt")
+				LogRestart("Restarted game for instance " . scriptName . " Reason: No save data found")
 				Reload
 			}
 		}
@@ -1098,7 +1092,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		if(skip) {
 			ElapsedTime := (A_TickCount - StartSkipTime) // 1000
 			if(ElapsedTime - messageTime > 0.5 || firstTime) {
-				CreateStatusMessage(imageName . " " . ElapsedTime . "/" . skip . " seconds until skipping")
+				LogDebug(imageName . " " . ElapsedTime . "/" . skip . " seconds until skipping")
 				messageTime := ElapsedTime
 				firstTime := false
 			}
@@ -1132,6 +1126,7 @@ LevelUp() {
 resetWindows(){
 	global Columns, winTitle, SelectedMonitorIndex, scaleParam
 	CreateStatusMessage("Arranging window positions and sizes")
+	LogDebug("Arranging window positions and sizes")
 	RetryCount := 0
 	MaxRetries := 10
 	Loop
@@ -1158,6 +1153,7 @@ resetWindows(){
 		catch {
 			if (RetryCount > MaxRetries) {
 				CreateStatusMessage("Pausing. Can't find window " . winTitle)
+				LogError("Pausing. Can't find window " . winTitle)
 				Pause
 			}
 			RetryCount++
@@ -1171,11 +1167,11 @@ killGodPackInstance(){
 	global winTitle, godPack
 	if(godPack = 2) {
 		CreateStatusMessage("Pausing script. Found GP.")
-		LogToFile("Paused God Pack instance.")
+		LogGP("Pausing script. Found GP.")
 		Pause, On
 	} else if(godPack = 1) {
 		CreateStatusMessage("Closing script. Found GP.")
-		LogToFile("Closing God Pack instance.")
+		LogGP("Closing God Pack instance.")
 		WinClose, %winTitle%
 		ExitApp
 	}
@@ -1196,6 +1192,7 @@ restartGameInstance(reason, RL := true){
 	global Delay, scriptName, adbShell, adbPath, adbPort, friended, loadedAccount, DeadCheck, openPack
 	;initializeAdbShell()
 	CreateStatusMessage("Restarting game reason: `n" reason)
+	LogWarning("Restarting game reason: " . reason)
 
 	if(!RL || RL != "GodPack") {
 		adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
@@ -1209,7 +1206,7 @@ restartGameInstance(reason, RL := true){
 	Sleep, 4500
 
 	if(RL = "GodPack") {
-		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+		LogRestart("Restarted game for instance " . scriptName . " Reason: " . reason)
 		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 
 		Reload
@@ -1217,10 +1214,10 @@ restartGameInstance(reason, RL := true){
 		if(menuDeleteStart()) {
 			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGot stuck getting friend code."
-			LogToFile(logMessage, "GPlog.txt")
+			LogGP(logMessage)
 			LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		}
-		LogToFile("Restarted game for instance " scriptName " Reason: " reason, "Restart.txt")
+		LogRestart("Restarted game, Reason: " . reason)
 
 		Reload
 	}
@@ -1230,6 +1227,7 @@ menuDelete() {
 	sleep, %Delay%
 	failSafe := A_TickCount
 	failSafeTime := 0
+	LogInfo("Menu Delete...")
 	Loop
 	{
 		sleep, %Delay%
@@ -1241,8 +1239,7 @@ menuDelete() {
 		sleep, %Delay%
 		adbClick(50, 100)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Settings. It's been: " . failSafeTime "s ")
-		LogToFile("In failsafe for Settings. It's been: " . failSafeTime "s ")
+		LogDebug("In failsafe for Settings. ")
 	}
 	Sleep,%Delay%
 	FindImageAndClick(24, 158, 57, 189, , "Account", 140, 440, 2000) ;wait for other menu
@@ -1271,8 +1268,7 @@ menuDelete() {
 				}
 				Delay(1)
 				failSafeTime := (A_TickCount - failSafe) // 1000
-				CreateStatusMessage("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
-				LogToFile("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
+				LogDebug("In failsafe for clicking to delete. ")
 			}
 			else {
 				break
@@ -1286,14 +1282,14 @@ menuDelete() {
 		adbClick(pos1, pos2)
 		break
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for clicking to delete. ")
 	}
 
 	Sleep, 2500
 }
 
 menuDeleteStart() {
+	LogInfo("Start...")
 	global friended
 	if(gpFound) {
 		return gpFound
@@ -1339,8 +1335,7 @@ menuDeleteStart() {
 					}
 					Delay(1)
 					failSafeTime := (A_TickCount - failSafe) // 1000
-					CreateStatusMessage("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
-					LogToFile("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
+					LogDebug("In failsafe for clicking to delete. ")
 				}
 				else {
 					break
@@ -1354,64 +1349,71 @@ menuDeleteStart() {
 			adbClick(pos1, pos2)
 			break
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
-			LogToFile("In failsafe for clicking to delete. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for clicking to delete. ")
 		}
 		CreateStatusMessage("Looking for Country/Menu")
-		Delay(1)
+		LogInfo("Looking for Country/Menu")
+		Delay(3)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Country/Menu. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Country/Menu. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Country/Menu. ")
 	}
 	if(loadedAccount) {
 		FileDelete, %loadedAccount%
 	}
 }
 
-LogToFile(message, logFile := "") {
-	global scriptName
-	if(logFile = "") {
-		logFile := A_ScriptDir . "\..\Logs\Logs" . scriptName . ".txt"
-	}
-	else
-		logFile := A_ScriptDir . "\..\Logs\" . logFile
-	FormatTime, readableTime, %A_Now%, MMMM dd, yyyy HH:mm:ss
-	FileAppend, % "[" readableTime "] " message "`n", %logFile%
-}
-
 CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
-	global scriptName, winTitle, StatusText, showStatus
-	static hwnds = {}
-	if(!showStatus) {
-		return
-	}
-	try {
-		; Check if GUI with this name already exists
-		GuiName := GuiName+scriptName
-		if !hwnds.HasKey(GuiName) {
-			WinGetPos, xpos, ypos, Width, Height, %winTitle%
-			X := X + xpos + 5
-			Y := Y + ypos
-			if(!X)
-				X := 0
-			if(!Y)
-				Y := 0
+    global scriptName, winTitle, StatusText, showStatus
+    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
+    static hwnds = {}
+    
+    if(!showStatus) {
+        return
+    }
+    
+    ; Create a unique key for this GuiName/position combination
+    messageKey := GuiName . ":" . X . ":" . Y
+    currentTime := A_TickCount / 1000
+    
+    ; If the same message was displayed recently in the same location, check interval
+    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
+        ; Only update if enough time has passed since the last update
+        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
+            return
+        }
+    }
+    
+    ; Update our record of this message
+    statusLastMessage[messageKey] := Message
+    statusLastUpdateTime[messageKey] := currentTime
+    
+    try {
+        ; Check if GUI with this name already exists
+        GuiName := GuiName+scriptName
+        if !hwnds.HasKey(GuiName) {
+            WinGetPos, xpos, ypos, Width, Height, %winTitle%
+            X := X + xpos + 5
+            Y := Y + ypos
+            if(!X)
+                X := 0
+            if(!Y)
+                Y := 0
 
-			; Create a new GUI with the given name, position, and message
-			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-			hwnds[GuiName] := hCtrl
-			OwnerWND := WinExist(winTitle)
-			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-		}
-		SetTextAndResize(hwnds[GuiName], Message)
-		Gui, %GuiName%:Show, NoActivate AutoSize
-	}
+            ; Create a new GUI with the given name, position, and message
+            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+            hwnds[GuiName] := hCtrl
+            OwnerWND := WinExist(winTitle)
+            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+        }
+        SetTextAndResize(hwnds[GuiName], Message)
+        Gui, %GuiName%:Show, NoActivate AutoSize
+    }
 }
 
 ;Modified from https://stackoverflow.com/a/49354127
@@ -1440,6 +1442,7 @@ SetTextAndResize(controlHwnd, newText) {
 }
 
 CheckPack() {
+	LogDebug("Checking Pack")
 	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck, MockSinglePack
 	foundGP := false ;check card border to find godpacks
 	foundTrainer := (MockSinglePack == "Trainer")
@@ -1496,9 +1499,11 @@ CheckPack() {
 				FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
 				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			}
-			if(foundGP)
+			if(foundGP) {
+				LogGP("God Pack found. Continuing...", "GodPack")
 				restartGameInstance("God Pack found. Continuing...", "GodPack") ; restarts to backup and delete xml file with account info.
-			else {
+			} else {
+				LogGP(foundTS . " found. Continuing...", "GodPack")
 				FoundStars(foundTS)
 				restartGameInstance(foundTS . " found. Continuing...", "GodPack") ; restarts to backup and delete xml file with account info.
 			}
@@ -1507,6 +1512,7 @@ CheckPack() {
 }
 
 FoundStars(star) {
+	LogInfo("Found " . star)
 	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, applyRoleFilters
 	screenShot := Screenshot(star)
 	accountFile := saveAccount(star, accountFullPath)
@@ -1535,13 +1541,12 @@ FoundStars(star) {
 					}
 			}
 		} catch e {
-			LogToFile("Failed to OCR the friend code: " . e.message, "BC.txt")
+			LogError("Failed to OCR the friend code: " . e.message)
 		}
 	}
 
 	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs, " . openPack . " booster)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
-	CreateStatusMessage(logMessage)
-	LogToFile(logMessage, "GPlog.txt")
+	LogGP(logMessage)
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 	
 	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
@@ -1601,6 +1606,7 @@ FindBorders(prefix) {
 }
 
 FindGodPack() {
+	LogInfo("Finding God Pack")
 	global winTitle, discordUserId, Delay, username, packs, minStars, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, openPack, scriptName, DeadCheck, deleteMethod
 	packMinStars := minStars
 	if(openPack = "Shining") { 
@@ -1674,6 +1680,7 @@ FindGodPack() {
 		Gdip_DisposeImage(pBitmap)
 		if(normalBorders) {
 			CreateStatusMessage("Not a God Pack ")
+			LogDebug("Not a God Pack ")
 			packs += 1
 			break
 		} else {
@@ -1690,6 +1697,7 @@ FindGodPack() {
 				starCount := 5 - FindBorders("1star")
 				if(starCount < packMinStars) {
 					CreateStatusMessage("Does not meet minimum 2 star threshold.")
+					LogInfo("Does not meet minimum 2 star threshold in ")
 					invalidGP := true
 				}
 			}
@@ -1711,6 +1719,7 @@ FindGodPack() {
 }
 
 GodPackFound(validity) {
+	LogInfo("God Pack found ")
 	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS
 
 	if(validity = "Valid") {
@@ -1728,9 +1737,7 @@ GodPackFound(validity) {
 	screenShot := Screenshot(validity)
 	accountFile := saveAccount(validity, accountFullPath)
 	logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGetting friend code then sendind discord message."
-	godPackLog = GPlog.txt
-	LogToFile(logMessage, godPackLog)
-	CreateStatusMessage(logMessage)
+	LogGP(logMessage)
 	friendCode := getFriendCode()
 	IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 
@@ -1753,11 +1760,11 @@ GodPackFound(validity) {
 				}
 		}
 	} catch e {
-		LogToFile("Failed to OCR the friend code: " . e.message, "BC.txt")
+		LogError("Failed to OCR the friend code: " . e.message)
 	}
 
 	logMessage := Interjection . "\n" . username . " (" . friendCode . ")\n[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nBacking up to the Accounts\\GodPacks folder and continuing..."
-	LogToFile(logMessage, godPackLog)
+	LogGP(logMessage)
 	;Run, http://google.com, , Hide ;Remove the ; at the start of the line and replace your url if you want to trigger a link when finding a god pack.
 
 	; Adjust the below to only send a 'ping' to Discord friends on Valid packs
@@ -1772,6 +1779,7 @@ GodPackFound(validity) {
 loadAccount() {
 	global adbShell, adbPath, adbPort, loadDir
 	CreateStatusMessage("Loading account...")
+	LogInfo("Loading account...")
 	currentDate := A_Now
 	year := SubStr(currentDate, 1, 4)
 	month := SubStr(currentDate, 5, 2)
@@ -1795,6 +1803,7 @@ loadAccount() {
 			cycle := 0
 			Loop {
 				CreateStatusMessage("Making sure XML is > 24 hours old: " . cycle . " attempts.")
+				LogInfo("Making sure XML is > 24 hours old: " . cycle . " attempts.")	
 				loadDir := saveDir . "\" . fileLines[1]  ; Store the first line
 				test := fileExist(loadDir)
 
@@ -1840,6 +1849,7 @@ loadAccount() {
 }
 
 saveAccount(file := "Valid", ByRef filePath := "") {
+	LogInfo("Saving account...")
 	global adbShell, adbPath, adbPort
 	;initializeAdbShell()
 	currentDate := A_Now
@@ -1874,6 +1884,7 @@ saveAccount(file := "Valid", ByRef filePath := "") {
 	count := 0
 	Loop {
 		CreateStatusMessage("Attempting to save account XML. " . count . "/10")
+		LogDebug("Attempting to save account XML. " . count . "/10")	
 
 		adbShell.StdIn.WriteLine("cp -f /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml /sdcard/deviceAccount.xml")
 		waitadb()
@@ -1894,10 +1905,12 @@ saveAccount(file := "Valid", ByRef filePath := "") {
 
 		if(count > 10 && file != "All") {
 			CreateStatusMessage("Attempted to save the account XML`n10 times, but was unsuccesful.`nPausing...")
+			LogWarning("Attempted to save the account XML`n10 times, but was unsuccesful.`nPausing...")
 			LogToDiscord("Attempted to save account in " . scriptName . " but was unsuccessful. Pausing. You will need to manually extract.", Screenshot(), discordUserId)
 			Pause, On
 		} else if(count > 10) {
 			LogToDiscord("Couldnt save this regular account skipping it.")
+			LogError("Couldnt save this regular account skipping it.")
 			break
 		}
 		count++
@@ -2008,6 +2021,7 @@ adbSwipe() {
 }
 
 Screenshot(filename := "Valid") {
+	LogInfo("Taking screenshot...")
 	global adbShell, adbPath, packs
 	SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
 
@@ -2033,6 +2047,7 @@ Screenshot(filename := "Valid") {
 }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "") {
+	LogInfo("Sending message to Discord...")
 	global discordUserId, discordWebhookURL, friendCode, sendAccountXml
 	discordPing := "<@" . discordUserId . "> "
 	discordFriends := ReadFile("discord")
@@ -2093,6 +2108,7 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 				RetryCount++
 				if (RetryCount >= MaxRetries) {
 					CreateStatusMessage("Failed to send discord message.")
+					LogError("Failed to send discord message: " . e.message)
 					break
 				}
 				Sleep, 250
@@ -2104,12 +2120,14 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
+	LogInfo("Pausing...")
 	Pause, On
 return
 
 ; Resume Script
 ResumeScript:
 	CreateStatusMessage("Resuming...")
+	LogInfo("Resuming...")
 	StartSkipTime := A_TickCount ;reset stuck timers
 	failSafe := A_TickCount
 	Pause, Off
@@ -2136,6 +2154,7 @@ ToggleStop()
 {
 	global stopToggle, friended
 	CreateStatusMessage("Stopping script at the end of the run...")
+	LogInfo("Stopping script at the end of the run...")
 	stopToggle := true
 	if(!friended)
 		ExitApp
@@ -2146,10 +2165,12 @@ ToggleTestScript()
 	global GPTest
 	if(!GPTest) {
 		CreateStatusMessage("In GP Test Mode")
+		LogInfo("In GP Test Mode")
 		GPTest := true
 	}
 	else {
 		CreateStatusMessage("Exiting GP Test Mode")
+		LogInfo("Exiting GP Test Mode")
 		;Winset, Alwaysontop, On, %winTitle%
 		GPTest := false
 	}
@@ -2351,10 +2372,11 @@ initializeAdbShell() {
 			}
 		} catch e {
 			RetryCount++
-			LogToFile("ADB Shell Error: " . e.message)
+			LogError("ADB Shell Error: " . e.message)
 
 			if (RetryCount >= MaxRetries) {
 				CreateStatusMessage("Failed to connect to shell after multiple attempts: " . e.message)
+				LogCritical("Failed to connect to shell after multiple attempts: " . e.message)
 				Pause
 			}
 		}
@@ -2372,6 +2394,7 @@ ConnectAdb() {
 	ip := "127.0.0.1:" . adbPort ; Specify the connection IP:port
 
 	CreateStatusMessage("Connecting to ADB...")
+	LogDebug("Connecting to ADB at " . ip)
 
 	Loop %MaxRetries% {
 		; Attempt to connect using CmdRet
@@ -2381,16 +2404,19 @@ ConnectAdb() {
 		if InStr(connectionResult, "connected to " . ip) {
 			connected := true
 			CreateStatusMessage("ADB connected successfully.")
+			LogDebug("ADB connected successfully to " . ip)
 			return true
 		} else {
 			RetryCount++
 			CreateStatusMessage("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
+			LogWarning("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
 			Sleep, 2000
 		}
 	}
 
 	if !connected {
 		CreateStatusMessage("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
+		LogError("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
 		Reload
 	}
 }
@@ -2512,6 +2538,7 @@ Delay(n) {
 }
 
 DoTutorial() {
+	LogInfo("Starting tutorial...")
 	FindImageAndClick(105, 396, 121, 406, , "Country", 143, 370) ;select month and year and click
 
 	Delay(1)
@@ -2536,8 +2563,7 @@ DoTutorial() {
 		Delay(1)
 		adbClick(82, 422)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Month. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Month. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Month. ")
 	} ;select month and year and click
 
 	adbClick(200, 400)
@@ -2563,8 +2589,7 @@ DoTutorial() {
 		adbClick(142, 159)
 		Delay(1)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Year. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Year. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Year. ")
 	} ;select month and year and click
 
 	Delay(1)
@@ -2583,8 +2608,7 @@ DoTutorial() {
 				break
 			Delay(2)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for country select. " . failSafeTime "/45 seconds")
-			LogToFile("In failsafe for country select. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for country select. ")
 		}
 	} else {
 		FindImageAndClick(116, 352, 138, 389, , "Birth", 140, 474, 1000)
@@ -2623,8 +2647,7 @@ DoTutorial() {
 		Delay(1)
 		adbClick(261, 374)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Save. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Save. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Save. ")
 	}
 
 	Delay(1)
@@ -2655,10 +2678,10 @@ DoTutorial() {
 			} else if(FindOrLoseImage(0, 46, 20, 70, , "Cinematic", 0, failSafeTime)) {
 				break
 			}
-			;CreateStatusMessage("Looking for Link/Welcome")
+			LogDebug("Looking for Link/Welcome")
 			Delay(1)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			;CreateStatusMessage("In failsafe for Link/Welcome. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for Link/Welcome. ")
 		}
 
 		if(setSpeed = 3) {
@@ -2713,10 +2736,10 @@ DoTutorial() {
 		Delay(1)
 		EraseInput() ; incase the random pokemon is not accepted
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Trace. " . failSafeTime "/45 seconds")
-		CreateStatusMessage("In failsafe for Trace. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Trace. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at name")
+			LogRestart("Stuck at name")
 	}
 
 	Delay(1)
@@ -2737,15 +2760,15 @@ DoTutorial() {
 		if (FindOrLoseImage(225, 273, 235, 290, , "Pack", 1, failSafeTime)){
 			if(setSpeed > 1) {
 				if(setSpeed = 3)
-						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click 3x
+						FindImageAndClick(182, 170, 194, 190, , "Three", 187, 180) ; click mod settings
 				else
-						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click 2x
+						FindImageAndClick(100, 170, 113, 190, , "Two", 107, 180) ; click mod settings
 			}
 			adbClick(41, 296)
 				break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Pack. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Pack. ")
 	}
 
 	FindImageAndClick(34, 99, 74, 131, , "Swipe", 140, 375) ;click through cards until needing to swipe up
@@ -2770,7 +2793,7 @@ DoTutorial() {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for swipe up. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for swipe up. ")
 		Delay(1)
 	}
 
@@ -2840,7 +2863,7 @@ DoTutorial() {
 				break
 			}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Pack. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Pack. ")
 		Delay(1)
 	}
 
@@ -2916,17 +2939,18 @@ DoTutorial() {
 		; Delay(1)
 		; adbClick(187, 345)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for End. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for End. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for End. ")
 	}
 
 	FindImageAndClick(120, 316, 143, 335, , "Main", 192, 449) ;click until at main menu
 
 	return true
+	LogInfo("Tutorial completed.")
 }
 
 SelectPack(HG := false) {
 	global openPack, packArray
+	LogInfo("Opening pack: " . openPack)
 	packy := 196
 	if(openPack = "Shining") {
 		packx := 145 
@@ -2972,7 +2996,7 @@ SelectPack(HG := false) {
 			adbClick(146, 439)
 			Delay(1)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for HourglassPack3. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for HourglassPack3. ")
 		}
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -2983,7 +3007,7 @@ SelectPack(HG := false) {
 			adbClick(205, 458)
 			Delay(1)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for HourglassPack4. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for HourglassPack4. ")
 		}
 	}
 	;if(HG != "Tutorial")
@@ -2995,7 +3019,7 @@ SelectPack(HG := false) {
 			Delay(1)
 			adbClick(200, 451)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for Skip2. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for Skip2. ")
 		}
 }
 
@@ -3010,7 +3034,7 @@ PackOpening() {
 		else
 			adbClick(239, 497)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Pack. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Pack. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at Pack")
 	}
@@ -3036,7 +3060,7 @@ PackOpening() {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Trace. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Trace. ")
 		Delay(1)
 	}
 
@@ -3062,8 +3086,7 @@ PackOpening() {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Home. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Home. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Home. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at Home")
 	}
@@ -3102,7 +3125,7 @@ HourglassOpening(HG := false) {
 			adbClick(146, 439)
 			Delay(1)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for HourglassPack. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for HourglassPack. ")
 		}
 		failSafe := A_TickCount
 		failSafeTime := 0
@@ -3113,7 +3136,7 @@ HourglassOpening(HG := false) {
 			adbClick(205, 458)
 			Delay(1)
 			failSafeTime := (A_TickCount - failSafe) // 1000
-			CreateStatusMessage("In failsafe for HourglassPack2. " . failSafeTime "/45 seconds")
+			LogDebug("In failsafe for HourglassPack2. ")
 		}
 	}
 	Loop {
@@ -3132,7 +3155,7 @@ HourglassOpening(HG := false) {
 			adbClick(pos1, pos2)
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Pack. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Pack. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at Pack")
 	}
@@ -3158,7 +3181,7 @@ HourglassOpening(HG := false) {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Trace. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Trace. ")
 		Delay(1)
 	}
 
@@ -3182,8 +3205,7 @@ HourglassOpening(HG := false) {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for ConfirmPack. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for ConfirmPack. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for ConfirmPack. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at ConfirmPack")
 	}
@@ -3192,6 +3214,7 @@ HourglassOpening(HG := false) {
 getFriendCode() {
 	global friendCode
 	CreateStatusMessage("Getting friend code")
+	LogInfo("Getting friend code")
 	Sleep, 2000
 	FindImageAndClick(233, 486, 272, 519, , "Skip", 146, 494) ;click on next until skip button appears
 	failSafe := A_TickCount
@@ -3211,14 +3234,14 @@ getFriendCode() {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Home. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Home. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Home. ")
 		if(failSafeTime > 45)
 			restartGameInstance("Stuck at Home")
 	}
 	friendCode := AddFriends(false, true)
 
 	return friendCode
+	LogInfo("Friend code: " . friendCode)
 }
 
 createAccountList(instance) {
@@ -3255,6 +3278,7 @@ createAccountList(instance) {
 }
 
 DoWonderPick() {
+	LogInfo("WonderPick")
 	FindImageAndClick(191, 393, 211, 411, , "Shop", 40, 515) ;click until at main menu
 	FindImageAndClick(240, 80, 265, 100, , "WonderPick", 59, 429) ;click until in wonderpick Screen
 	failSafe := A_TickCount
@@ -3277,8 +3301,7 @@ DoWonderPick() {
 		}
 		Delay(1)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for WonderPick. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for WonderPick. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for WonderPick. ")
 	}
 	Sleep, 300
 	if(slowMotion)
@@ -3292,8 +3315,7 @@ DoWonderPick() {
 		}
 		Delay(1)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Card. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Card. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Card. ")
 	}
 	failSafe := A_TickCount
 	failSafeTime := 0
@@ -3306,8 +3328,7 @@ DoWonderPick() {
 		}
 		delay(1)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Shop. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Shop. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Shop. ")
 	}
 	failSafe := A_TickCount
 	failSafeTime := 0
@@ -3320,8 +3341,7 @@ DoWonderPick() {
 		else
 			adbInputEvent("111") ;send ESC
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Shop. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for Shop. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for Shop. ")
 	}
 	FindImageAndClick(2, 85, 34, 120, , "Missions", 261, 478, 500)
 	;FindImageAndClick(130, 170, 170, 205, , "WPMission", 150, 286, 1000)
@@ -3341,10 +3361,10 @@ DoWonderPick() {
 		else
 			break
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for WonderPick. " . failSafeTime "/45 seconds")
-		LogToFile("In failsafe for WonderPick. " . failSafeTime "/45 seconds")
+		LogDebug("In failsafe for WonderPick. ")
 	}
 	return true
+	LogInfo("WonderPick completed.")
 }
 
 getChangeDateTime() {

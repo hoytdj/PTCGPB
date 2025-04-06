@@ -9,7 +9,7 @@ localVersion := "v1.2.3"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
-DEBUG := false ; TODO: Make this false!
+DEBUG := false ; false default, Will be overridden by debugMode when GUI is submitted
 
 if not A_IsAdmin
 {
@@ -108,6 +108,7 @@ IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 IniRead, tesseractPath, Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
 IniRead, applyRoleFilters, Settings.ini, UserSettings, applyRoleFilters, 0
+IniRead, debugMode, Settings.ini, UserSettings, debugMode, 0
 
 ; Create a stylish GUI with custom colors and modern look
 Gui, Color, 1E1E1E, 333333 ; Dark theme background
@@ -352,6 +353,7 @@ Gui, Add, GroupBox, x5 y515 w740 h50 %sectionColor%, Extra Settings
 Gui, Add, Text, x15 y535 %sectionColor%, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w300 x115 y534 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
 Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x455 y535 " . sectionColor, Use Role-Based Filters
+Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x20 y500 " . sectionColor, Debug Mode
 
 
 
