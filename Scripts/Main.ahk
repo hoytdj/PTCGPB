@@ -203,9 +203,8 @@ if (scaleParam = 287) {
 99Path := "99" . clientLanguage
 99Leftx := 99Configs[clientLanguage].leftx
 99Rightx := 99Configs[clientLanguage].rightx
-
+LogInfo("Adding Friends...")
 Loop {
-	LogInfo("Adding Friends...")
 	if (GPTest) {
 		if (triggerTestNeeded)
 			GPTestScript()
