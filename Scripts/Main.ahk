@@ -337,8 +337,8 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	else
 		FSTime := 180
 	if (safeTime >= FSTime) {
-		CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
-		LogError("Instance " . scriptName . " has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		CreateStatusMessage("Instance has been stuck `n" . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		LogError("Instance has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
 		restartGameInstance("Instance has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
@@ -419,7 +419,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				ElapsedTime := (A_TickCount - StartSkipTime) // 1000
 				FSTime := 45
 				if (ElapsedTime >= FSTime || safeTime >= FSTime) {
-					CreateStatusMessage("Instance " . scriptName . " has been stuck for 90s. Killing it...")
+					CreateStatusMessage("Instance has been stuck for 90s. Killing it...")
 					LogError("Instance has been stuck for 90s looking for " . imageName . ". Killing it...")
 					restartGameInstance("Instance has been stuck at " . imageName) ; change to reset the instance and delete data then reload script
 					StartSkipTime := A_TickCount
@@ -442,7 +442,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
-			CreateStatusMessage("Error message in " scriptName " Clicking retry..." )
+			CreateStatusMessage("Error message, Clicking retry..." )
 			LogError("Error message, Clicking retry..." )
 			adbClick(82, 389)
 			Sleep, %Delay%
@@ -523,7 +523,7 @@ restartGameInstance(reason, RL := true) {
 
 	initializeAdbShell()
 	CreateStatusMessage("Restarting game reason: " reason)
-	LogWarning("Restarting game reason: " . reason)
+	LogRestart("Restarting game reason: " . reason)
 
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
 	;adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache

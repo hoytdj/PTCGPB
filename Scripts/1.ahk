@@ -949,7 +949,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 				FileDelete, %loadedAccount%
 				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			}
-			LogRestart("Restarted game for instance " . scriptName . " Reason: No save data found")
+			LogRestart("Restarted game for instance Reason: No save data found")
 			Reload
 		}
 	}
@@ -961,9 +961,9 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	else
 		FSTime := 45
 	if (safeTime >= FSTime) {
-		CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
-		LogError("Instance " . scriptName . " has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
-		restartGameInstance("Instance " . scriptName . " has been stuck " . imageName)
+		CreateStatusMessage("Instance has been stuck`n" . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		LogError("Instance has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
+		restartGameInstance("Instance has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
 	Gdip_DisposeImage(pBitmap)
@@ -1096,9 +1096,9 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				}
 			}
 			if (ElapsedTime >= FSTime || safeTime >= FSTime) {
-				CreateStatusMessage("Instance " . scriptName . " has been stuck for 90s. Killing it...")
-				LogError("Instance " . scriptName . " has been stuck for 90s looking for " . imageName . ". Killing it...")
-				restartGameInstance("Instance " . scriptName . " has been stuck at `n" . imageName) ; change to reset the instance and delete data then reload script
+				CreateStatusMessage("Instance has been stuck for 90s. Killing it...")
+				LogError("Instance has been stuck for 90s looking for " . imageName . ". Killing it...")
+				restartGameInstance("Instance has been stuck at `n" . imageName) ; change to reset the instance and delete data then reload script
 				StartSkipTime := A_TickCount
 				failSafe := A_TickCount
 			}
@@ -1108,8 +1108,8 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
 		if (vRet = 1) {
-			CreateStatusMessage("Error message in " . scriptName " Clicking retry..." )
-			LogError("Error message in " . scriptName . " Clicking retry..." )
+			CreateStatusMessage("Error message, Clicking retry..." )
+			LogError("Error message, Clicking retry..." )
 			adbClick(82, 389)
 			Delay(1)
 			adbClick(139, 386)
