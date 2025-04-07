@@ -204,7 +204,6 @@ if (scaleParam = 287) {
 99Leftx := 99Configs[clientLanguage].leftx
 99Rightx := 99Configs[clientLanguage].rightx
 Loop {
-	LogInfo("Adding Friends...")
 	if (GPTest) {
 		if (triggerTestNeeded)
 			GPTestScript()
@@ -213,7 +212,7 @@ Loop {
 			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
-
+	LogInfo("Adding Friends...")
 	if(heartBeat)
 		IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 	Sleep, %Delay%
