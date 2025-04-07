@@ -25,7 +25,12 @@ GetNeedle(Path) {
 ; ============================================================================
 ; Status Display Functions
 ; ============================================================================
-
+ToggleStatusMessages() {
+	if(showStatus)
+		showStatus := False
+	else
+		showStatus := True
+}
 CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
     global scriptName, winTitle, StatusText, showStatus
     global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
