@@ -1,6 +1,7 @@
 #Include %A_ScriptDir%\Include\Logger_Module.ahk
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
+#Include %A_ScriptDir%\Include\Utils.ahk
 
 #Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
 #Include *i %A_ScriptDir%\Include\StringCompare.ahk
@@ -144,6 +145,7 @@ pToken := Gdip_Startup()
 if(heartBeat)
 	IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
+LogInfo("Waiting for the game to load...")
 if (!DEBUG)
 	firstRun := True
 
@@ -235,7 +237,7 @@ Loop {
 				if (GPTest)
 					break
 				failSafeTime := (A_TickCount - failSafe) // 1000
-				CreateStatusMessage("Failsafe " . failSafeTime "/180 seconds")
+				LogDebug("Failsafe " . failSafeTime "/180 seconds")
 			}
 		}
 		if(done || fullList|| GPTest)
@@ -309,7 +311,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	if (safeTime >= FSTime) {
 		CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
 		LogError("Instance " . scriptName . " has been stuck " . imageName . " for 90s. EL: " . EL . " sT: " . safeTime . " Killing it...")
-		restartGameInstance("Instance " . scriptName . " has been stuck " . imageName)
+		restartGameInstance("Instance has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
 	return confirmed
@@ -390,8 +392,8 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				FSTime := 45
 				if (ElapsedTime >= FSTime || safeTime >= FSTime) {
 					CreateStatusMessage("Instance " . scriptName . " has been stuck for 90s. Killing it...")
-					LogError("Instance " . scriptName . " has been stuck for 90s looking for " . imageName . ". Killing it...")
-					restartGameInstance("Instance " . scriptName . " has been stuck at " . imageName) ; change to reset the instance and delete data then reload script
+					LogError("Instance has been stuck for 90s looking for " . imageName . ". Killing it...")
+					restartGameInstance("Instance has been stuck at " . imageName) ; change to reset the instance and delete data then reload script
 					StartSkipTime := A_TickCount
 					failSafe := A_TickCount
 				}
@@ -413,7 +415,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("Error message in " scriptName " Clicking retry..." )
-			LogError("Error message in " scriptName " Clicking retry..." )
+			LogError("Error message, Clicking retry..." )
 			adbClick(82, 389)
 			Sleep, %Delay%
 			adbClick(139, 386)
@@ -502,27 +504,9 @@ restartGameInstance(reason, RL := true) {
 
 	Sleep, 3000
 	if(RL) {
-		LogRestart("Restarted game for instance " . scriptName . " Reason: " . reason)
+		LogRestart("Restarted game, reason: " . reason)
 		LogToDiscord("Restarted game for instance " . scriptName . " Reason: " . reason, , discordUserId)
 		Reload
-	}
-}
-
-; Replace LogToFile with Logger functions - this function is kept for backwards compatibility
-LogToFile(message, logFile := "") {
-	global scriptName
-	if(logFile = "") {
-		; No longer needed as we use the Logger module
-		return
-	}
-	else if(logFile = "Restart.txt") {
-		LogRestart(message)
-	}
-	else if(logFile = "GPTestLog.txt") {
-		LogInfo(message) ; Regular info log for GP test operations
-	}
-	else {
-		LogDebug(message)
 	}
 }
 
@@ -672,25 +656,26 @@ adbSwipe() {
 	}
 }
 
-Screenshot(filename := "Valid") {
-	global adbShell, adbPath, packs
-	SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
+; Screenshot(filename := "Valid") {
+; 	global adbShell, adbPath, packs
+; 	SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
 
-	; Define folder and file paths
-	screenshotsDir := A_ScriptDir "\..\Screenshots"
-	if !FileExist(screenshotsDir)
-		FileCreateDir, %screenshotsDir%
+; 	; Define folder and file paths
+; 	screenshotsDir := A_ScriptDir "\..\Screenshots"
+; 	if !FileExist(screenshotsDir)
+; 		FileCreateDir, %screenshotsDir%
 
-	; File path for saving the screenshot locally
-	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
+; 	; File path for saving the screenshot locally
+; 	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
 
-	pBitmap := from_window(WinExist(winTitle))
-	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
+; 	pBitmap := from_window(WinExist(winTitle))
+; 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
 
-	return screenshotFile
-}
+; 	return screenshotFile
+; }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
+	LogInfo("Sending message to Discord: " . message)
 	global discordUserId, discordWebhookURL, sendXML
 	if (discordWebhookURL != "") {
 		MaxRetries := 10
@@ -731,6 +716,7 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 				RetryCount++
 				if (RetryCount >= MaxRetries) {
 					CreateStatusMessage("Failed to send discord message.")
+					LogError("Failed to send discord message.")
 					break
 				}
 				Sleep, 250
@@ -807,76 +793,76 @@ FriendAdded()
 	AddFriend++
 }
 
-; Function to create or select the JSON file
-InitializeJsonFile() {
-	global jsonFileName
-	fileName := A_ScriptDir . "\..\json\Packs.json"
-	if !FileExist(fileName) {
-		; Create a new file with an empty JSON array
-		FileAppend, [], %fileName%  ; Write an empty JSON array
-		jsonFileName := fileName
-		return
-	}
-}
+; ; Function to create or select the JSON file
+; InitializeJsonFile() {
+; 	global jsonFileName
+; 	fileName := A_ScriptDir . "\..\json\Packs.json"
+; 	if !FileExist(fileName) {
+; 		; Create a new file with an empty JSON array
+; 		FileAppend, [], %fileName%  ; Write an empty JSON array
+; 		jsonFileName := fileName
+; 		return
+; 	}
+; }
 
-; Function to append a time and variable pair to the JSON file
-AppendToJsonFile(variableValue) {
-	global jsonFileName
-	if (jsonFileName = "") {
-		return
-	}
+; ; Function to append a time and variable pair to the JSON file
+; AppendToJsonFile(variableValue) {
+; 	global jsonFileName
+; 	if (jsonFileName = "") {
+; 		return
+; 	}
 
-	; Read the current content of the JSON file
-	FileRead, jsonContent, %jsonFileName%
-	if (jsonContent = "") {
-		jsonContent := "[]"
-	}
+; 	; Read the current content of the JSON file
+; 	FileRead, jsonContent, %jsonFileName%
+; 	if (jsonContent = "") {
+; 		jsonContent := "[]"
+; 	}
 
-	; Parse and modify the JSON content
-	jsonContent := SubStr(jsonContent, 1, StrLen(jsonContent) - 1) ; Remove trailing bracket
-	if (jsonContent != "[")
-		jsonContent .= ","
-	jsonContent .= "{""time"": """ A_Now """, ""variable"": " variableValue "}]"
+; 	; Parse and modify the JSON content
+; 	jsonContent := SubStr(jsonContent, 1, StrLen(jsonContent) - 1) ; Remove trailing bracket
+; 	if (jsonContent != "[")
+; 		jsonContent .= ","
+; 	jsonContent .= "{""time"": """ A_Now """, ""variable"": " variableValue "}]"
 
-	; Write the updated JSON back to the file
-	FileDelete, %jsonFileName%
-	FileAppend, %jsonContent%, %jsonFileName%
-}
+; 	; Write the updated JSON back to the file
+; 	FileDelete, %jsonFileName%
+; 	FileAppend, %jsonContent%, %jsonFileName%
+; }
 
-; Function to sum all variable values in the JSON file
-SumVariablesInJsonFile() {
-	global jsonFileName
-	if (jsonFileName = "") {
-		return 0
-	}
+; ; Function to sum all variable values in the JSON file
+; SumVariablesInJsonFile() {
+; 	global jsonFileName
+; 	if (jsonFileName = "") {
+; 		return 0
+; 	}
 
-	; Read the file content
-	FileRead, jsonContent, %jsonFileName%
-	if (jsonContent = "") {
-		return 0
-	}
+; 	; Read the file content
+; 	FileRead, jsonContent, %jsonFileName%
+; 	if (jsonContent = "") {
+; 		return 0
+; 	}
 
-	; Parse the JSON and calculate the sum
-	sum := 0
-	; Clean and parse JSON content
-	jsonContent := StrReplace(jsonContent, "[", "") ; Remove starting bracket
-	jsonContent := StrReplace(jsonContent, "]", "") ; Remove ending bracket
-	Loop, Parse, jsonContent, {, }
-	{
-		; Match each variable value
-		if (RegExMatch(A_LoopField, """variable"":\s*(-?\d+)", match)) {
-			sum += match1
-		}
-	}
+; 	; Parse the JSON and calculate the sum
+; 	sum := 0
+; 	; Clean and parse JSON content
+; 	jsonContent := StrReplace(jsonContent, "[", "") ; Remove starting bracket
+; 	jsonContent := StrReplace(jsonContent, "]", "") ; Remove ending bracket
+; 	Loop, Parse, jsonContent, {, }
+; 	{
+; 		; Match each variable value
+; 		if (RegExMatch(A_LoopField, """variable"":\s*(-?\d+)", match)) {
+; 			sum += match1
+; 		}
+; 	}
 
-	; Write the total sum to a file called "total.json"
-	totalFile := A_ScriptDir . "\json\total.json"
-	totalContent := "{""total_sum"": " sum "}"
-	FileDelete, %totalFile%
-	FileAppend, %totalContent%, %totalFile%
+; 	; Write the total sum to a file called "total.json"
+; 	totalFile := A_ScriptDir . "\json\total.json"
+; 	totalContent := "{""total_sum"": " sum "}"
+; 	FileDelete, %totalFile%
+; 	FileAppend, %totalContent%, %totalFile%
 
-	return sum
-}
+; 	return sum
+; }
 
 from_window(ByRef image) {
 	; Thanks tic - https://www.autohotkey.com/boards/viewtopic.php?t=6517
@@ -965,6 +951,7 @@ bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 
 ; Function to initialize ADB Shell
 initializeAdbShell() {
+	LogDebug("Initializing ADB Shell...")
 	global adbShell, adbPath, adbPort
 	RetryCount := 0
 	MaxRetries := 10
@@ -993,7 +980,7 @@ initializeAdbShell() {
 			RetryCount++
 			if (RetryCount > MaxRetries) {
 				CreateStatusMessage("Failed to connect to shell: " . e.message)
-				LogToFile("Failed to connect to shell: " . e.message)
+				LogError("Failed to connect to shell: " . e.message)
 				Pause
 			}
 		}
@@ -1001,6 +988,7 @@ initializeAdbShell() {
 	}
 }
 ConnectAdb() {
+	LogDebug("Connecting to ADB...")
 	global adbPath, adbPort, StatusText
 	MaxRetries := 5
 	RetryCount := 0
@@ -1017,16 +1005,19 @@ ConnectAdb() {
 		if InStr(connectionResult, "connected to " . ip) {
 			connected := true
 			CreateStatusMessage("ADB connected successfully.")
+			LogDebug("ADB connected successfully.")
 			return true
 		} else {
 			RetryCount++
 			CreateStatusMessage("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
+			LogWarning("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
 			Sleep, 2000
 		}
 	}
 
 	if !connected {
 		CreateStatusMessage("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
+		LogError("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
 		Reload
 	}
 }
@@ -1172,15 +1163,16 @@ RemoveNonVipFriends() {
 			break
 		Delay(5)
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		CreateStatusMessage("In failsafe for Social. " . failSafeTime "/90 seconds")
 		LogDebug("In failsafe for Social. " . failSafeTime "/90 seconds")
 	}
 	FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
 	Delay(3)
 
 	CreateStatusMessage("Downloading vip_ids.txt.")
+	LogInfo("Downloading vip_ids.txt.")
 	if (vipIdsURL != "" && !DownloadFile(vipIdsURL, "vip_ids.txt")) {
 		CreateStatusMessage("Failed to download vip_ids.txt. Aborting test...")
+		LogError("Failed to download vip_ids.txt.")
 		return
 	}
 
@@ -1188,6 +1180,7 @@ RemoveNonVipFriends() {
 	vipFriendsArray :=  GetFriendAccountsFromFile(A_ScriptDir . "\..\vip_ids.txt", includesIdsAndNames)
 	if (!vipFriendsArray.MaxIndex()) {
 		CreateStatusMessage("No accounts found in vip_ids.txt. Aborting test...")
+		LogError("No accounts found in vip_ids.txt.")
 		return
 	}
 
@@ -1212,6 +1205,7 @@ RemoveNonVipFriends() {
 			}
 			if (repeatFriendAccounts > 2) {
                 CreateStatusMessage("End of list - parsed the same friend codes multiple times.")
+				LogInfo("End of list - parsed the same friend codes multiple times.")
                 Delay(2)
                 CreateStatusMessage("Ready to test.")
                 adbClick(143, 507)
@@ -1224,11 +1218,12 @@ RemoveNonVipFriends() {
                 ; If we couldn't parse the friend, skip removal
                 if (!parseFriendResult) {
                     CreateStatusMessage("Couldn't parse friend. Skipping friend...`nParsed friend: " . friendAccount.ToString())
-                    LogToFile("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.", "GPTestLog.txt")
+                    LogInfo("Friend skipped: " . friendAccount.ToString() . ". Couldn't parse identifiers.")
                 }
                 ; If it's a VIP friend, skip removal
                 if (isVipResult)
                     CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nMatched VIP: " . matchedFriend.ToString() . "`nSkipping VIP...")
+					LogInfo("Friend skipped: " . friendAccount.ToString() . ". Matched VIP: " . matchedFriend.ToString() . ".")
                 Sleep, 1500 ; Time to read
                 FindImageAndClick(226, 100, 270, 135, , "Add", 143, 507, 500)
                 Delay(2)
@@ -1243,7 +1238,7 @@ RemoveNonVipFriends() {
             else {
                 ; If NOT a VIP remove the friend
                 CreateStatusMessage("Parsed friend: " . friendAccount.ToString() . "`nNo VIP match found.`nRemoving friend...")
-                LogToFile("Friend removed: " . friendAccount.ToString() . ". No VIP match found.", "GPTestLog.txt")
+                LogInfo("Friend removed: " . friendAccount.ToString() . ". No VIP match found.")
                 Sleep, 1500 ; Time to read
                 FindImageAndClick(135, 355, 160, 385, , "Remove", 145, 407, 500)
                 FindImageAndClick(70, 395, 100, 420, , "Send2", 200, 372, 500)
@@ -1256,6 +1251,7 @@ RemoveNonVipFriends() {
 			; If on social screen, we're stuck between friends, micro scroll
 			If (FindOrLoseImage(226, 100, 270, 135, , "Add", 0)) {
 				CreateStatusMessage("Stuck between friends. Tiny scroll and continue.")
+				LogInfo("Stuck between friends. Tiny scroll and continue.")
 				adbSwipeFriendMicro()
 			}
 			else { ; Handling for account not currently in use
