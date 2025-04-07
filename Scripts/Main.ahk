@@ -60,7 +60,6 @@ IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPa
 IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
 
 InitLogger()
-LogInfo("Debug mode is set to: " . (debugMode ? "ON" : "OFF"))
 LogInfo("Status display is set to: " . (showStatus ? "ON" : "OFF"))
 
 adbPort := findAdbPorts(folderPath)
