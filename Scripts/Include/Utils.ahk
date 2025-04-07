@@ -1,3 +1,9 @@
+#Include %A_ScriptDir%\Include\Logger_Module.ahk
+#Include %A_ScriptDir%\Include\Gdip_All.ahk
+#Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
+#Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
+#Include *i %A_ScriptDir%\Include\StringCompare.ahk
+#Include *i %A_ScriptDir%\Include\OCR.ahk
 ; Global variables commonly used across scripts
 global statusLastMessage := {}
 global statusLastUpdateTime := {}
@@ -6,117 +12,6 @@ global statusUpdateInterval := 2 ; Seconds between updates of the same message
 ; ============================================================================
 ; Image Recognition Functions
 ; ============================================================================
-
-FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
-    global winTitle, Variation, failSafe, scaleParam, defaultLanguage
-    if(searchVariation = "")
-        searchVariation := 20
-    imagePath := A_ScriptDir . "\" . defaultLanguage . "\"
-    confirmed := false
-
-    CreateStatusMessage(imageName)
-    LogDebug("Looking for image: " . imageName)
-    pBitmap := from_window(WinExist(winTitle))
-    Path = %imagePath%%imageName%.png
-    pNeedle := GetNeedle(Path)
-
-    ; 100% scale changes
-    if (scaleParam = 287) {
-        Y1 -= 8 ; offset, should be 44-36 i think?
-        Y2 -= 8
-        if (Y1 < 0) {
-            Y1 := 0
-        }
-        if (imageName = "Bulba") { ; too much to the left? idk how that happens
-            X1 := 200
-            Y1 := 220
-            X2 := 230
-            Y2 := 260
-        } else if (imageName = "Erika") { ; 100% fix for Erika avatar
-            X1 := 149
-            Y1 := 153
-            X2 := 159
-            Y2 := 162
-        } else if (imageName = "DeleteAll") { ; 100% for Deleteall offset
-            X1 := 200
-            Y1 := 340
-            X2 := 265
-            Y2 := 530
-        }
-    }
-    ;bboxAndPause(X1, Y1, X2, Y2)
-
-    ; ImageSearch within the region
-    vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
-    if(EL = 0)
-        GDEL := 1
-    else
-        GDEL := 0
-    if (!confirmed && vRet = GDEL && GDEL = 1) {
-        confirmed := vPosXY
-    } else if(!confirmed && vRet = GDEL && GDEL = 0) {
-        confirmed := true
-    }
-    Path = %imagePath%App.png
-    pNeedle := GetNeedle(Path)
-    ; ImageSearch within the region
-    vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
-    Gdip_DisposeImage(pBitmap)
-    if (vRet = 1) {
-        CreateStatusMessage("At home page. Opening app..." )
-        LogWarning("At home page during image search. Opening app...")
-        restartGameInstance("At the home page during: `n" imageName)
-    }
-    
-    ; Check for special cases like TradeTutorial or LevelUp based on imageName
-    if(imageName = "Social" || imageName = "Add") {
-        TradeTutorial()
-    }
-    
-    if(imageName = "Social" || imageName = "Country" || imageName = "Account2" || imageName = "Account") {
-        ; Look for No Save Data error message > if loaded account > delete xml > reload
-        Path = %imagePath%NoSave.png
-        pNeedle := GetNeedle(Path)
-        ; ImageSearch within the region
-        vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 331, 50, 449, searchVariation)
-        if (scaleParam = 287) {
-            vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 30, 325, 55, 445, searchVariation)
-        }
-        if (vRet = 1) {
-            adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
-            waitadb()
-            CreateStatusMessage("Loaded deleted account. Deleting XML." )
-            LogError("Loaded deleted account. Deleting XML.")
-            if(loadedAccount) {
-                FileDelete, %loadedAccount%
-                IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
-            }
-            LogRestart("Restarted game for instance " . scriptName . " Reason: No save data found")
-            Reload
-        }
-    }
-    
-    if(imageName = "Points" || imageName = "Home") {
-        LevelUp()
-    }
-    
-    if(imageName = "Country" || imageName = "Social")
-        FSTime := 90
-    else if(imageName = "Button")
-        FSTime := 240
-    else
-        FSTime := 45
-        
-    if (safeTime >= FSTime) {
-        CreateStatusMessage("Instance " . scriptName . " has been `nstuck " . imageName . " for " . FSTime . "s. Killing it...")
-        LogError("Instance " . scriptName . " has been stuck " . imageName . " for " . FSTime . "s. EL: " . EL . " sT: " . safeTime . " Killing it...")
-        restartGameInstance("Instance " . scriptName . " has been stuck " . imageName)
-        failSafe := A_TickCount
-    }
-    
-    return confirmed
-}
-
 GetNeedle(Path) {
     static NeedleBitmaps := Object()
     if (NeedleBitmaps.HasKey(Path)) {
@@ -127,7 +22,6 @@ GetNeedle(Path) {
         return pNeedle
     }
 }
-
 ; ============================================================================
 ; Status Display Functions
 ; ============================================================================
@@ -213,65 +107,9 @@ SetTextAndResize(controlHwnd, newText) {
 ; ============================================================================
 ; ADB Interface Functions
 ; ============================================================================
-
-adbClick(X, Y) {
-    global adbShell
-    static clickCommands := Object()
-    static convX := 540/277, convY := 960/489, offset := -44
-
-    key := X << 16 | Y
-
-    if (!clickCommands.HasKey(key)) {
-        clickCommands[key] := Format("input tap {} {}"
-            , Round(X * convX)
-            , Round((Y + offset) * convY))
-    }
-    adbShell.StdIn.WriteLine(clickCommands[key])
-}
-
-adbInput(input) {
-    global adbShell
-    Delay(3)
-    adbShell.StdIn.WriteLine("input text " . input )
-    Delay(3)
-}
-
-adbInputEvent(event) {
-    global adbShell
-    adbShell.StdIn.WriteLine("input keyevent " . event)
-}
-
-adbSwipeUp(speed) {
-    global adbShell
-    adbShell.StdIn.WriteLine("input swipe 266 770 266 355 " . speed)
-    waitadb()
-}
-
-adbSwipe() {
-    global adbShell, setSpeed, swipeSpeed
-    X1 := 35
-    Y1 := 327
-    X2 := 267
-    Y2 := 327
-    X1 := Round(X1 / 277 * 535)
-    Y1 := Round((Y1 - 44) / 489 * 960)
-    X2 := Round(X2 / 277 * 535)
-    Y2 := Round((Y2 - 44) / 489 * 960)
-
-    adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-    waitadb()
-}
-
-waitadb() {
-    global adbShell
-    adbShell.StdIn.WriteLine("echo done")
-    while !adbShell.StdOut.AtEndOfStream
-    {
-        line := adbShell.StdOut.ReadLine()
-        if (line = "done")
-            break
-        Sleep, 50
-    }
+ControlClick(X, Y) {
+	global winTitle
+	ControlClick, x%X% y%Y%, %winTitle%
 }
 
 initializeAdbShell() {
@@ -448,46 +286,6 @@ findAdbPorts(baseFolder := "C:\Program Files\Netease") {
 ; Window and UI Handling Functions
 ; ============================================================================
 
-resetWindows(){
-    global Columns, winTitle, SelectedMonitorIndex, scaleParam, runMain, Mains, scriptName
-    CreateStatusMessage("Arranging window positions and sizes")
-    LogDebug("Arranging window positions and sizes")
-    RetryCount := 0
-    MaxRetries := 10
-    Loop
-    {
-        try {
-            ; Get monitor origin from index
-            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
-            Title := winTitle
-
-            if (runMain) {
-                instanceIndex := (Mains - 1) + Title + 1
-            } else {
-                instanceIndex := Title
-            }
-
-            rowHeight := 533  ; Adjust the height of each row
-            currentRow := Floor((instanceIndex - 1) / Columns)
-            y := currentRow * rowHeight
-            x := Mod((instanceIndex - 1), Columns) * scaleParam
-            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-            break
-        }
-        catch {
-            RetryCount++
-            if (RetryCount > MaxRetries) {
-                CreateStatusMessage("Pausing. Can't find window " . winTitle)
-                LogError("Pausing. Can't find window " . winTitle)
-                Pause
-            }
-        }
-        Sleep, 1000
-    }
-    return true
-}
-
 from_window(ByRef image) {
     ; Get the handle to the window.
     image := (hwnd := WinExist(image)) ? hwnd : image
@@ -587,189 +385,6 @@ Screenshot(filename := "Valid") {
     return screenshotFile
 }
 
-LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "") {
-    global discordUserId, discordWebhookURL, friendCode, sendAccountXml
-    LogInfo("Sending message to Discord: " . message)
-    
-    discordPing := "<@" . discordUserId . "> "
-    discordFriends := ReadFile("discord")
-
-    if(ping != false && discordFriends) {
-        for index, value in discordFriends {
-            if(value = discordUserId)
-                continue
-            discordPing .= "<@" . value . "> "
-        }
-    }
-
-    if (discordWebhookURL != "") {
-        if (!sendAccountXml)
-            xmlFile := ""
-        MaxRetries := 10
-        RetryCount := 0
-        Loop {
-            try {
-                ; Base command
-                curlCommand := "curl -k "
-                    . "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
-                
-                ; If an screenshot or xml file is provided, send it
-                sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
-                sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
-                sendAccountXml := xmlFile != "" && FileExist(xmlFile)
-                if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
-                    fileIndex := 0
-                    if (sendScreenshot1) {
-                        fileIndex++
-                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
-                    }
-                    if (sendScreenshot2) {
-                        fileIndex++
-                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
-                    }
-                    if (sendAccountXml) {
-                        fileIndex++
-                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
-                    }
-                }
-                else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
-                    if (sendScreenshot1)
-                        curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-                    if (sendScreenshot2)
-                        curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
-                    if (sendAccountXml)
-                        curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
-                }
-                ; Add the webhook
-                curlCommand := curlCommand . discordWebhookURL
-                ; Send the message using curl
-                RunWait, %curlCommand%,, Hide
-                break
-            }
-            catch e {
-                RetryCount++
-                if (RetryCount >= MaxRetries) {
-                    CreateStatusMessage("Failed to send discord message.")
-                    LogError("Failed to send discord message: " . e.message)
-                    break
-                }
-                Sleep, 250
-            }
-            sleep, 250
-        }
-    }
-}
-
-ReadFile(filename, numbers := false) {
-    FileRead, content, %A_ScriptDir%\..\%filename%.txt
-
-    if (!content)
-        return false
-
-    values := []
-    for _, val in StrSplit(Trim(content), "`n") {
-        ; Don't strip non-alphanumeric characters - we need to keep the | and ,
-        trimmedVal := Trim(val, " `t`n`r")
-        if (trimmedVal != "")
-            values.Push(trimmedVal)
-    }
-
-    return values.MaxIndex() ? values : false
-}
-
-DownloadFile(url, filename) {
-    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-    localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
-    errored := false
-    try {
-        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", url, true)
-        whr.Send()
-        whr.WaitForResponse()
-        ids := whr.ResponseText
-    } catch {
-        errored := true
-    }
-    if(!errored) {
-        FileDelete, %localPath%
-        FileAppend, %ids%, %localPath%
-        return true
-    }
-    return false
-}
-
-; ============================================================================
-; JSON Functions
-; ============================================================================
-
-InitializeJsonFile() {
-    global jsonFileName
-    fileName := A_ScriptDir . "\..\json\Packs.json"
-    if !FileExist(fileName) {
-        ; Create a new file with an empty JSON array
-        FileAppend, [], %fileName%  ; Write an empty JSON array
-        jsonFileName := fileName
-        return
-    }
-}
-
-AppendToJsonFile(variableValue) {
-    global jsonFileName
-    if (jsonFileName = "") {
-        return
-    }
-
-    ; Read the current content of the JSON file
-    FileRead, jsonContent, %jsonFileName%
-    if (jsonContent = "") {
-        jsonContent := "[]"
-    }
-
-    ; Parse and modify the JSON content
-    jsonContent := SubStr(jsonContent, 1, StrLen(jsonContent) - 1) ; Remove trailing bracket
-    if (jsonContent != "[")
-        jsonContent .= ","
-    jsonContent .= "{""time"": """ A_Now """, ""variable"": " variableValue "}]"
-
-    ; Write the updated JSON back to the file
-    FileDelete, %jsonFileName%
-    FileAppend, %jsonContent%, %jsonFileName%
-}
-
-SumVariablesInJsonFile() {
-    global jsonFileName
-    if (jsonFileName = "") {
-        return 0
-    }
-
-    ; Read the file content
-    FileRead, jsonContent, %jsonFileName%
-    if (jsonContent = "") {
-        return 0
-    }
-
-    ; Parse the JSON and calculate the sum
-    sum := 0
-    ; Clean and parse JSON content
-    jsonContent := StrReplace(jsonContent, "[", "") ; Remove starting bracket
-    jsonContent := StrReplace(jsonContent, "]", "") ; Remove ending bracket
-    Loop, Parse, jsonContent, {, }
-    {
-        ; Match each variable value
-        if (RegExMatch(A_LoopField, """variable"":\s*(-?\d+)", match)) {
-            sum += match1
-        }
-    }
-
-    ; Write the total sum to a file called "total.json"
-    totalFile := A_ScriptDir . "\json\total.json"
-    totalContent := "{""total_sum"": " sum "}"
-    FileDelete, %totalFile%
-    FileAppend, %totalContent%, %totalFile%
-
-    return sum
-}
-
 ; ============================================================================
 ; Date and Time Functions
 ; ============================================================================
@@ -785,78 +400,8 @@ MonthToDays(year, month) {
     return days
 }
 
-IsLeapYear(year) {
-    return (Mod(year, 4) = 0 && Mod(year, 100) != 0) || Mod(year, 400) = 0
-}
-
 Delay(n) {
     global Delay
     msTime := Delay * n
     Sleep, msTime
-}
-
-getChangeDateTime() {
-    ; Get system timezone bias and determine local time for 1 AM EST
-
-    ; Retrieve timezone information from Windows registry
-    RegRead, TimeBias, HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TimeZoneInformation, Bias
-    RegRead, DltBias, HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TimeZoneInformation, ActiveTimeBias
-
-    ; Convert registry values to integers
-    Bias := TimeBias + 0
-    DltBias := DltBias + 0
-
-    ; Determine if Daylight Saving Time (DST) is active
-    IsDST := (Bias != DltBias) ? 1 : 0
-
-    ; EST is UTC-5 (300 minutes offset)
-    EST_Offset := 300
-
-    ; Use the correct local offset (DST or Standard)
-    Local_Offset := (IsDST) ? DltBias : Bias
-
-    ; Convert 1 AM EST to UTC (UTC = EST + 5 hours)
-    UTC_Time := 1 + EST_Offset / 60  ; 06:00 UTC
-
-    ; Convert UTC to local time
-    Local_Time := UTC_Time - (Local_Offset / 60)
-
-    ; Round to ensure we get whole numbers
-    Local_Time := Floor(Local_Time)
-
-    ; Handle 24-hour wrap-around
-    If (Local_Time < 0)
-        Local_Time += 24
-    Else If (Local_Time >= 24)
-        Local_Time -= 24
-
-    ; Format output as HHMM
-    FormattedTime := (Local_Time < 10 ? "0" : "") . Local_Time . "00"
-
-    Return FormattedTime
-}
-
-; This function needs to be implemented where it's used as it may have script-specific behavior
-TradeTutorial() {
-    if(FindOrLoseImage(100, 120, 175, 145, , "Trade", 0)) {
-        LogDebug("Trade tutorial detected, handling...")
-        FindImageAndClick(15, 455, 40, 475, , "Add2", 188, 449)
-        Sleep, 1000
-        FindImageAndClick(226, 100, 270, 135, , "Add", 38, 460, 500)
-    }
-    Delay(1)
-}
-
-; This function needs to be implemented where it's used as it depends on script-specific variables
-LevelUp() {
-    Leveled := FindOrLoseImage(100, 86, 167, 116, , "LevelUp", 0)
-    if(Leveled) {
-        clickButton := FindOrLoseImage(75, 340, 195, 530, 80, "Button", 0, failSafeTime)
-        StringSplit, pos, clickButton, `,  ; Split at ", "
-        if (scaleParam = 287) {
-            pos2 += 5
-        }
-        adbClick(pos1, pos2)
-    }
-    Delay(1)
 }

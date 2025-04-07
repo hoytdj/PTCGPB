@@ -18,9 +18,6 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
 global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
-global statusLastMessage := {}
-global statusLastUpdateTime := {}
-global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -93,7 +90,8 @@ IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRol
 IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
 
 InitLogger()
-LogDebug("Script started: " . scriptName)
+LogInfo("Debug mode is set to: " . (debugMode ? "ON" : "OFF"))
+LogInfo("Status display is set to: " . (showStatus ? "ON" : "OFF"))
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
@@ -1376,85 +1374,6 @@ menuDeleteStart() {
 	}
 }
 
-CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
-    global scriptName, winTitle, StatusText, showStatus
-    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
-    static hwnds = {}
-    
-    if(!showStatus) {
-        return
-    }
-    
-    ; Create a unique key for this GuiName/position combination
-    messageKey := GuiName . ":" . X . ":" . Y
-    currentTime := A_TickCount / 1000
-    
-    ; If the same message was displayed recently in the same location, check interval
-    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
-        ; Only update if enough time has passed since the last update
-        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
-            return
-        }
-    }
-    
-    ; Update our record of this message
-    statusLastMessage[messageKey] := Message
-    statusLastUpdateTime[messageKey] := currentTime
-    
-    try {
-        ; Check if GUI with this name already exists
-        GuiName := GuiName+scriptName
-        if !hwnds.HasKey(GuiName) {
-            WinGetPos, xpos, ypos, Width, Height, %winTitle%
-            X := X + xpos + 5
-            Y := Y + ypos
-            if(!X)
-                X := 0
-            if(!Y)
-                Y := 0
-
-            ; Create a new GUI with the given name, position, and message
-            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-            hwnds[GuiName] := hCtrl
-            OwnerWND := WinExist(winTitle)
-            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-        }
-        SetTextAndResize(hwnds[GuiName], Message)
-        Gui, %GuiName%:Show, NoActivate AutoSize
-    }
-}
-
-;Modified from https://stackoverflow.com/a/49354127
-SetTextAndResize(controlHwnd, newText) {
-    dc := DllCall("GetDC", "Ptr", controlHwnd)
-
-    ; 0x31 = WM_GETFONT
-    SendMessage 0x31,,,, ahk_id %controlHwnd%
-    hFont := ErrorLevel
-    oldFont := 0
-    if (hFont != "FAIL")
-        oldFont := DllCall("SelectObject", "Ptr", dc, "Ptr", hFont)
-
-    VarSetCapacity(rect, 16, 0)
-    ; 0x440 = DT_CALCRECT | DT_EXPANDTABS
-    h := DllCall("DrawText", "Ptr", dc, "Ptr", &newText, "Int", -1, "Ptr", &rect, "UInt", 0x440)
-    ; width = rect.right - rect.left
-    w := NumGet(rect, 8, "Int") - NumGet(rect, 0, "Int")
-
-    if oldFont
-        DllCall("SelectObject", "Ptr", dc, "Ptr", oldFont)
-    DllCall("ReleaseDC", "Ptr", controlHwnd, "Ptr", dc)
-
-    GuiControl,, %controlHwnd%, %newText%
-    GuiControl MoveDraw, %controlHwnd%, % "h" h*96/A_ScreenDPI + 2 " w" w*96/A_ScreenDPI + 2
-}
-
 CheckPack() {
 	LogDebug("Checking Pack")
 	global scriptName, DeadCheck, CheckShiningPackOnly, InvalidCheck, MockSinglePack
@@ -1960,29 +1879,6 @@ adbClick(X, Y) {
     adbShell.StdIn.WriteLine(clickCommands[key])
 }
 
-ControlClick(X, Y) {
-	global winTitle
-	ControlClick, x%X% y%Y%, %winTitle%
-}
-
-DownloadFile(url, filename) {
-	url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-	localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
-	errored := false
-	try {
-		whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-		whr.Open("GET", url, true)
-		whr.Send()
-		whr.WaitForResponse()
-		ids := whr.ResponseText
-	} catch {
-		errored := true
-	}
-	if(!errored) {
-		FileDelete, %localPath%
-		FileAppend, %ids%, %localPath%
-	}
-}
 
 ReadFile(filename, numbers := false) {
 	FileRead, content, %A_ScriptDir%\..\%filename%.txt
@@ -2036,32 +1932,6 @@ adbSwipe() {
 
 	adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
 	waitadb()
-}
-
-Screenshot(filename := "Valid") {
-	LogInfo("Taking screenshot...")
-	global adbShell, adbPath, packs
-	SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
-
-	; Define folder and file paths
-	screenshotsDir := A_ScriptDir "\..\Screenshots"
-	if !FileExist(screenshotsDir)
-		FileCreateDir, %screenshotsDir%
-
-	; File path for saving the screenshot locally
-	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
-	pBitmapW := from_window(WinExist(winTitle))
-	pBitmap := Gdip_CloneBitmapArea(pBitmapW, 18, 175, 240, 227)
-	;scale 100%
-	if (scaleParam = 287) {
-	pBitmap := Gdip_CloneBitmapArea(pBitmapW, 17, 168, 245, 230)
-	}
-	Gdip_DisposeImage(pBitmapW)
-
-	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
-
-	Gdip_DisposeImage(pBitmap)
-	return screenshotFile
 }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "") {
@@ -2194,18 +2064,6 @@ ToggleTestScript()
 	}
 }
 
-; Function to create or select the JSON file
-InitializeJsonFile() {
-	global jsonFileName
-	fileName := A_ScriptDir . "\..\json\Packs.json"
-	if !FileExist(fileName) {
-		; Create a new file with an empty JSON array
-		FileAppend, [], %fileName%  ; Write an empty JSON array
-		jsonFileName := fileName
-		return
-	}
-}
-
 ; Function to append a time and variable pair to the JSON file
 AppendToJsonFile(variableValue) {
 	global jsonFileName
@@ -2230,52 +2088,11 @@ AppendToJsonFile(variableValue) {
 	FileAppend, %jsonContent%, %jsonFileName%
 }
 
-; Function to sum all variable values in the JSON file
-SumVariablesInJsonFile() {
-	global jsonFileName
-	if (jsonFileName = "") {
-		return 0
-	}
-
-	; Read the file content
-	FileRead, jsonContent, %jsonFileName%
-	if (jsonContent = "") {
-		return 0
-	}
-
-	; Parse the JSON and calculate the sum
-	sum := 0
-	; Clean and parse JSON content
-	jsonContent := StrReplace(jsonContent, "[", "") ; Remove starting bracket
-	jsonContent := StrReplace(jsonContent, "]", "") ; Remove ending bracket
-	Loop, Parse, jsonContent, {, }
-	{
-		; Match each variable value
-		if (RegExMatch(A_LoopField, """variable"":\s*(-?\d+)", match)) {
-			sum += match1
-		}
-	}
-
-	; Write the total sum to a file called "total.json"
-	totalFile := A_ScriptDir . "\json\total.json"
-	totalContent := "{""total_sum"": " sum "}"
-	FileDelete, %totalFile%
-	FileAppend, %totalContent%, %totalFile%
-
-	return sum
-}
-
 ~+F5::Reload
 ~+F6::Pause
 ~+F7::ToggleStop()
 ~+F8::ToggleStatusMessages()
 ;~F9::restartGameInstance("F9")
-
-Delay(n) {
-	global Delay
-	msTime := Delay * n
-	Sleep, msTime
-}
 
 DoTutorial() {
 	LogInfo("Starting tutorial...")

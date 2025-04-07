@@ -2,17 +2,13 @@
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
 #Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
 #Include %A_ScriptDir%\Include\Utils.ahk
-
 #Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
 #Include *i %A_ScriptDir%\Include\StringCompare.ahk
 #Include *i %A_ScriptDir%\Include\OCR.ahk
 
 #SingleInstance on
-;SetKeyDelay, -1, -1
 SetMouseDelay, -1
 SetDefaultMouseSpeed, 0
-;SetWinDelay, -1
-;SetControlDelay, -1
 SetBatchLines, -1
 SetTitleMatchMode, 3
 CoordMode, Pixel, Screen
@@ -23,9 +19,6 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
 global triggerTestNeeded, testStartTime, firstRun, minStars, minStarsA2b, vipIdsURL, tesseractPath
-global statusLastMessage := {}
-global statusLastUpdateTime := {}
-global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -64,7 +57,8 @@ IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPa
 IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
 
 InitLogger()
-LogDebug("Script started: " . scriptName)
+LogInfo("Debug mode is set to: " . (debugMode ? "ON" : "OFF"))
+LogInfo("Status display is set to: " . (showStatus ? "ON" : "OFF"))
 
 adbPort := findAdbPorts(folderPath)
 
@@ -246,9 +240,8 @@ Loop {
 }
 return
 
-; Modified from original Main.ahk to match the logger usage in 1.ahk
 FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
-	global winTitle, Variation, failSafe
+	global winTitle, Variation, failSafe, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 	if(searchVariation = "")
 		searchVariation := Variation
 	imagePath := A_ScriptDir . "\" . defaultLanguage . "\"
@@ -318,7 +311,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 }
 
 FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
-	global winTitle, Variation, failSafe, confirmed
+	global winTitle, Variation, failSafe, confirmed, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 	if(searchVariation = "")
 		searchVariation := Variation
 	if (sleepTime = "") {
@@ -510,96 +503,12 @@ restartGameInstance(reason, RL := true) {
 	}
 }
 
-CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
-    global scriptName, winTitle, StatusText, showStatus
-    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
-    static hwnds = {}
-    
-    if(!showStatus) {
-        return
-    }
-    
-    ; Create a unique key for this GuiName/position combination
-    messageKey := GuiName . ":" . X . ":" . Y
-    currentTime := A_TickCount / 1000
-    
-    ; If the same message was displayed recently in the same location, check interval
-    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
-        ; Only update if enough time has passed since the last update
-        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
-            return
-        }
-    }
-    
-    ; Update our record of this message
-    statusLastMessage[messageKey] := Message
-    statusLastUpdateTime[messageKey] := currentTime
-    
-    try {
-        ; Check if GUI with this name already exists
-        GuiName := GuiName+scriptName
-        if !hwnds.HasKey(GuiName) {
-            WinGetPos, xpos, ypos, Width, Height, %winTitle%
-            X := X + xpos + 5
-            Y := Y + ypos
-            if(!X)
-                X := 0
-            if(!Y)
-                Y := 0
-
-            ; Create a new GUI with the given name, position, and message
-            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-            hwnds[GuiName] := hCtrl
-            OwnerWND := WinExist(winTitle)
-            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-        }
-        SetTextAndResize(hwnds[GuiName], Message)
-        Gui, %GuiName%:Show, NoActivate AutoSize
-    }
-}
-
-;Modified from https://stackoverflow.com/a/49354127
-SetTextAndResize(controlHwnd, newText) {
-    dc := DllCall("GetDC", "Ptr", controlHwnd)
-
-    ; 0x31 = WM_GETFONT
-    SendMessage 0x31,,,, ahk_id %controlHwnd%
-    hFont := ErrorLevel
-    oldFont := 0
-    if (hFont != "FAIL")
-        oldFont := DllCall("SelectObject", "Ptr", dc, "Ptr", hFont)
-
-    VarSetCapacity(rect, 16, 0)
-    ; 0x440 = DT_CALCRECT | DT_EXPANDTABS
-    h := DllCall("DrawText", "Ptr", dc, "Ptr", &newText, "Int", -1, "Ptr", &rect, "UInt", 0x440)
-    ; width = rect.right - rect.left
-    w := NumGet(rect, 8, "Int") - NumGet(rect, 0, "Int")
-
-    if oldFont
-        DllCall("SelectObject", "Ptr", dc, "Ptr", oldFont)
-    DllCall("ReleaseDC", "Ptr", controlHwnd, "Ptr", dc)
-
-    GuiControl,, %controlHwnd%, %newText%
-    GuiControl MoveDraw, %controlHwnd%, % "h" h*96/A_ScreenDPI + 2 " w" w*96/A_ScreenDPI + 2
-}
-
 adbClick(X, Y) {
 	global adbShell, setSpeed, adbPath, adbPort
 	initializeAdbShell()
 	X := Round(X / 277 * 540)
 	Y := Round((Y - 44) / 489 * 960)
 	adbShell.StdIn.WriteLine("input tap " X " " Y)
-}
-
-ControlClick(X, Y) {
-	global winTitle
-	ControlClick, x%X% y%Y%, %winTitle%
 }
 
 RandomUsername() {
@@ -655,24 +564,6 @@ adbSwipe() {
 		Sleep, %sleepDuration%
 	}
 }
-
-; Screenshot(filename := "Valid") {
-; 	global adbShell, adbPath, packs
-; 	SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
-
-; 	; Define folder and file paths
-; 	screenshotsDir := A_ScriptDir "\..\Screenshots"
-; 	if !FileExist(screenshotsDir)
-; 		FileCreateDir, %screenshotsDir%
-
-; 	; File path for saving the screenshot locally
-; 	screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
-
-; 	pBitmap := from_window(WinExist(winTitle))
-; 	Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
-
-; 	return screenshotFile
-; }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 	LogInfo("Sending message to Discord: " . message)
@@ -792,77 +683,6 @@ FriendAdded()
 	global AddFriend
 	AddFriend++
 }
-
-; ; Function to create or select the JSON file
-; InitializeJsonFile() {
-; 	global jsonFileName
-; 	fileName := A_ScriptDir . "\..\json\Packs.json"
-; 	if !FileExist(fileName) {
-; 		; Create a new file with an empty JSON array
-; 		FileAppend, [], %fileName%  ; Write an empty JSON array
-; 		jsonFileName := fileName
-; 		return
-; 	}
-; }
-
-; ; Function to append a time and variable pair to the JSON file
-; AppendToJsonFile(variableValue) {
-; 	global jsonFileName
-; 	if (jsonFileName = "") {
-; 		return
-; 	}
-
-; 	; Read the current content of the JSON file
-; 	FileRead, jsonContent, %jsonFileName%
-; 	if (jsonContent = "") {
-; 		jsonContent := "[]"
-; 	}
-
-; 	; Parse and modify the JSON content
-; 	jsonContent := SubStr(jsonContent, 1, StrLen(jsonContent) - 1) ; Remove trailing bracket
-; 	if (jsonContent != "[")
-; 		jsonContent .= ","
-; 	jsonContent .= "{""time"": """ A_Now """, ""variable"": " variableValue "}]"
-
-; 	; Write the updated JSON back to the file
-; 	FileDelete, %jsonFileName%
-; 	FileAppend, %jsonContent%, %jsonFileName%
-; }
-
-; ; Function to sum all variable values in the JSON file
-; SumVariablesInJsonFile() {
-; 	global jsonFileName
-; 	if (jsonFileName = "") {
-; 		return 0
-; 	}
-
-; 	; Read the file content
-; 	FileRead, jsonContent, %jsonFileName%
-; 	if (jsonContent = "") {
-; 		return 0
-; 	}
-
-; 	; Parse the JSON and calculate the sum
-; 	sum := 0
-; 	; Clean and parse JSON content
-; 	jsonContent := StrReplace(jsonContent, "[", "") ; Remove starting bracket
-; 	jsonContent := StrReplace(jsonContent, "]", "") ; Remove ending bracket
-; 	Loop, Parse, jsonContent, {, }
-; 	{
-; 		; Match each variable value
-; 		if (RegExMatch(A_LoopField, """variable"":\s*(-?\d+)", match)) {
-; 			sum += match1
-; 		}
-; 	}
-
-; 	; Write the total sum to a file called "total.json"
-; 	totalFile := A_ScriptDir . "\json\total.json"
-; 	totalContent := "{""total_sum"": " sum "}"
-; 	FileDelete, %totalFile%
-; 	FileAppend, %totalContent%, %totalFile%
-
-; 	return sum
-; }
 
 ~+F5::Reload
 ~+F6::Pause
@@ -1428,11 +1248,6 @@ GetTempDirectory() {
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ; ~~~ Copied from other Arturo scripts ~~~
 ; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Delay(n) {
-	global Delay
-	msTime := Delay * n
-	Sleep, msTime
-}
 
 DownloadFile(url, filename) {
 	url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
