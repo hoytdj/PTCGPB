@@ -205,6 +205,7 @@ if (scaleParam = 287) {
 99Rightx := 99Configs[clientLanguage].rightx
 
 Loop {
+	LogInfo("Adding Friends...")
 	if (GPTest) {
 		if (triggerTestNeeded)
 			GPTestScript()
