@@ -4,10 +4,6 @@
 #Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
 #Include *i %A_ScriptDir%\Include\StringCompare.ahk
 #Include *i %A_ScriptDir%\Include\OCR.ahk
-; Global variables commonly used across scripts
-global statusLastMessage := {}
-global statusLastUpdateTime := {}
-global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 ; ============================================================================
 ; Image Recognition Functions
@@ -30,59 +26,6 @@ ToggleStatusMessages() {
 		showStatus := False
 	else
 		showStatus := True
-}
-CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
-    global scriptName, winTitle, StatusText, showStatus
-    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
-    static hwnds = {}
-    
-    if(!showStatus) {
-        return
-    }
-    
-    ; Create a unique key for this GuiName/position combination
-    messageKey := GuiName . ":" . X . ":" . Y
-    currentTime := A_TickCount / 1000
-    
-    ; If the same message was displayed recently in the same location, check interval
-    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
-        ; Only update if enough time has passed since the last update
-        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
-            return
-        }
-    }
-    
-    ; Update our record of this message
-    statusLastMessage[messageKey] := Message
-    statusLastUpdateTime[messageKey] := currentTime
-    
-    try {
-        ; Check if GUI with this name already exists
-        GuiName := GuiName+scriptName
-        if !hwnds.HasKey(GuiName) {
-            WinGetPos, xpos, ypos, Width, Height, %winTitle%
-            X := X + xpos + 5
-            Y := Y + ypos
-            if(!X)
-                X := 0
-            if(!Y)
-                Y := 0
-
-            ; Create a new GUI with the given name, position, and message
-            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-            hwnds[GuiName] := hCtrl
-            OwnerWND := WinExist(winTitle)
-            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-        }
-        SetTextAndResize(hwnds[GuiName], Message)
-        Gui, %GuiName%:Show, NoActivate AutoSize
-    }
 }
 
 SetTextAndResize(controlHwnd, newText) {

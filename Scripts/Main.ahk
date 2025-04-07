@@ -19,6 +19,9 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, skipInvalidGP, deleteXML, packs, FriendID, AddFriend, Instances, showStatus
 global triggerTestNeeded, testStartTime, firstRun, minStars, minStarsA2b, vipIdsURL, tesseractPath
+global statusLastMessage := {}
+global statusLastUpdateTime := {}
+global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 deleteAccount := false
 scriptName := StrReplace(A_ScriptName, ".ahk")
@@ -87,7 +90,39 @@ if (InStr(defaultLanguage, "100")) {
 } else {
 	scaleParam := 277
 }
+CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80) {
+	global scriptName, winTitle, StatusText
+	global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
+	static hwnds := {}
+	if(!showStatus)
+		return
+	try {
+		; Check if GUI with this name already exists
+		if !hwnds.HasKey(GuiName) {
+			WinGetPos, xpos, ypos, Width, Height, %winTitle%
+			X := X + xpos + 5
+			Y := Y + ypos
+			if(!X)
+				X := 0
+			if(!Y)
+				Y := 0
 
+			; Create a new GUI with the given name, position, and message
+			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+			hwnds[GuiName] := hCtrl
+			OwnerWND := WinExist(winTitle)
+			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+		}
+		SetTextAndResize(hwnds[GuiName], Message)
+		Gui, %GuiName%:Show, NoActivate AutoSize
+	}
+}
 resetWindows()
 MaxRetries := 10
 RetryCount := 0

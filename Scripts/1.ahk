@@ -18,6 +18,9 @@ WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
 global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
+global statusLastMessage := {}
+global statusLastUpdateTime := {}
+global statusUpdateInterval := 2 ; Seconds between updates of the same message
 
 scriptName := StrReplace(A_ScriptName, ".ahk")
 winTitle := scriptName
@@ -810,7 +813,59 @@ EraseInput(num := 0, total := 0) {
 	failSafeTime := (A_TickCount - failSafe) // 1000
 	LogDebug("In failsafe for Erase. ")
 }
+CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
+    global scriptName, winTitle, StatusText, showStatus
+    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
+    static hwnds = {}
+    
+    if(!showStatus) {
+        return
+    }
+    
+    ; Create a unique key for this GuiName/position combination
+    messageKey := GuiName . ":" . X . ":" . Y
+    currentTime := A_TickCount / 1000
+    
+    ; If the same message was displayed recently in the same location, check interval
+    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
+        ; Only update if enough time has passed since the last update
+        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
+            return
+        }
+    }
+    
+    ; Update our record of this message
+    statusLastMessage[messageKey] := Message
+    statusLastUpdateTime[messageKey] := currentTime
+    
+    try {
+        ; Check if GUI with this name already exists
+        GuiName := GuiName+scriptName
+        if !hwnds.HasKey(GuiName) {
+            WinGetPos, xpos, ypos, Width, Height, %winTitle%
+            X := X + xpos + 5
+            Y := Y + ypos
+            if(!X)
+                X := 0
+            if(!Y)
+                Y := 0
 
+            ; Create a new GUI with the given name, position, and message
+            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
+            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
+            hwnds[GuiName] := hCtrl
+            OwnerWND := WinExist(winTitle)
+            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
+        }
+        SetTextAndResize(hwnds[GuiName], Message)
+        Gui, %GuiName%:Show, NoActivate AutoSize
+    }
+}
 FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
     global winTitle, failSafe, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 	if(slowMotion) {
