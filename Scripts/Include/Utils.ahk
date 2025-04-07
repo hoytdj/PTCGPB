@@ -399,7 +399,9 @@ MonthToDays(year, month) {
         days += 1
     return days
 }
-
+IsLeapYear(year) {
+    return (Mod(year, 4) = 0 && Mod(year, 100) != 0) || Mod(year, 400) = 0
+}
 Delay(n) {
     global Delay
     msTime := Delay * n
