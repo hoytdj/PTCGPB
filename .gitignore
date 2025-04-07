@@ -16,8 +16,7 @@ Scripts/temp/*
 HeartBeat.ini
 Settings.ini
 /Scripts/sample
-usernames.txt
-ids.txt
-vip_ids.txt
+*.txt
 *.bak
 .DS_Store
+!usernames_default.txt
