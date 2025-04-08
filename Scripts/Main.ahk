@@ -531,7 +531,7 @@ restartGameInstance(reason, RL := true) {
 	Sleep, 3000
 	if(RL) {
 		LogRestart("Restarted game, reason: " . reason)
-		LogToDiscord("Restarted game for instance " . scriptName . " Reason: " . reason, , discordUserId)
+		LogToDiscord("Restarted game for instance " . scriptName . " Reason: " . reason, , true)
 		Reload
 	}
 }
@@ -601,42 +601,32 @@ adbSwipe() {
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 	LogInfo("Sending message to Discord: " . message)
 	global discordUserId, discordWebhookURL, sendXML
+
 	if (discordWebhookURL != "") {
 		MaxRetries := 10
 		RetryCount := 0
 		Loop {
 			try {
-				; Prepare the message data
-				if (ping && discordUserId != "") {
-					data := "{""content"": ""<@" discordUserId "> " message """}"
-				} else {
-					data := "{""content"": """ message """}"
-				}
-
-				; Create the HTTP request object
-				whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-				whr.Open("POST", discordWebhookURL, false)
-				whr.SetRequestHeader("Content-Type", "application/json")
-				whr.Send(data)
-
-				; If an image file is provided, send it
-				if (screenshotFile != "") {
-					; Check if the file exists
-					if (FileExist(screenshotFile)) {
-						; Send the image using curl
-						RunWait, curl -k -F "file=@%screenshotFile%" %discordWebhookURL%,, Hide
-					}
-				}
-				if (xmlFile != "" && sendXML > 0) {
-					; Check if the file exists
-					if (FileExist(xmlFile)) {
-						; Send the image using curl
-						RunWait, curl -k -F "file=@%xmlFile%" %discordWebhookURL%,, Hide
-					}
-				}
+				; Prepare the ping portion if needed
+				pingText := ""
+				if (ping && discordUserId != "")
+					pingText := "<@" . discordUserId . "> "
+				
+				; Base command with proper message content
+				curlCommand := "curl -k -F ""payload_json={\""content\"":\""" . pingText . message . "\""};type=application/json;charset=UTF-8"" "
+				
+				; Add screenshot if provided
+				if (screenshotFile != "" && FileExist(screenshotFile))
+					curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
+				
+				; Add the webhook URL
+				curlCommand := curlCommand . discordWebhookURL
+				
+				; Send the message using curl
+				RunWait, %curlCommand%,, Hide
 				break
 			}
-			catch {
+			catch e {
 				RetryCount++
 				if (RetryCount >= MaxRetries) {
 					CreateStatusMessage("Failed to send discord message.")
@@ -649,6 +639,7 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
 		}
 	}
 }
+
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
