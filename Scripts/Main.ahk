@@ -796,6 +796,7 @@ RemoveNonVipFriends() {
 				LogInfo("End of list - parsed the same friend codes multiple times.")
                 Delay(2)
                 CreateStatusMessage("Ready to test.")
+				LogToDiscord("GP test ended, ready to test.", ,true)
                 adbClick(143, 507)
                 return 
             }
