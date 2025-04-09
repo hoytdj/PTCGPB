@@ -333,6 +333,15 @@ Screenshot(filename := "Valid") {
     return screenshotFile
 }
 
+EscapeForJson(text) {
+    ; First escape backslashes (must come first)
+    text := StrReplace(text, "\", "\\")
+    ; Then escape quotes
+    text := StrReplace(text, """", "\""")
+    ; Finally replace newlines
+    text := StrReplace(text, "`n", "\n")
+    return text
+}
 ; ============================================================================
 ; Date and Time Functions
 ; ============================================================================

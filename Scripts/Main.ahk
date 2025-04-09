@@ -456,7 +456,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		if (vRet = 1) {
 			CreateStatusMessage("At home page. Opening app..." )
 			LogWarning("At home page during image search. Opening app...")
-			restartGameInstance("Found myself at the home page during: `n" imageName)
+			restartGameInstance("Found myself at the home page during: " imageName)
 		}
 
 		if(skip) {
@@ -599,45 +599,51 @@ adbSwipe() {
 }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
-	LogInfo("Sending message to Discord: " . message)
-	global discordUserId, discordWebhookURL, sendXML
+    LogInfo("Sending message to Discord: " . message)
+    global discordUserId, discordWebhookURL, sendXML
 
-	if (discordWebhookURL != "") {
-		MaxRetries := 10
-		RetryCount := 0
-		Loop {
-			try {
-				; Prepare the ping portion if needed
-				pingText := ""
-				if (ping && discordUserId != "")
-					pingText := "<@" . discordUserId . "> "
-				
-				; Base command with proper message content
-				curlCommand := "curl -k -F ""payload_json={\""content\"":\""" . pingText . message . "\""};type=application/json;charset=UTF-8"" "
-				
-				; Add screenshot if provided
-				if (screenshotFile != "" && FileExist(screenshotFile))
-					curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-				
-				; Add the webhook URL
-				curlCommand := curlCommand . discordWebhookURL
-				
-				; Send the message using curl
-				RunWait, %curlCommand%,, Hide
-				break
-			}
-			catch e {
-				RetryCount++
-				if (RetryCount >= MaxRetries) {
-					CreateStatusMessage("Failed to send discord message.")
-					LogError("Failed to send discord message.")
-					break
-				}
-				Sleep, 250
-			}
-			sleep, 250
-		}
-	}
+    if (discordWebhookURL != "") {
+        MaxRetries := 10
+        RetryCount := 0
+        Loop {
+            try {
+                ; Prepare the ping portion if needed
+                pingText := ""
+                if (ping && discordUserId != "")
+                    pingText := "<@" . discordUserId . "> "
+                
+                ; Escape message for JSON
+                escapedMessage := EscapeForJson(message)
+                
+                ; Base command with proper message content
+                curlCommand := "curl -k -F ""payload_json={\""content\"":\""" . pingText . escapedMessage . "\""};type=application/json;charset=UTF-8"" "
+                
+                ; Add screenshot if provided
+                if (screenshotFile != "" && FileExist(screenshotFile))
+                    curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
+                
+                ; Add the webhook URL
+                curlCommand := curlCommand . discordWebhookURL
+                
+                ; For debugging (optional)
+                LogDebug("Executing curl command: " . curlCommand)
+                
+                ; Send the message using curl
+                RunWait, %curlCommand%,, Hide
+                break
+            }
+            catch e {
+                RetryCount++
+                if (RetryCount >= MaxRetries) {
+                    CreateStatusMessage("Failed to send discord message.")
+                    LogError("Failed to send discord message.")
+                    break
+                }
+                Sleep, 250
+            }
+            sleep, 250
+        }
+    }
 }
 
 ; Pause Script
