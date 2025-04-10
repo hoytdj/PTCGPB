@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.3.8"
+localVersion := "v1.3.9"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -715,6 +715,8 @@ Start:
 			
 			; Send the heartbeat message to Discord
 			discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+			discMessage .= typeMsg
+			discMessage .= selectMsg
 			if(heartBeatName)
 				discordUserID := heartBeatName
 			LogToDiscord(discMessage, , discordUserID)
@@ -1197,7 +1199,58 @@ VersionCompare(v1, v2) {
 }
 
 ~+F7::
-    IniWrite, 0, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
-    IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
+    ; Set heartbeat flags
+    IniWrite, 0, HeartBeat.ini, HeartBeat, Main
+    IniWrite, 1, HeartBeat.ini, HeartBeat, ForceCheck
+    
+    ; Prepare heartbeat message with all instances offline
+    offlineAHK := "Offline: Main"
+    onlineAHK := "Online: none."
+    
+    ; Count instances from settings
+    IniRead, Instances, Settings.ini, UserSettings, Instances, 1
+    
+    ; Add all instances to offline list
+    if (Instances > 0) {
+        offlineAHK .= ", "
+        Loop, %Instances% {
+            if (A_Index = Instances)
+                offlineAHK .= A_Index . "."
+            else
+                offlineAHK .= A_Index . ", "
+        }
+    } else {
+        offlineAHK .= "."
+    }
+    
+    ; Get needed settings
+    IniRead, heartBeatName, Settings.ini, UserSettings, heartBeatName, ""
+    IniRead, discordUserID, Settings.ini, UserSettings, discordUserId, ""
+    
+    ; Current stats
+    totalFile := A_ScriptDir . "\json\total.json"
+    if FileExist(totalFile) {
+        FileRead, totalContent, %totalFile%
+        RegExMatch(totalContent, """total_sum"":\s*(\d+)", totalMatch)
+        total := totalMatch1
+    } else {
+        total := 0
+    }
+    
+    ; Calculate runtime
+    totalSeconds := Round((A_TickCount - rerollTime) / 1000)
+    mminutes := Floor(totalSeconds / 60)
+    packStatus := "Time: " . mminutes . "m Packs: " . total
+    packStatus .= "   |   Avg: " . Round(total / mminutes, 2) . " packs/min"
+    
+    ; Send shutdown message
+    discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+    discMessage .= typeMsg
+    discMessage .= selectMsg
+    
+    if(heartBeatName)
+        discordUserID := heartBeatName
+    
+    LogToDiscord(discMessage, , discordUserID)
     ExitApp
 return
