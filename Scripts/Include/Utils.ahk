@@ -23,11 +23,12 @@ GetNeedle(Path) {
 ; ============================================================================
 
 ToggleStatusMessages() {
-    global showStatus, scriptName
+    global showStatus
     
     if(showStatus) {
-        showStatus := False
         CreateStatusMessage("")
+        showStatus := False
+    }
     else {
         showStatus := True
     }

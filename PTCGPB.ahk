@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.3.6"
+localVersion := "v1.3.8"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -1196,4 +1196,8 @@ VersionCompare(v1, v2) {
 	return 0 ; Versions are equal
 }
 
-~+F7::ExitApp
+~+F7::
+    IniWrite, 0, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+    IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
+    ExitApp
+return

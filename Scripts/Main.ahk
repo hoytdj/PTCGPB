@@ -715,6 +715,7 @@ ToggleTestScript()
 		        ; Restore normal heartbeat when exiting GP Test Mode
         if(heartBeat) {
             IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
         }
 		
 		CreateStatusMessage("Exiting GP Test Mode")
