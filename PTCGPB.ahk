@@ -676,7 +676,49 @@ Start:
 
 		; Display pack status at the bottom of the first reroll instance
 		CreateStatusMessage(packStatus, ((Mains * scaleParam) + 5), 490)
-
+		
+		; Check if we need to force a heartbeat check (GP Test was activated)
+		IniRead, forceCheck, HeartBeat.ini, HeartBeat, ForceCheck, 0
+		if(heartBeat && forceCheck = 1) {
+			; Reset the force check flag
+			IniWrite, 0, HeartBeat.ini, HeartBeat, ForceCheck
+			
+			onlineAHK := "Online: "
+			offlineAHK := "Offline: "
+			
+			; Check Main status (should be offline since GP Test was activated)
+			if(runMain) {
+				IniRead, value, HeartBeat.ini, HeartBeat, Main
+				if(value)
+					onlineAHK := "Online: Main, "
+				else
+					offlineAHK := "Offline: Main, "
+				; Don't reset the value to keep Main showing as offline during GP Test
+			}
+			
+			; Use existing instance status values
+			for index, value in Online {
+				if(index = Online.MaxIndex())
+					commaSeparate := "."
+				else
+					commaSeparate := ", "
+				if(value)
+					onlineAHK .= A_Index . commaSeparate
+				else
+					offlineAHK .= A_Index . commaSeparate
+			}
+			
+			if(offlineAHK = "Offline: ")
+				offlineAHK := "Offline: none."
+			if(onlineAHK = "Online: ")
+				onlineAHK := "Online: none."
+			
+			; Send the heartbeat message to Discord
+			discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+			if(heartBeatName)
+				discordUserID := heartBeatName
+			LogToDiscord(discMessage, , discordUserID)
+		}
 		if(heartBeat)
 			if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
 				onlineAHK := "Online: "
