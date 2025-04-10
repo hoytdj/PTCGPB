@@ -683,13 +683,21 @@ return
 
 ToggleTestScript()
 {
-	global DEBUG, GPTest, triggerTestNeeded, testStartTime, firstRun
+	global DEBUG, GPTest, triggerTestNeeded, testStartTime, firstRun, heartBeat, scriptName
 	if(!GPTest) {
 		GPTest := true
 		triggerTestNeeded := true
 		testStartTime := A_TickCount
 		CreateStatusMessage("In GP Test Mode")
 		LogInfo("In GP Test Mode")
+
+		; Set Main as offline immediately when entering GP Test Mode
+        if(heartBeat) {
+            IniWrite, 0, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+            IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
+            LogInfo("Heartbeat set to offline for GP Test Mode")
+        }
+
 		StartSkipTime := A_TickCount ;reset stuck timers
 		failSafe := A_TickCount
 	}
@@ -703,6 +711,12 @@ ToggleTestScript()
 				firstRun := True
 			testStartTime := ""
 		}
+
+		        ; Restore normal heartbeat when exiting GP Test Mode
+        if(heartBeat) {
+            IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+        }
+		
 		CreateStatusMessage("Exiting GP Test Mode")
 		LogInfo("Exiting GP Test Mode")
 		; Ensure the GUI is restored when exiting test mode
