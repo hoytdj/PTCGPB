@@ -927,7 +927,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	if (vRet = 1) {
 		CreateStatusMessage("At home page. Opening app..." )
 		LogWarning("At home page during image search. Opening app...")
-		restartGameInstance("At the home page during: `n" imageName)
+		restartGameInstance("At the home page during: " imageName)
 	}
 	if(imageName = "Social" || imageName = "Add") {
 		TradeTutorial()
@@ -943,13 +943,14 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		if (vRet = 1) {
 			adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 			waitadb()
+			Sleep, 5000  ; Give more time for cache clearing to take effect
 			CreateStatusMessage("Loaded deleted account. Deleting XML." )
 			LogError("Loaded deleted account. Deleting XML.")
 			if(loadedAccount) {
 				FileDelete, %loadedAccount%
 				IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			}
-			LogRestart("Restarted game for instance Reason: No save data found")
+			LogRestart("Restarted game, reason: No save data found")
 			Reload
 		}
 	}
@@ -1098,7 +1099,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			if (ElapsedTime >= FSTime || safeTime >= FSTime) {
 				CreateStatusMessage("Instance has been stuck for 90s. Killing it...")
 				LogError("Instance has been stuck for 90s looking for " . imageName . ". Killing it...")
-				restartGameInstance("Instance has been stuck at `n" . imageName) ; change to reset the instance and delete data then reload script
+				restartGameInstance("Instance has been stuck at " . imageName) ; change to reset the instance and delete data then reload script
 				StartSkipTime := A_TickCount
 				failSafe := A_TickCount
 			}
@@ -1122,7 +1123,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		if (vRet = 1) {
 			CreateStatusMessage("At home page. Opening app..." )
 			LogWarning("At home page during image search. Opening app...")
-			restartGameInstance("Found myself at the home page during: `n" imageName)
+			restartGameInstance("Found myself at the home page during: " imageName)
 		}
 		if(imageName = "Social" || imageName = "Country" || imageName = "Account2" || imageName = "Account") { ;only look for deleted account on start up.
 			Path = %imagePath%NoSave.png ; look for No Save Data error message > if loaded account > delete xml > reload
@@ -1135,13 +1136,14 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 			if (vRet = 1) {
 				adbShell.StdIn.WriteLine("rm -rf /data/data/jp.pokemon.pokemontcgp/cache/*") ; clear cache
 				waitadb()
+				Sleep, 5000  ; Give more time for cache clearing to take effect
 				CreateStatusMessage("Loaded deleted account. Deleting XML." )
 				LogError("Loaded deleted account. Deleting XML.")
 				if(loadedAccount) {
 					FileDelete, %loadedAccount%
 					IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 				}
-				LogRestart("Restarted game for instance " . scriptName . " Reason: No save data found")
+				LogRestart("Restarted game, reason: No save data found")
 				Reload
 			}
 		}
@@ -1269,7 +1271,7 @@ restartGameInstance(reason, RL := true){
 	Sleep, 4500
 
 	if(RL = "GodPack") {
-		LogRestart("Restarted game for instance " . scriptName . " Reason: " . reason)
+		LogRestart("Restarted game, reason: " . reason)
 		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 
 		Reload
@@ -1897,7 +1899,7 @@ saveAccount(file := "Valid", ByRef filePath := "") {
 
 		if(count > 10 && file != "All") {
 			CreateStatusMessage("Attempted to save the account XML`n10 times, but was unsuccesful.`nPausing...")
-			LogWarning("Attempted to save the account XML`n10 times, but was unsuccesful.`nPausing...")
+			LogWarning("Attempted to save the account XML 10 times, but was unsuccesful. Pausing...")
 			LogToDiscord("Attempted to save account in " . scriptName . " but was unsuccessful. Pausing. You will need to manually extract.", Screenshot(), discordUserId)
 			Pause, On
 		} else if(count > 10) {
