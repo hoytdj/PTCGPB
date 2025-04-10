@@ -326,7 +326,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 	if (vRet = 1) {
 		CreateStatusMessage("At home page. Opening app..." )
 		LogWarning("At home page during image search. Opening app...")
-		restartGameInstance("At the home page during: `n" imageName)
+		restartGameInstance("At the home page during: " imageName)
 	}
 	if(imageName = "Country" || imageName = "Social")
 		FSTime := 90
@@ -531,7 +531,7 @@ restartGameInstance(reason, RL := true) {
 	Sleep, 3000
 	if(RL) {
 		LogRestart("Restarted game, reason: " . reason)
-		LogToDiscord("Restarted game for instance " . scriptName . " Reason: " . reason, , true)
+		LogToDiscord("Main restarted, reason: " . reason, , true)
 		Reload
 	}
 }
@@ -705,6 +705,9 @@ ToggleTestScript()
 		}
 		CreateStatusMessage("Exiting GP Test Mode")
 		LogInfo("Exiting GP Test Mode")
+		; Ensure the GUI is restored when exiting test mode
+        Delay(2)
+        CreateStatusMessage("Ready for normal operation")
 	}
 }
 
@@ -794,10 +797,12 @@ RemoveNonVipFriends() {
 			if (repeatFriendAccounts > 2) {
                 CreateStatusMessage("End of list - parsed the same friend codes multiple times.")
 				LogInfo("End of list - parsed the same friend codes multiple times.")
-                Delay(2)
+                Delay(5)
                 CreateStatusMessage("Ready to test.")
 				LogToDiscord("GP test ended, ready to test.", ,true)
-                adbClick(143, 507)
+				adbClick(143, 507)
+				Delay(30)
+				RemoveStatusMessage()
                 return 
             }
             
