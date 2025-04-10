@@ -3,13 +3,13 @@ version = Arturos PTCGP Bot
 CoordMode, Mouse, Screen
 SetTitleMatchMode, 3
 
-githubUser := "hoytdj"
+githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.5.4"
+localVersion := "v1.3.9"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
-DEBUG := false ; TODO: Make this false!
+DEBUG := false ; false default, Will be overridden by debugMode when GUI is submitted
 
 if not A_IsAdmin
 {
@@ -108,6 +108,7 @@ IniRead, heartBeatDelay, Settings.ini, UserSettings, heartBeatDelay, 30
 IniRead, sendAccountXml, Settings.ini, UserSettings, sendAccountXml, 0
 IniRead, tesseractPath, Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
 IniRead, applyRoleFilters, Settings.ini, UserSettings, applyRoleFilters, 0
+IniRead, debugMode, Settings.ini, UserSettings, debugMode, 0
 
 ; Create a stylish GUI with custom colors and modern look
 Gui, Color, 1E1E1E, 333333 ; Dark theme background
@@ -352,6 +353,7 @@ Gui, Add, GroupBox, x5 y515 w740 h50 %sectionColor%, Extra Settings
 Gui, Add, Text, x15 y535 %sectionColor%, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w300 x115 y534 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
 Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x455 y535 " . sectionColor, Use Role-Based Filters
+Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x20 y500 " . sectionColor, Debug Mode
 
 
 
@@ -674,7 +676,51 @@ Start:
 
 		; Display pack status at the bottom of the first reroll instance
 		CreateStatusMessage(packStatus, ((Mains * scaleParam) + 5), 490)
-
+		
+		; Check if we need to force a heartbeat check (GP Test was activated)
+		IniRead, forceCheck, HeartBeat.ini, HeartBeat, ForceCheck, 0
+		if(heartBeat && forceCheck = 1) {
+			; Reset the force check flag
+			IniWrite, 0, HeartBeat.ini, HeartBeat, ForceCheck
+			
+			onlineAHK := "Online: "
+			offlineAHK := "Offline: "
+			
+			; Check Main status (should be offline since GP Test was activated)
+			if(runMain) {
+				IniRead, value, HeartBeat.ini, HeartBeat, Main
+				if(value)
+					onlineAHK := "Online: Main, "
+				else
+					offlineAHK := "Offline: Main, "
+				; Don't reset the value to keep Main showing as offline during GP Test
+			}
+			
+			; Use existing instance status values
+			for index, value in Online {
+				if(index = Online.MaxIndex())
+					commaSeparate := "."
+				else
+					commaSeparate := ", "
+				if(value)
+					onlineAHK .= A_Index . commaSeparate
+				else
+					offlineAHK .= A_Index . commaSeparate
+			}
+			
+			if(offlineAHK = "Offline: ")
+				offlineAHK := "Offline: none."
+			if(onlineAHK = "Online: ")
+				onlineAHK := "Online: none."
+			
+			; Send the heartbeat message to Discord
+			discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+			discMessage .= typeMsg
+			discMessage .= selectMsg
+			if(heartBeatName)
+				discordUserID := heartBeatName
+			LogToDiscord(discMessage, , discordUserID)
+		}
 		if(heartBeat)
 			if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
 				onlineAHK := "Online: "
@@ -1152,4 +1198,59 @@ VersionCompare(v1, v2) {
 	return 0 ; Versions are equal
 }
 
-~+F7::ExitApp
+~+F7::
+    ; Set heartbeat flags
+    IniWrite, 0, HeartBeat.ini, HeartBeat, Main
+    IniWrite, 1, HeartBeat.ini, HeartBeat, ForceCheck
+    
+    ; Prepare heartbeat message with all instances offline
+    offlineAHK := "Offline: Main"
+    onlineAHK := "Online: none."
+    
+    ; Count instances from settings
+    IniRead, Instances, Settings.ini, UserSettings, Instances, 1
+    
+    ; Add all instances to offline list
+    if (Instances > 0) {
+        offlineAHK .= ", "
+        Loop, %Instances% {
+            if (A_Index = Instances)
+                offlineAHK .= A_Index . "."
+            else
+                offlineAHK .= A_Index . ", "
+        }
+    } else {
+        offlineAHK .= "."
+    }
+    
+    ; Get needed settings
+    IniRead, heartBeatName, Settings.ini, UserSettings, heartBeatName, ""
+    IniRead, discordUserID, Settings.ini, UserSettings, discordUserId, ""
+    
+    ; Current stats
+    totalFile := A_ScriptDir . "\json\total.json"
+    if FileExist(totalFile) {
+        FileRead, totalContent, %totalFile%
+        RegExMatch(totalContent, """total_sum"":\s*(\d+)", totalMatch)
+        total := totalMatch1
+    } else {
+        total := 0
+    }
+    
+    ; Calculate runtime
+    totalSeconds := Round((A_TickCount - rerollTime) / 1000)
+    mminutes := Floor(totalSeconds / 60)
+    packStatus := "Time: " . mminutes . "m Packs: " . total
+    packStatus .= "   |   Avg: " . Round(total / mminutes, 2) . " packs/min"
+    
+    ; Send shutdown message
+    discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+    discMessage .= typeMsg
+    discMessage .= selectMsg
+    
+    if(heartBeatName)
+        discordUserID := heartBeatName
+    
+    LogToDiscord(discMessage, , discordUserID)
+    ExitApp
+return
