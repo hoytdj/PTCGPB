@@ -816,7 +816,7 @@ RemoveNonVipFriends() {
 				LogToDiscord("GP test ended, ready to test.", ,true)
 				adbClick(143, 507)
 				Delay(30)
-				RemoveStatusMessage()
+				CreateStatusMessage("")
                 return 
             }
             

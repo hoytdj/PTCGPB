@@ -21,51 +21,13 @@ GetNeedle(Path) {
 ; ============================================================================
 ; Status Display Functions
 ; ============================================================================
-RemoveStatusMessage(GuiName := "") {
-    global scriptName, showStatus
-    
-    if (!showStatus)
-        return
-    
-    try {
-        ; If no GuiName provided, use defaults based on the script
-        if (GuiName == "") {
-            if (A_ScriptName = "Main.ahk") {
-                ; For Main.ahk
-                Gui, StatusMessage:Destroy
-            } else {
-                ; For 1.ahk
-                actualGuiName := 50+scriptName
-                Gui, %actualGuiName%:Destroy
-            }
-        } 
-        else if (GuiName is integer) {
-            ; 1.ahk style - numeric GuiName
-            actualGuiName := GuiName+scriptName
-            Gui, %actualGuiName%:Destroy
-        }
-        else {
-            ; Main.ahk style - string GuiName
-            Gui, %GuiName%:Destroy
-        }
-    }
-}
 
 ToggleStatusMessages() {
     global showStatus, scriptName
     
     if(showStatus) {
         showStatus := False
-        
-        ; Remove any existing status messages when toggling off
-        if (A_ScriptName = "Main.ahk") {
-            ; For Main.ahk which uses string GUI names
-            RemoveStatusMessage("StatusMessage")
-        } else {
-            ; For 1.ahk which uses numeric GUI names
-            RemoveStatusMessage(50)  ; Default value for 1.ahk
-        }
-    }
+        CreateStatusMessage("")
     else {
         showStatus := True
     }
