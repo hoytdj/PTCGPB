@@ -208,7 +208,7 @@ Loop {
 			GPTestScript()
 		Sleep, 1000
 		if (heartBeat && (Mod(A_Index, 60) = 0))
-			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
+			IniWrite, 0, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 		Continue
 	}
 	LogInfo("Adding Friends...")
