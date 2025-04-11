@@ -5,7 +5,7 @@ SetTitleMatchMode, 3
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.3.98"
+localVersion := "v1.3.99"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
