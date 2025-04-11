@@ -17,7 +17,7 @@ DllCall("AllocConsole")
 WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
 
 global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipTime, Columns, failSafe, adbPort, scriptName, adbShell, adbPath, GPTest, StatusText, defaultLanguage, setSpeed, jsonFileName, pauseToggle, SelectedMonitorIndex, swipeSpeed, godPack, scaleParam, discordUserId, discordWebhookURL, deleteMethod, packs, FriendID, friendIDs, Instances, username, friendCode, stopToggle, friended, runMain, Mains, showStatus, injectMethod, packMethod, loadDir, loadedAccount, nukeAccount, CheckShiningPackOnly, TrainerCheck, FullArtCheck, RainbowCheck, ShinyCheck, dateChange, foundGP, foundTS, friendsAdded, minStars, PseudoGodPack, Palkia, Dialga, Mew, Pikachu, Charizard, Mewtwo, packArray, CrownCheck, ImmersiveCheck, InvalidCheck, slowMotion, screenShot, accountFile, invalid, starCount, gpFound, foundTS, minStarsA1Charizard, minStarsA1Mewtwo, minStarsA1Pikachu, minStarsA1a, minStarsA2Dialga, minStarsA2Palkia, minStarsA2a, minStarsA2b, rawFriendIDs
-global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack
+global DeadCheck, sendAccountXml, applyRoleFilters, MockGodPack, MockSinglePack, gpFoundTime
 global statusLastMessage := {}
 global statusLastUpdateTime := {}
 global statusUpdateInterval := 2 ; Seconds between updates of the same message
@@ -1276,10 +1276,11 @@ restartGameInstance(reason, RL := true){
 
 		Reload
 	} else if(RL) {
-		if(menuDeleteStart()) {
+		; Only do the additional processing if this is not from a God Pack restart
+		if(menuDeleteStart() && reason != "God Pack found. Continuing...") {
 			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 			logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGot stuck getting friend code."
-			LogGP(logMessage)
+			LogGP(username . "[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found, File name: " . accountFile . "Got stuck getting friend code.")
 			LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 		}
 		LogRestart("Restarted game, Reason: " . reason)
@@ -1361,6 +1362,10 @@ menuDeleteStart() {
 	LogInfo("Start...")
 	global friended
 	if(gpFound) {
+		; Don't re-process God Pack information on restart
+		if(A_TickCount - gpFoundTime < 120000) { ; Check if it's been less than 2 minutes
+			return false ; Return false to prevent reprocessing
+		}
 		return gpFound
 	}
 	if(friended) {
@@ -1536,7 +1541,7 @@ FoundStars(star) {
 	}
 
 	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs, " . openPack . " booster)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
-	LogGP(logMessage)
+	LogGP(star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs, " . openPack . " booster)\nFile name: " . accountFile . "Backing up to the Accounts\\SpecificCards folder and continuing...")
 	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
 	
 	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
@@ -1714,8 +1719,11 @@ GodPackFound(validity) {
 	FlushLogMessages()
 	
 	LogInfo("God Pack found ")
-	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS
-
+	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS, gpFoundTime
+	
+	; Set the timestamp of when we found the God Pack
+	gpFoundTime := A_TickCount
+	
 	if(validity = "Valid") {
 		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 		Praise := ["Congrats!", "Congratulations!", "GG!", "Whoa!", "Praise Helix! ༼ つ ◕_◕ ༽つ", "Way to go!", "You did it!", "Awesome!", "Nice!", "Cool!", "You deserve it!", "Keep going!", "This one has to be live!", "No duds, no duds, no duds!", "Fantastic!", "Bravo!", "Excellent work!", "Impressive!", "You're amazing!", "Well done!", "You're crushing it!", "Keep up the great work!", "You're unstoppable!", "Exceptional!", "You nailed it!", "Hats off to you!", "Sweet!", "Kudos!", "Phenomenal!", "Boom! Nailed it!", "Marvelous!", "Outstanding!", "Legendary!", "Youre a rock star!", "Unbelievable!", "Keep shining!", "Way to crush it!", "You're on fire!", "Killing it!", "Top-notch!", "Superb!", "Epic!", "Cheers to you!", "Thats the spirit!", "Magnificent!", "Youre a natural!", "Gold star for you!", "You crushed it!", "Incredible!", "Shazam!", "You're a genius!", "Top-tier effort!", "This is your moment!", "Powerful stuff!", "Wicked awesome!", "Props to you!", "Big win!", "Yesss!", "Champion vibes!", "Spectacular!"]
@@ -1731,7 +1739,7 @@ GodPackFound(validity) {
 	screenShot := Screenshot(validity)
 	accountFile := saveAccount(validity, accountFullPath)
 	logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGetting friend code then sendind discord message."
-	LogGP(logMessage)
+	LogGP(username . "[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found, File name: " . accountFile . "Getting friend code then sendind discord message.")
 	friendCode := getFriendCode()
 	IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 
@@ -1758,7 +1766,7 @@ GodPackFound(validity) {
 	}
 
 	logMessage := Interjection . "\n" . username . " (" . friendCode . ")\n[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nBacking up to the Accounts\\GodPacks folder and continuing..."
-	LogGP(logMessage)
+	LogGP(username . "[" . starCount . "/5][" . packs . "P] " . invalid . " God pack found, File name: " . accountFile . "Backing up to the Accounts\\GodPacks folder and continuing...")
 	;Run, http://google.com, , Hide ;Remove the ; at the start of the line and replace your url if you want to trigger a link when finding a god pack.
 
 	; Adjust the below to only send a 'ping' to Discord friends on Valid packs
