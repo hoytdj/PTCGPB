@@ -19,4 +19,4 @@ Settings.ini
 *.txt
 *.bak
 .DS_Store
-!usernames_default.txt
+temp/*
