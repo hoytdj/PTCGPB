@@ -189,7 +189,7 @@ CmdRet(sCmd, callBackFuncObj := "", encoding := "")
 }
 
 findAdbPorts(baseFolder := "C:\Program Files\Netease") {
-    global adbPorts, winTitle, scriptName
+    global scriptName
     ; Initialize variables
     adbPorts := 0  ; Create an empty associative array for adbPorts
     mumuFolder = %baseFolder%\MuMuPlayerGlobal-12.0\vms\*

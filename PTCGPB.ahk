@@ -5,11 +5,10 @@ SetTitleMatchMode, 3
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.3.99"
+localVersion := "v1.4.0"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
-DEBUG := false ; false default, Will be overridden by debugMode when GUI is submitted
 
 if not A_IsAdmin
 {
@@ -18,11 +17,8 @@ if not A_IsAdmin
 	ExitApp
 }
 
-if (!DEBUG)
-{
-	MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
-	CheckForUpdate()
-}
+MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
+CheckForUpdate()
 
 KillADBProcesses()
 
@@ -543,6 +539,7 @@ Start:
 	IniWrite, %sendAccountXml%, Settings.ini, UserSettings, sendAccountXml
 	IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
 	IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
+	IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
 	
 	; Using FriendID field to provide a URL to download ids.txt is deprecated.
 	if (inStr(FriendID, "http")) {

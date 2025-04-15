@@ -385,6 +385,14 @@ RemoveFriends(filterByPreference := false) {
 		return
 	}
 	
+	; If this is a GodPack, don't remove anyone - everyone wants GodPacks
+    if (foundTS = "God Pack") {
+        CreateStatusMessage("Found God Pack")
+        LogGP("Found God Pack")
+        friended := false
+        return
+    }
+    
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
@@ -413,112 +421,64 @@ RemoveFriends(filterByPreference := false) {
 	FindImageAndClick(205, 430, 255, 475, , "Search", 240, 120, 1500)
 	FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
 	
-	; Use the global rawFriendIDs variable instead of reading the file again
-	filteredIDs := []
-	
-	if (filterByPreference) {
-		; If this is a GodPack, don't remove anyone - everyone wants GodPacks
-		; TODO: I think this should move up to the top
-		if (foundTS = "God Pack") {
-			CreateStatusMessage("Found God Pack")
-			LogGP("Found God Pack")
-			friended := false
-			return
-		}
-	
-		for index, id in friendIDs {
-			shouldKeep := false
-			onlySRMode := false 
-			
-			; Look for this ID's preferences in rawFriendIDs
-			for _, rawLine in rawFriendIDs {
-				if (InStr(rawLine, id)) {
-					; Check if the line has pack type information
-					if (InStr(rawLine, "|")) {
-						parts := StrSplit(rawLine, "|")
-						
-						; If we have at least 3 parts (ID | Boosters | Pack Types)
-						if (parts.MaxIndex() >= 3) {
-							packTypeList := Trim(parts[3])
-							
-							; Special check for "Only for SR" tag
-							if (InStr(packTypeList, "Only for SR")) {
-								onlySRMode := true
-								LogDebug("Found 'Only for SR' tag for " . id)
-								
-								; If current pack is Shining, check if foundTS matches desired pack types
-								if (openPack = "Shining") {
-									; Check if the specific foundTS (packType) exists in their pack types list
-									packTypeMatch := false
-									packTypes := StrSplit(packTypeList, ",")
-									
-									for _, packType in packTypes {
-										trimmedPackType := Trim(packType)
-										; Skip the "Only for SR" text in the comparison
-										if (trimmedPackType != "Only for SR" && trimmedPackType = foundTS) {
-											packTypeMatch := true
-											LogDebug("Pack type match found: " . trimmedPackType)
-											break
-										}
-									}
-									
-									if (packTypeMatch) {
-										shouldKeep := true
-										LogDebug("Keeping friend " . id . " (Only for SR + Shining booster + wants " . foundTS . ")")
-									}
-								}
-								break
-							}
-						
-							; If not in "Only for SR" mode, do the regular check for pack type
-							if (!onlySRMode) {
-								packTypes := StrSplit(packTypeList, ",")
-								
-								; Check if foundTS is in the desired pack types
-								for _, packType in packTypes {
-									trimmedPackType := Trim(packType)
-									if (trimmedPackType = foundTS) {
-										shouldKeep := true
-										LogDebug("Keeping friend " . id . " (wants " . foundTS . ")")
-										break
-									}
-								}
-							}
-						} else {
-							; No pack type information, so keep anyway
-							shouldKeep := true
-							LogDebug("Friend " . id . " has no pack type info, keeping anyway")
-						}
-					} else {
-						; No separator, assume they accept any pack type
-						shouldKeep := true
-						LogDebug("Keeping friend " . id . " (accepts all pack types)")
-					}
-					break
-				}
-			}
-		
-			if (!shouldKeep) {
-				; This friend doesn't want this pack type, add to filtered list for removal
-				filteredIDs.Push(id)
-				if (onlySRMode && openPack = "Shining") {
-					LogDebug("Will remove friend " . id . " (Only for SR but doesn't want " . foundTS . ")")
-				} else if (onlySRMode) {
-					LogDebug("Will remove friend " . id . " (Only wants SR cards)")
-				} else {
-					LogDebug("Will remove friend " . id . " (doesn't want " . foundTS . ")")
-				}
-			}
-		}
+    ; Use the global rawFriendIDs variable instead of reading the file again
+    filteredIDs := []
+    
+    if (filterByPreference && foundTS) {
+        ; Loop through each friend ID
+        for index, id in friendIDs {
+            shouldKeep := false
+            
+            ; Find this ID in the raw friends data
+            for _, line in rawFriendIDs {
+                if (InStr(line, id)) {
+                    ; Extract the preferences part
+                    parts := StrSplit(line, "|", " ")
+                    if (parts.MaxIndex() >= 2) {
+                        preferences := Trim(parts[2])
+                        
+                        ; Look for the current openPack in the preferences
+                        boosters := StrSplit(preferences, ";", " ")
+                        for _, boosterData in boosters {
+                            boosterInfo := StrSplit(boosterData, ":", " ")
+                            boosterName := Trim(boosterInfo[1])
+                            
+                            ; If this is the current booster
+                            if (boosterName = openPack) {
+                                ; Check if the found card type is in the preferences
+                                boosterPrefs := Trim(boosterInfo[2])
+                                prefList := StrSplit(boosterPrefs, ",", " ")
+                                
+                                for _, pref in prefList {
+                                    if (Trim(pref) = foundTS) {
+                                        shouldKeep := true
+                                        LogDebug("Keeping friend " . id . " (wants " . foundTS . " in " . openPack . ")")
+                                        break
+                                    }
+                                }
+                                
+                                ; No need to check other boosters
+                                break
+                            }
+                        }
+                    }
+                    
+                    ; Found the line for this ID, no need to check other lines
+                    break
+                }
+            }
+            
+            ; If we shouldn't keep this friend, add to filtered list for removal
+            if (!shouldKeep) {
+                filteredIDs.Push(id)
+                LogDebug("Will remove friend " . id . " (doesn't want " . foundTS . " in " . openPack . ")")
+            }
+        }
+    } else {
+        ; If not filtering by preference, remove all friends
+        filteredIDs := friendIDs
+    }
 
-		; If no friends to remove, exit
-		if (filteredIDs.MaxIndex() = 0) {
-			CreateStatusMessage("No friends to remove based on pack type filter")
-			LogInfo("No friends to remove based on pack type filter")
-			friended := false
-			return
-		}
-	} 
 	 ; Process filtered IDs for removal
 	for index, value in filteredIDs {
 		failSafe := A_TickCount
@@ -583,80 +543,78 @@ AddFriends(renew := false, getFC := false) {
 	global FriendID, friendIds, waitTime, friendCode, scriptName, openPack, rawFriendIDs, applyRoleFilters
 	IniWrite, 1, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 	LogInfo("AddFriends called with renew: " . renew . ", getFC: " . getFC)
-	; Modify the reading of IDs to store in global variable
-	rawFriendIDs := ReadFile("ids")
-	friendIDs := [] ; Initialize an empty array to store friend IDs
-	
-	if (rawFriendIDs) {
-		LogDebug("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
-		CreateStatusMessage("Checking for IDs in ids.txt")
-		LogDebug("Checking for IDs in ids.txt")
-		for index, value in rawFriendIDs {
-			; Skip empty lines
-			if (value = "") {
-				continue
-			}
-			
-			LogDebug("Processing line: " . value)
-			
-			; Checks if there is a list of boosters next to the ID (format: "ID | Charizard,Mewtwo,... | GodPack,Double Two Stars,...")
-			if (InStr(value, "|") && applyRoleFilters) {
-				parts := StrSplit(value, "|")
-				id := RegExReplace(parts[1], "[^a-zA-Z0-9]")
-				
-				; If the ID is not valid (not 16 digits), skip it
-				if (StrLen(id) != 16) {
-					CreateStatusMessage("ID " . id . " is invalid (wrong length)")
-					LogWarning("ID " . id . " is invalid (wrong length)")
-					continue
-				}
-				
-				boosterList := Trim(parts[2])
-				boosters := StrSplit(boosterList, ",")
-				
-				LogDebug("ID: " . id . " has " . boosters.MaxIndex() . " boosters")
-				
-				; Checks if the current booster is in the list
-				desiredBooster := false
-				for _, pack in boosters {
-					trimmedPack := Trim(pack)
-					LogDebug("Checking if " . trimmedPack . " = " . openPack)
-					
-					; Case-insensitive comparison
-					if (trimmedPack = openPack) {
-						desiredBooster := true
-						LogDebug("Match found!")
-						break
-					}
-				}
-				
-				if (desiredBooster) {
-					friendIDs.Push(id)
-					LogDebug("ADDING: " . id . " wants the booster " . openPack)
-				}
-				else {
-					LogDebug("SKIPPING: " . id . " doesn't want booster " . openPack)
-				}
-			}
-			else {
-				id := RegExReplace(value, "\|.*|[^a-zA-Z0-9]")
-				; If there is no list of boosters, check if it's a valid ID (length = 16)
-				if (StrLen(id) = 16) {
-					; If no boosters are specified, add the ID (it accepts all boosters)
-					friendIDs.Push(id)
-					LogDebug("ADDING: " . id . " (accepts all boosters)")
-				}
-				else {
-					LogWarning("SKIPPING: " . id . " is invalid (wrong length)")
-				}
-			}
-		}
-	}
-	
-	LogInfo("Final list contains " . friendIDs.MaxIndex() . " friends")
-	; Handle single FriendID, rather than ids.txt file
-	if (friendIDs.MaxIndex() = "" && FriendID != "")
-		friendIDs.Push(FriendID)
+    ; Skip processing IDs if we're just getting the friend code
+    if (!getFC) {
+        ; Modify the reading of IDs to store in global variable
+        rawFriendIDs := ReadFile("ids")
+        friendIDs := [] ; Initialize an empty array to store friend IDs
+        
+        if (rawFriendIDs) {
+            LogDebug("Found " . rawFriendIDs.MaxIndex() . " lines in ids.txt")
+            CreateStatusMessage("Checking for IDs in ids.txt")
+            LogDebug("Checking for IDs in ids.txt")
+
+            for index, value in rawFriendIDs {
+                ; Skip empty lines
+                if (value = "") {
+                    continue
+                }
+                
+                LogDebug("Processing line: " . value)
+                
+                ; Check if there is booster and preference information (format: "ID | Booster1: Pref1, Pref2; Booster2: Pref1;...")
+                if (InStr(value, "|") && applyRoleFilters) {
+                    parts := StrSplit(value, "|", " ")
+                    id := Trim(parts[1])
+                    
+                    ; If the ID is not valid (not 16 digits), skip it
+                    if (StrLen(id) != 16) {
+                        CreateStatusMessage("ID " . id . " is invalid (wrong length)")
+                        LogWarning("ID " . id . " is invalid (wrong length)")
+                        continue
+                    }
+                    
+                    preferences := Trim(parts[2])
+                    boosters := StrSplit(preferences, ";", " ")
+                    
+                    ; Check if the current openPack is in the boosters list
+                    hasCurrentBooster := false
+                    for _, boosterData in boosters {
+                        if (InStr(boosterData, openPack . ":")) {
+                            hasCurrentBooster := true
+                            break
+                        }
+                    }
+                    
+                    if (hasCurrentBooster) {
+                        friendIDs.Push(id)
+                        LogDebug("ADDING: " . id . " wants the booster " . openPack)
+                    } else {
+                        LogDebug("SKIPPING: " . id . " doesn't want booster " . openPack)
+                    }
+                }
+                else {
+                    id := RegExReplace(value, "\|.*|[^a-zA-Z0-9]")
+                    ; If there is no list of boosters, check if it's a valid ID (length = 16)
+                    if (StrLen(id) = 16) {
+                        ; If no boosters are specified, add the ID (it accepts all boosters)
+                        friendIDs.Push(id)
+                        LogDebug("ADDING: " . id . " (accepts all boosters)")
+                    }
+                    else {
+                        LogWarning("SKIPPING: " . id . " is invalid (wrong length)")
+                    }
+                }
+            }
+        }
+        
+        ; Handle single FriendID, rather than ids.txt file
+        if (friendIDs.MaxIndex() = "" && FriendID != "") {
+            friendIDs.Push(FriendID)
+        }
+        
+        LogInfo("Final list contains " . friendIDs.MaxIndex() . " friends")
+    }
 	
 	count := 0
 	friended := true
