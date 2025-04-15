@@ -432,10 +432,24 @@ RemoveFriends(filterByPreference := false) {
             ; Find this ID in the raw friends data
             for _, line in rawFriendIDs {
                 if (InStr(line, id)) {
+                    ; Check if this ID has no pipe character (no preferences)
+                    if (!InStr(line, "|")) {
+                        shouldKeep := true
+                        LogDebug("Keeping friend " . id . " (no preferences specified)")
+                        break
+                    }
+                    
                     ; Extract the preferences part
                     parts := StrSplit(line, "|", " ")
                     if (parts.MaxIndex() >= 2) {
                         preferences := Trim(parts[2])
+                        
+                        ; If preferences is "No preferences", always keep the friend
+                        if (InStr(preferences, "No preferences")) {
+                            shouldKeep := true
+                            LogDebug("Keeping friend " . id . " (no preferences specified)")
+                            break
+                        }
                         
                         ; Look for the current openPack in the preferences
                         boosters := StrSplit(preferences, ";", " ")
@@ -562,46 +576,58 @@ AddFriends(renew := false, getFC := false) {
                 
                 LogDebug("Processing line: " . value)
                 
-                ; Check if there is booster and preference information (format: "ID | Booster1: Pref1, Pref2; Booster2: Pref1;...")
-                if (InStr(value, "|") && applyRoleFilters) {
+                ; Extract the ID part (everything before | or the whole line if no |)
+                if (InStr(value, "|")) {
                     parts := StrSplit(value, "|", " ")
                     id := Trim(parts[1])
                     
                     ; If the ID is not valid (not 16 digits), skip it
                     if (StrLen(id) != 16) {
-                        CreateStatusMessage("ID " . id . " is invalid (wrong length)")
                         LogWarning("ID " . id . " is invalid (wrong length)")
                         continue
                     }
                     
                     preferences := Trim(parts[2])
-                    boosters := StrSplit(preferences, ";", " ")
                     
-                    ; Check if the current openPack is in the boosters list
-                    hasCurrentBooster := false
-                    for _, boosterData in boosters {
-                        if (InStr(boosterData, openPack . ":")) {
-                            hasCurrentBooster := true
-                            break
+                    ; Only filter by preferences if role filtering is enabled
+                    if (applyRoleFilters) {
+                        ; If preferences is "No preferences", always add the ID
+                        if (InStr(preferences, "No preferences")) {
+                            friendIDs.Push(id)
+                            LogDebug("ADDING: " . id . " (no preferences specified)")
+                            continue
                         }
-                    }
-                    
-                    if (hasCurrentBooster) {
-                        friendIDs.Push(id)
-                        LogDebug("ADDING: " . id . " wants the booster " . openPack)
+                        
+                        boosters := StrSplit(preferences, ";", " ")
+                        
+                        ; Check if the current openPack is in the boosters list
+                        hasCurrentBooster := false
+                        for _, boosterData in boosters {
+                            if (InStr(boosterData, openPack . ":")) {
+                                hasCurrentBooster := true
+                                break
+                            }
+                        }
+                        
+                        if (hasCurrentBooster) {
+                            friendIDs.Push(id)
+                            LogDebug("ADDING: " . id . " wants the booster " . openPack)
+                        } else {
+                            LogDebug("SKIPPING: " . id . " doesn't want booster " . openPack)
+                        }
                     } else {
-                        LogDebug("SKIPPING: " . id . " doesn't want booster " . openPack)
-                    }
-                }
-                else {
-                    id := RegExReplace(value, "\|.*|[^a-zA-Z0-9]")
-                    ; If there is no list of boosters, check if it's a valid ID (length = 16)
-                    if (StrLen(id) = 16) {
-                        ; If no boosters are specified, add the ID (it accepts all boosters)
+                        ; If role filtering is disabled, add all IDs
                         friendIDs.Push(id)
-                        LogDebug("ADDING: " . id . " (accepts all boosters)")
+                        LogDebug("ADDING: " . id . " (role filtering disabled)")
                     }
-                    else {
+                } else {
+                    id := RegExReplace(value, "[^a-zA-Z0-9]")
+                    ; If there is no pipe character, check if it's a valid ID (length = 16)
+                    if (StrLen(id) = 16) {
+                        ; If no preferences are specified, add the ID (it accepts all boosters)
+                        friendIDs.Push(id)
+                        LogDebug("ADDING: " . id . " (no preferences specified)")
+                    } else {
                         LogWarning("SKIPPING: " . id . " is invalid (wrong length)")
                     }
                 }
