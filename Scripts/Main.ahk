@@ -120,7 +120,7 @@ rerollTime := A_TickCount
 
 initializeAdbShell()
 CreateStatusMessage("Initializing bot...")
-restartGameInstance("Initializing bot...")
+restartGameInstance("Initializing bot...", false)
 pToken := Gdip_Startup()
 
 if(heartBeat)
