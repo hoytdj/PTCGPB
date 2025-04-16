@@ -72,11 +72,55 @@ if (InStr(defaultLanguage, "100")) {
     scaleParam := 277
 }
 
+resetWindows()
+MaxRetries := 10
+RetryCount := 0
+Loop {
+    try {
+        WinGetPos, x, y, Width, Height, %winTitle%
+        sleep, 2000
+        ;Winset, Alwaysontop, On, %winTitle%
+        OwnerWND := WinExist(winTitle)
+        x4 := x + 5
+        y4 := y + 44
+        buttonWidth := 35
+        if (scaleParam = 287)
+            buttonWidth := buttonWidth + 6
+
+        Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
+        Gui, Toolbar: Default
+        Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
+        Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
+        DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+        Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
+        break
+    }
+    catch {
+        RetryCount++
+        if (RetryCount >= MaxRetries) {
+            CreateStatusMessage("Failed to create button GUI.")
+            LogError("Failed to create button GUI.")
+            break
+        }
+        Sleep, 1000
+    }
+    Sleep, %Delay%
+    CreateStatusMessage("Creating button GUI...")
+    LogInfo("Creating button GUI...")
+}
+
 rerollTime := A_TickCount
 
 initializeAdbShell()
-CreateStatusMessage("Initializing bot...",,,, false)
-restartGameInstance("Initializing bot...", false)
+CreateStatusMessage("Initializing bot...")
+restartGameInstance("Initializing bot...")
 pToken := Gdip_Startup()
 
 if(heartBeat)
@@ -418,48 +462,6 @@ RandomUsername() {
 
     ; Return the random value
     return values[randomIndex]
-}
-
-adbInput(name) {
-	global adbShell, adbPath, adbPort
-	initializeAdbShell()
-	adbShell.StdIn.WriteLine("input text " . name )
-}
-
-adbSwipeUp() {
-	global adbShell, adbPath, adbPort
-	initializeAdbShell()
-	adbShell.StdIn.WriteLine("input swipe 309 816 309 355 60")
-	;adbShell.StdIn.WriteLine("input swipe 309 816 309 555 30")
-	Sleep, 150
-}
-
-adbSwipe() {
-	global adbShell, setSpeed, swipeSpeed, adbPath, adbPort
-	initializeAdbShell()
-	X1 := 35
-	Y1 := 327
-	X2 := 267
-	Y2 := 327
-	X1 := Round(X1 / 277 * 535)
-	Y1 := Round((Y1 - 44) / 489 * 960)
-	X2 := Round(X2 / 44 * 535)
-	Y2 := Round((Y2 - 44) / 489 * 960)
-	if(setSpeed = 1) {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
-	else if(setSpeed = 2) {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
-	else {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
 }
 
 ; Pause Script
@@ -1068,27 +1070,36 @@ GetTempDirectory() {
         FileCreateDir, %tempDir%
     return tempDir
 }
+resetWindows(){
+    global Columns, winTitle, SelectedMonitorIndex, scaleParam
+    CreateStatusMessage("Arranging window positions and sizes")
+    RetryCount := 0
+    MaxRetries := 10
+    Loop
+    {
+        try {
+            ; Get monitor origin from index
+            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
+            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
+            Title := winTitle
 
-; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; ~~~ Copied from other Arturo scripts ~~~
-; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            instanceIndex := StrReplace(Title, "Main", "")
+            if (instanceIndex = "")
+                instanceIndex := 1
 
-DownloadFile(url, filename) {
-    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-    localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
-    errored := false
-    try {
-        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", url, true)
-        whr.Send()
-        whr.WaitForResponse()
-        contents := whr.ResponseText
-    } catch {
-        errored := true
+            rowHeight := 533  ; Adjust the height of each row
+            currentRow := Floor((instanceIndex - 1) / Columns)
+            y := currentRow * rowHeight
+            x := Mod((instanceIndex - 1), Columns) * scaleParam
+            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+            break
+        }
+        catch {
+            if (RetryCount > MaxRetries)
+                CreateStatusMessage("Pausing. Can't find window " . winTitle . ".",,,, false)
+            Pause
+        }
+        Sleep, 1000
     }
-    if(!errored) {
-        FileDelete, %localPath%
-        FileAppend, %contents%, %localPath%
-    }
-    return !errored
+    return true
 }

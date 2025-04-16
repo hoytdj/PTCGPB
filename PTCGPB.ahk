@@ -18,15 +18,23 @@ scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
 
+; Read debugMode from Settings.ini before checking it
+IniRead, debugMode, Settings.ini, UserSettings, debugMode, 0
+
+
 if not A_IsAdmin
 {
     ; Relaunch script with admin rights
     Run *RunAs "%A_ScriptFullPath%"
     ExitApp
 }
+if (!debugMode)
+{
+    MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
+    CheckForUpdate()
+}
 
-MsgBox, 64, The project is now licensed under CC BY-NC 4.0, The original intention of this project was not for it to be used for paid services even those disguised as 'donations.' I hope people respect my wishes and those of the community. `nThe project is now licensed under CC BY-NC 4.0, which allows you to use, modify, and share the software only for non-commercial purposes. Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license. The new license applies to this and all future releases.
-CheckForUpdate()
+KillADBProcesses()
 
 global scriptName, winTitle, FriendID, Instances, instanceStartDelay, jsonFileName, PacksText, runMain, Mains, scaleParam
 
@@ -1340,3 +1348,40 @@ VersionCompare(v1, v2) {
     LogToDiscord(discMessage, , discordUserID)
     ExitApp
 return
+
+resetWindows(Title, SelectedMonitorIndex) {
+    global Columns, runMain, Mains, scaleParam
+    RetryCount := 0
+    MaxRetries := 10
+    Loop
+    {
+        try {
+            ; Get monitor origin from index
+            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
+            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
+            if (runMain) {
+                if (InStr(Title, "Main") = 1) {
+                    instanceIndex := StrReplace(Title, "Main", "")
+                    if (instanceIndex = "")
+                        instanceIndex := 1
+                } else {
+                    instanceIndex := (Mains - 1) + Title + 1
+                }
+            } else {
+                instanceIndex := Title
+            }
+            rowHeight := 533  ; Adjust the height of each row
+            currentRow := Floor((instanceIndex - 1) / Columns)
+            y := currentRow * rowHeight
+            x := Mod((instanceIndex - 1), Columns) * scaleParam
+            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+            break
+        }
+        catch {
+            if (RetryCount > MaxRetries)
+                Pause
+        }
+        Sleep, 1000
+    }
+    return true
+}

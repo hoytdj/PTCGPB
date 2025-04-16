@@ -1,5 +1,6 @@
 #Include %A_ScriptDir%\Scripts\Include\Logger_Module.ahk
 #Include %A_ScriptDir%\Scripts\Include\Utils.ahk
+#Include %A_ScriptDir%\Scripts\Include\Gdip_All.ahk
 #SingleInstance, force
 CoordMode, Mouse, Screen
 SetTitleMatchMode, 3

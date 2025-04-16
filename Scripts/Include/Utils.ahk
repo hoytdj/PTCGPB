@@ -1,3 +1,4 @@
+global adbPort, adbShell, adbPath, debugMode
 ; ============================================================================
 ; Image Recognition Functions
 ; ============================================================================
@@ -75,112 +76,107 @@ CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enable
     }
 }
 
-resetWindows(instanceName := "", monitorOverride := "") {
-    global Columns, winTitle, SelectedMonitorIndex, scaleParam, Delay, runMain, Mains
+; resetWindows(instanceName := "", monitorOverride := "") {
+;     global Columns, winTitle, SelectedMonitorIndex, scaleParam, Delay
     
-    ; Use standard variable assignment instead of "local" keyword
-    currentWinTitle := instanceName ? instanceName : winTitle
-    currentMonitor := monitorOverride ? monitorOverride : SelectedMonitorIndex
+;     currentWinTitle := instanceName ? instanceName : winTitle
+;     currentMonitor := monitorOverride ? monitorOverride : SelectedMonitorIndex
     
-    CreateStatusMessage("Arranging window positions and sizes")
-    LogDebug("Arranging window positions and sizes")
-    RetryCount := 0
-    MaxRetries := 10
+;     CreateStatusMessage("Arranging window positions and sizes for " . currentWinTitle)
+;     LogDebug("Arranging window positions and sizes for " . currentWinTitle)
     
-    ; First position the window
-    Loop {
-        try {
-            ; Get monitor origin from index
-            currentMonitor := RegExReplace(currentMonitor, ":.*$")
-            SysGet, Monitor, Monitor, %currentMonitor%
-            Title := currentWinTitle
+;     RetryCount := 0
+;     MaxRetries := 10
+    
+;     ; First position the window
+;     Loop {
+;         try {
+;             ; Get monitor origin from index
+;             currentMonitor := RegExReplace(currentMonitor, ":.*$")
+;             SysGet, MonitorCount, MonitorCount
+;             if (currentMonitor > MonitorCount || currentMonitor < 1) {
+;                 currentMonitor := 1
+;             }
+            
+;             SysGet, Monitor, Monitor, %currentMonitor%
+;             Title := currentWinTitle
+            
+;             ; Check if window exists
+;             if (!WinExist(Title)) {
+;                 RetryCount++
+;                 if (RetryCount >= MaxRetries) {
+;                     CreateStatusMessage("Can't find window " . currentWinTitle)
+;                     LogError("Can't find window " . currentWinTitle)
+;                     return false
+;                 }
+;                 Sleep, 1000
+;                 continue
+;             }
 
-            ; Calculate instance index based on whether it's a main instance or not
-            if (InStr(Title, "Main")) {
-                ; Extract the number after "Main", defaulting to 1
-                mainNumber := RegExReplace(Title, "Main(\d*)", "$1")
-                if (mainNumber == "")
-                    mainNumber := 1
-                    
-                instanceIndex := mainNumber
-            } else {
-                instanceIndex := Title
-            }
+;             ; Extract instance number for positioning
+;             if (Title = "Main" || RegExMatch(Title, "^Main\.ahk$")) {
+;                 ; First main instance is always 1
+;                 instanceIndex := 1
+;             } else if (RegExMatch(Title, "^Main(\d+)(\.ahk)?$", match)) {
+;                 ; Main2.ahk -> 2, Main3 -> 3, etc.
+;                 instanceIndex := match1
+;             } else {
+;                 ; Regular numbered instances
+;                 instanceIndex := Title
+;             }
 
-            rowHeight := 533  ; Adjust the height of each row
-            currentRow := Floor((instanceIndex - 1) / Columns)
-            y := currentRow * rowHeight
-            x := Mod((instanceIndex - 1), Columns) * scaleParam
-            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-            break
-        }
-        catch {
-            RetryCount++
-            if (RetryCount >= MaxRetries) {
-                CreateStatusMessage("Pausing. Can't find window " . currentWinTitle)
-                LogError("Pausing. Can't find window " . currentWinTitle)
-                return false
-            }
-            Sleep, 1000
-        }
-    }
+;             rowHeight := 533
+;             currentRow := Floor((instanceIndex - 1) / Columns)
+;             y := currentRow * rowHeight
+;             x := Mod((instanceIndex - 1), Columns) * scaleParam
+            
+;             WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+;             Sleep, 500
+;             break
+;         }
+;         catch e {
+;             RetryCount++
+;             LogError("Error positioning window: " . e.message)
+;             if (RetryCount >= MaxRetries) {
+;                 return false
+;             }
+;             Sleep, 1000
+;         }
+;     }
     
-    ; Now create the toolbar GUI
-    RetryCount := 0
-    Loop {
-        try {
-            WinGetPos, x, y, Width, Height, %currentWinTitle%
-            Sleep, 2000
+;     ; Create toolbar GUI with proper delays
+;     try {
+;         WinGetPos, x, y, Width, Height, %Title%
+;         x4 := x + 5
+;         y4 := y + 44
+;         buttonWidth := 40
+        
+;         if (scaleParam = 287)
+;             buttonWidth := buttonWidth + 5
             
-            ; Calculate GUI position
-            OwnerWND := WinExist(currentWinTitle)
-            x4 := x + 5
-            y4 := y + 44
-            buttonWidth := 40
-            
-            ; Adjust button width for different scales
-            if (scaleParam = 287)
-                buttonWidth := buttonWidth + 5
-                
-            ; Create the toolbar GUI
-            Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
-            Gui, Toolbar: Default
-            Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
-            Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
-            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
-            
-            ; Add the GP Test button if we're in Main.ahk
-            if (InStr(currentWinTitle, "Main")) {
-                Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
-            }
-            
-            ; Position the GUI at the bottom of the Z-order
-            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                    , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-            
-            ; Show the GUI
-            Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
-            break
-        }
-        catch {
-            RetryCount++
-            if (RetryCount >= MaxRetries) {
-                CreateStatusMessage("Failed to create button GUI.",,,, false)
-                LogError("Failed to create button GUI.")
-                break
-            }
-            Sleep, 1000
-        }
-        Sleep, % (Delay ? Delay : 250)
-        CreateStatusMessage("Creating button GUI...",,,, false)
-    }
+;         Gui, Toolbar: New, +ToolWindow -Caption
+;         Gui, Toolbar: Default
+;         Gui, Toolbar: Margin, 4, 4
+;         Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI
+;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
+;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
+;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
+;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
+;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+        
+;         ; Add GP Test button if it's a main instance
+;         if (InStr(Title, "Main")) {
+;             Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
+;         }
+        
+;         Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
+;     }
+;     catch e {
+;         LogError("Failed to create toolbar: " . e.message)
+;     }
     
-    return true
-}
+;     return true
+; }
 
 
 ToggleStatusMessages() {
@@ -222,13 +218,23 @@ SetTextAndResize(controlHwnd, newText) {
 ; ============================================================================
 ; ADB Interface Functions
 ; ============================================================================
+KillADBProcesses() {
+    ; Use AHK's Process command to close adb.exe
+    Process, Close, adb.exe
+    ; Fallback to taskkill for robustness
+    RunWait, %ComSpec% /c taskkill /IM adb.exe /F /T,, Hide
+}
+
 ControlClick(X, Y) {
 	global winTitle
 	ControlClick, x%X% y%Y%, %winTitle%
 }
 
+; filepath: c:\Users\Gabriel\Documents\GitHub\PTCGPB\Scripts\Include\Utils.ahk
+
 initializeAdbShell() {
-    global adbShell, adbPath, adbPort
+    global adbShell, adbPath, adbPort, debugMode
+    
     RetryCount := 0
     MaxRetries := 10
     BackoffTime := 1000  ; Initial backoff time in milliseconds
@@ -241,10 +247,10 @@ initializeAdbShell() {
 
                 ; Validate adbPath and adbPort
                 if (!FileExist(adbPath)) {
-                    throw "ADB path is invalid: " . adbPath
+                    throw Exception("ADB path is invalid: " . adbPath)
                 }
                 if (adbPort < 0 || adbPort > 65535) {
-                    throw "ADB port is invalid: " . adbPort
+                    throw Exception("ADB port is invalid: " . adbPort)
                 }
 
                 ; Attempt to start adb shell
@@ -253,7 +259,7 @@ initializeAdbShell() {
                 ; Ensure adbShell is running before sending 'su'
                 Sleep, 500
                 if (adbShell.Status != 0) {
-                    throw "Failed to start ADB shell."
+                    throw Exception("Failed to start ADB shell.")
                 }
 
                 adbShell.StdIn.WriteLine("su")
@@ -264,11 +270,18 @@ initializeAdbShell() {
                 break
             }
         } catch e {
+            errorMsg := IsObject(e) && e.HasKey("message") ? e.message : "Unknown error"
             RetryCount++
-            LogError("ADB Shell Error: " . e.message)
+            LogError("ADB Shell Error: " . errorMsg)
+            
             if (RetryCount >= MaxRetries) {
-                CreateStatusMessage("Failed to connect to shell after multiple attempts: " . e.message)
-                LogCritical("Failed to connect to shell after multiple attempts: " . e.message)
+                if (debugMode) {
+                    CreateStatusMessage("Failed to connect to shell after multiple attempts: " . errorMsg)
+                    LogCritical("Failed to connect to shell after multiple attempts: " . errorMsg)
+                } else {
+                    CreateStatusMessage("Failed to connect to shell. Pausing.")
+                    LogCritical("Failed to connect to shell. Pausing.")
+                }
                 Pause
             }
         }
@@ -299,7 +312,8 @@ ConnectAdb(folderPath := "C:\Program Files\Netease") {
     connected := false
     ip := "127.0.0.1:" . adbPort ; Specify the connection IP:port
 
-    CreateStatusMessage("Connecting to ADB...",,,, false)
+    CreateStatusMessage("Connecting to ADB...")
+    LogDebug("Connecting to ADB...")
 
     Loop %MaxRetries% {
         ; Attempt to connect using CmdRet
@@ -314,16 +328,20 @@ ConnectAdb(folderPath := "C:\Program Files\Netease") {
         } else {
             RetryCount++
             CreateStatusMessage("ADB connection failed.`nRetrying (" . RetryCount . "/" . MaxRetries . ")...")
-            LogWarning("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ")...")
+            LogDebug("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ")...")
             Sleep, 2000
         }
     }
 
-    if !connected 
-        CreateStatusMessage("Failed to connect to ADB.")
-        LogCritical("Failed to connect to ADB after multiple retries.")
-        Reload
-    
+    if !connected {
+        if (debugMode){
+            CreateStatusMessage("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
+            LogCritical("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
+        }else{
+            CreateStatusMessage("Failed to connect to ADB.")
+            LogCritical("Failed to connect to ADB.")
+        }Reload
+    }
 }
 
 CmdRet(sCmd, callBackFuncObj := "", encoding := "")
@@ -443,40 +461,9 @@ adbInputEvent(event) {
     waitadb()
 }
 
-adbSwipeUp() {
-	global adbShell, adbPath, adbPort
-	initializeAdbShell()
-	adbShell.StdIn.WriteLine("input swipe 309 816 309 355 60")
-	;adbShell.StdIn.WriteLine("input swipe 309 816 309 555 30")
-	Sleep, 150
-}
-
-adbSwipe() {
-	global adbShell, setSpeed, swipeSpeed, adbPath, adbPort
-	initializeAdbShell()
-	X1 := 35
-	Y1 := 327
-	X2 := 267
-	Y2 := 327
-	X1 := Round(X1 / 277 * 535)
-	Y1 := Round((Y1 - 44) / 489 * 960)
-	X2 := Round(X2 / 44 * 535)
-	Y2 := Round((Y2 - 44) / 489 * 960)
-	if(setSpeed = 1) {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
-	else if(setSpeed = 2) {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
-	else {
-		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
-		sleepDuration := swipeSpeed * 1.2
-		Sleep, %sleepDuration%
-	}
+adbSwipe(params) {
+    adbShell.StdIn.WriteLine("input swipe " . params)
+    waitadb()
 }
 
 ; Simulates a touch gesture on an Android device to scroll in a controlled way.

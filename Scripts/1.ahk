@@ -146,32 +146,33 @@ Loop {
         if (scaleParam = 287)
             buttonWidth := buttonWidth + 5
 
-		Gui, New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
-		Gui, Default
-		Gui, Margin, 4, 4  ; Set margin for the GUI
-		Gui, Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-		Gui, Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
-		Gui, Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-		Gui, Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-		Gui, Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-		Gui, Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
-		DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-		Gui, Show, NoActivate x%x4% y%y4% AutoSize
-		break
-	}
-	catch {
-		RetryCount++
-		if (RetryCount >= MaxRetries) {
-			LogError("Failed to create button gui.")
-			break
-		}
-		Sleep, 1000
-	}
-	Delay(1)
-	LogDebug("Trying to create button gui...")
+        Gui, New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
+        Gui, Default
+        Gui, Margin, 4, 4  ; Set margin for the GUI
+        Gui, Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
+        Gui, Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
+        Gui, Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
+        Gui, Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
+        Gui, Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
+        Gui, Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+        DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+        Gui, Show, NoActivate x%x4% y%y4% AutoSize
+        break
+    }
+    catch {
+        RetryCount++
+        if (RetryCount >= MaxRetries) {
+            CreateStatusMessage("Failed to create button GUI.")
+			LogError("Failed to create button GUI.")
+            break
+        }
+        Sleep, 1000
+    }
+    Delay(1)
+    CreateStatusMessage("Trying to create button GUI...")
+	LogInfo("Trying to create button GUI...")
 }
-
 if (!godPack)
     godPack = 1
 else if (godPack = "Close")
@@ -319,10 +320,10 @@ if(DeadCheck = 1){
         }
 
         if (nukeAccount && !keepAccount && !injectMethod) {
-            CreateStatusMessage("Deleting account...",,,, false)
+            CreateStatusMessage("Deleting account...")
             menuDelete()
         } else if (friended) {
-            CreateStatusMessage("Unfriending...",,,, false)
+            CreateStatusMessage("Unfriending...")
             RemoveFriends()
         }
 
@@ -1175,7 +1176,6 @@ restartGameInstance(reason, RL := true){
             Reload
         }
     }
-}
 
 menuDelete() {
 	sleep, %Delay%
@@ -2350,7 +2350,7 @@ DoTutorial() {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		adbSwipeUp(60)
+		adbSwipe("266 770 266 355 60")
 		Sleep, 10
 		if (FindOrLoseImage(120, 70, 150, 95, , "SwipeUp", 0, failSafeTime)){
 			if(setSpeed > 1) {
@@ -2617,7 +2617,7 @@ PackOpening() {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		adbSwipe()
+		adbSwipe(adbSwipeParams)
 		Sleep, 10
 		if (FindOrLoseImage(225, 273, 235, 290, , "Pack", 1, failSafeTime)){
 		if(setSpeed > 1) {
@@ -2738,7 +2738,7 @@ HourglassOpening(HG := false) {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		adbSwipe()
+		adbSwipe(adbSwipeParams)
 		Sleep, 10
 		if (FindOrLoseImage(225, 273, 235, 290, , "Pack", 1, failSafeTime)){
 		if(setSpeed > 1) {
@@ -2976,7 +2976,43 @@ getChangeDateTime() {
 
     Return FormattedTime
 }
+resetWindows(){
+    global Columns, winTitle, SelectedMonitorIndex, scaleParam
+    CreateStatusMessage("Arranging window positions and sizes",,,, false)
+    RetryCount := 0
+    MaxRetries := 10
+    Loop
+    {
+        try {
+            ; Get monitor origin from index
+            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
+            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
+            Title := winTitle
 
+            if (runMain) {
+                instanceIndex := (Mains - 1) + Title + 1
+            } else {
+                instanceIndex := Title
+            }
+
+            rowHeight := 533  ; Adjust the height of each row
+            currentRow := Floor((instanceIndex - 1) / Columns)
+            y := currentRow * rowHeight
+            x := Mod((instanceIndex - 1), Columns) * scaleParam
+            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+            break
+        }
+        catch {
+            if (RetryCount > MaxRetries) {
+                CreateStatusMessage("Pausing. Can't find window " . winTitle . ".",,,, false)
+                Pause
+            }
+            RetryCount++
+        }
+        Sleep, 1000
+    }
+    return true
+}
 
 /*
 ^e::
