@@ -117,15 +117,28 @@ initializeAdbShell() {
     }
 }
 
-ConnectAdb() {
-    global adbPath, adbPort, StatusText
+ConnectAdb(folderPath := "C:\Program Files\Netease") {
+    adbPort := findAdbPorts(folderPath)
+
+    adbPath := folderPath . "\MuMuPlayerGlobal-12.0\shell\adb.exe"
+
+    if !FileExist(adbPath) ;if international mumu file path isn't found look for chinese domestic path
+        adbPath := folderPath . "\MuMu Player 12\shell\adb.exe"
+
+    if !FileExist(adbPath)
+        MsgBox Double check your folder path! It should be the one that contains the MuMuPlayer 12 folder! `nDefault is just C:\Program Files\Netease
+
+    if(!adbPort) {
+        Msgbox, Invalid port... Check the common issues section in the readme/github guide.
+        ExitApp
+    }
+
     MaxRetries := 5
     RetryCount := 0
     connected := false
     ip := "127.0.0.1:" . adbPort ; Specify the connection IP:port
 
-    CreateStatusMessage("Connecting to ADB...")
-    LogDebug("Connecting to ADB at " . ip)
+    CreateStatusMessage("Connecting to ADB...",,,, false)
 
     Loop %MaxRetries% {
         ; Attempt to connect using CmdRet
@@ -135,21 +148,21 @@ ConnectAdb() {
         if InStr(connectionResult, "connected to " . ip) {
             connected := true
             CreateStatusMessage("ADB connected successfully.")
-            LogDebug("ADB connected successfully to " . ip)
+            LogDebug("ADB connected successfully.")
             return true
         } else {
             RetryCount++
-            CreateStatusMessage("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
-            LogWarning("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ").")
+            CreateStatusMessage("ADB connection failed.`nRetrying (" . RetryCount . "/" . MaxRetries . ")...")
+            LogWarning("ADB connection failed. Retrying (" . RetryCount . "/" . MaxRetries . ")...")
             Sleep, 2000
         }
     }
 
-    if !connected {
-        CreateStatusMessage("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
-        LogError("Failed to connect to ADB after multiple retries. Please check your emulator and port settings.")
+    if !connected 
+        CreateStatusMessage("Failed to connect to ADB.")
+        LogCritical("Failed to connect to ADB after multiple retries.")
         Reload
-    }
+    
 }
 
 CmdRet(sCmd, callBackFuncObj := "", encoding := "")
@@ -234,6 +247,64 @@ findAdbPorts(baseFolder := "C:\Program Files\Netease") {
             }
         }
     }
+}
+waitadb() {
+    adbShell.StdIn.WriteLine("echo done")
+    while !adbShell.StdOut.AtEndOfStream {
+        line := adbShell.StdOut.ReadLine()
+        if (line = "done")
+            break
+        Sleep, 50
+    }
+}
+
+adbClick(X, Y) {
+    static clickCommands := Object()
+    static convX := 540/277, convY := 960/489, offset := -44
+
+    key := X << 16 | Y
+
+    if (!clickCommands.HasKey(key)) {
+        clickCommands[key] := Format("input tap {} {}"
+            , Round(X * convX)
+            , Round((Y + offset) * convY))
+    }
+    adbShell.StdIn.WriteLine(clickCommands[key])
+}
+
+adbInput(name) {
+    adbShell.StdIn.WriteLine("input text " . name)
+    waitadb()
+}
+
+adbInputEvent(event) {
+    adbShell.StdIn.WriteLine("input keyevent " . event)
+    waitadb()
+}
+
+; Simulates a swipe gesture on an Android device, swiping from one X/Y-coordinate to another.
+adbSwipe(params) {
+    adbShell.StdIn.WriteLine("input swipe " . params)
+    waitadb()
+}
+
+; Simulates a touch gesture on an Android device to scroll in a controlled way.
+; Not currently supported.
+adbGesture(params) {
+    ; Example params (a 2-second hold-drag from a lower to an upper Y-coordinate): 0 2000 138 380 138 90 138 90
+    adbShell.StdIn.WriteLine("input touchscreen gesture " . params)
+    waitadb()
+}
+
+; Takes a screenshot of an Android device using ADB and saves it to a file.
+adbTakeScreenshot(outputFile) {
+    ; ------------------------------------------------------------------------------
+    ; Parameters:
+    ;   outputFile (String) - The path and filename where the screenshot will be saved.
+    ; ------------------------------------------------------------------------------
+    deviceAddress := "127.0.0.1:" . adbPort
+    command := """" . adbPath . """ -s " . deviceAddress . " exec-out screencap -p > """ .  outputFile . """"
+    RunWait, %ComSpec% /c "%command%", , Hide
 }
 
 ; ============================================================================
@@ -347,6 +418,83 @@ EscapeForJson(text) {
     ; Finally replace newlines
     text := StrReplace(text, "`n", "\n")
     return text
+}
+
+LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "", altWebhookURL := "", altUserId := "") {
+    discordPing := ""
+
+    if (ping) {
+        userId := (altUserId ? altUserId : discordUserId)
+
+        discordPing := "<@" . userId . "> "
+        discordFriends := ReadFile("discord")
+        if (discordFriends) {
+            for index, value in discordFriends {
+                if (value = userId)
+                    continue
+                discordPing .= "<@" . value . "> "
+            }
+        }
+    }
+
+    webhookURL := (altWebhookURL ? altWebhookURL : discordWebhookURL)
+
+    if (webhookURL != "") {
+        MaxRetries := 10
+        RetryCount := 0
+        Loop {
+            try {
+                ; Base command
+                curlCommand := "curl -k "
+                    . "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
+
+                ; If an screenshot or xml file is provided, send it
+                sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
+                sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
+                sendAccountXml := xmlFile != "" && FileExist(xmlFile)
+                if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
+                    fileIndex := 0
+                    if (sendScreenshot1) {
+                        fileIndex++
+                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
+                    }
+                    if (sendScreenshot2) {
+                        fileIndex++
+                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
+                    }
+                    if (sendAccountXml) {
+                        fileIndex++
+                        curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
+                    }
+                }
+                else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
+                    if (sendScreenshot1)
+                        curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
+                    if (sendScreenshot2)
+                        curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
+                    if (sendAccountXml)
+                        curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
+                }
+                ; Add the webhook
+                curlCommand := curlCommand . webhookURL
+
+                LogToFile(curlCommand, "Discord.txt")
+
+                ; Send the message using curl
+                RunWait, %curlCommand%,, Hide
+                break
+            }
+            catch {
+                RetryCount++
+                if (RetryCount >= MaxRetries) {
+                    CreateStatusMessage("Failed to send discord message.")
+                    break
+                }
+                Sleep, 250
+            }
+            Sleep, 250
+        }
+    }
 }
 ; ============================================================================
 ; Date and Time Functions

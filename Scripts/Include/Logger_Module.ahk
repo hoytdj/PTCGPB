@@ -188,7 +188,9 @@ LogGP(message, level := 20) {
 LogRestart(message, level := 20) {
     Log(message, level, "Restart")
 }
-
+LogTrade(message, level := 20) {
+    Log(message, level, "Trade")
+}
 LogGPTest(message, level := 20) {
     Log(message, level, "GPTestLog")
 }

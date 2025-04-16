@@ -396,7 +396,7 @@ return
 
 RemoveFriends(filterByPreference := false) {
 	LogInfo("RemoveFriends called with filterByPreference: " . filterByPreference)
-	global friendIDs, stopToggle, friended, foundTS, openPack, rawFriendIDs
+	global friendIDs, stopToggle, friended, foundLabel, openPack, rawFriendIDs
 	; Early exit if no friends to process
 	if (filterByPreference && !friendIDs) {
 		CreateStatusMessage("No friends to filter - friendIDs is empty")
@@ -406,7 +406,7 @@ RemoveFriends(filterByPreference := false) {
 	}
 	
 	; If this is a GodPack, don't remove anyone - everyone wants GodPacks
-    if (foundTS = "God Pack") {
+    if (foundLabel = "God Pack") {
         CreateStatusMessage("Found God Pack")
         LogGP("Found God Pack")
         friended := false
@@ -444,7 +444,7 @@ RemoveFriends(filterByPreference := false) {
     ; Use the global rawFriendIDs variable instead of reading the file again
     filteredIDs := []
     
-    if (filterByPreference && foundTS) {
+    if (filterByPreference && foundLabel) {
         ; Loop through each friend ID
         for index, id in friendIDs {
             shouldKeep := false
@@ -484,9 +484,9 @@ RemoveFriends(filterByPreference := false) {
                                 prefList := StrSplit(boosterPrefs, ",", " ")
                                 
                                 for _, pref in prefList {
-                                    if (Trim(pref) = foundTS) {
+                                    if (Trim(pref) = foundLabel) {
                                         shouldKeep := true
-                                        LogDebug("Keeping friend " . id . " (wants " . foundTS . " in " . openPack . ")")
+                                        LogDebug("Keeping friend " . id . " (wants " . foundLabel . " in " . openPack . ")")
                                         break
                                     }
                                 }
@@ -505,7 +505,7 @@ RemoveFriends(filterByPreference := false) {
             ; If we shouldn't keep this friend, add to filtered list for removal
             if (!shouldKeep) {
                 filteredIDs.Push(id)
-                LogDebug("Will remove friend " . id . " (doesn't want " . foundTS . " in " . openPack . ")")
+                LogDebug("Will remove friend " . id . " (doesn't want " . foundLabel . " in " . openPack . ")")
             }
         }
     } else {
@@ -1886,7 +1886,7 @@ GodPackFound(validity) {
 	; Flush any pending log messages before reporting a God Pack
 	FlushLogMessages()
 	LogInfo("God Pack found ")
-	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, foundTS, gpFoundTime
+	global scriptName, DeadCheck, ocrLanguage, injectMethod, openPack, gpFoundTime
 	; Set the timestamp of when we found the God Pack
 	gpFoundTime := A_TickCount
 

@@ -29,7 +29,6 @@ winTitle := scriptName
 pauseToggle := false
 showStatus := true
 jsonFileName := A_ScriptDir . "\..\json\Packs.json"
-DEBUG := false ; TODO: Make this false!
 
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, Instances, %A_ScriptDir%\..\Settings.ini, UserSettings, Instances
@@ -158,7 +157,7 @@ if(heartBeat)
     IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
 FindImageAndClick(120, 500, 155, 530, , "Social", 143, 518, 1000, 150)
 LogInfo("Waiting for the game to load...")
-if (!DEBUG)
+if (!debugMode)
 	firstRun := True
 
 global 99Configs := {}
@@ -496,9 +495,9 @@ resetWindows(){
 }
 
 restartGameInstance(reason, RL := true) {
-    global DEBUG, Delay, scriptName, adbShell, adbPath, adbPort
+    global debugMode, Delay, scriptName, adbShell, adbPath, adbPort
 
-	if (DEBUG)
+	if (debugMode)
 		return
 
 	initializeAdbShell()
@@ -575,54 +574,6 @@ adbSwipe() {
 		sleepDuration := swipeSpeed * 1.2
 		Sleep, %sleepDuration%
 	}
-}
-
-LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "") {
-    LogInfo("Sending message to Discord: " . message)
-    global discordUserId, discordWebhookURL, sendXML
-
-    if (discordWebhookURL != "") {
-        MaxRetries := 10
-        RetryCount := 0
-        Loop {
-            try {
-                ; Prepare the ping portion if needed
-                pingText := ""
-                if (ping && discordUserId != "")
-                    pingText := "<@" . discordUserId . "> "
-                
-                ; Escape message for JSON
-                escapedMessage := EscapeForJson(message)
-                
-                ; Base command with proper message content
-                curlCommand := "curl -k -F ""payload_json={\""content\"":\""" . pingText . escapedMessage . "\""};type=application/json;charset=UTF-8"" "
-                
-                ; Add screenshot if provided
-                if (screenshotFile != "" && FileExist(screenshotFile))
-                    curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-                
-                ; Add the webhook URL
-                curlCommand := curlCommand . discordWebhookURL
-                
-                ; For debugging (optional)
-                LogDebug("Executing curl command: " . curlCommand)
-                
-                ; Send the message using curl
-                RunWait, %curlCommand%,, Hide
-                break
-            }
-            catch e {
-                RetryCount++
-                if (RetryCount >= MaxRetries) {
-                    CreateStatusMessage("Failed to send discord message.")
-                    LogError("Failed to send discord message.")
-                    break
-                }
-                Sleep, 250
-            }
-            sleep, 250
-        }
-    }
 }
 
 ; Pause Script
