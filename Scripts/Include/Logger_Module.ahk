@@ -194,6 +194,12 @@ LogTrade(message, level := 20) {
 LogGPTest(message, level := 20) {
     Log(message, level, "GPTestLog")
 }
+LogDiscord(message, level := 20) {
+    Log(message, level, "DiscordLog")
+}
+LogMonitor(message, level := 20) {
+    Log(message, level, "MonitorLog")
+}
 
 FlushLogMessages() {
     global logLastMessages, logMessageCounter, logRunCounter

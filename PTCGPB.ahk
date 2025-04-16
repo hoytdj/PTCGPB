@@ -1,5 +1,10 @@
-﻿#Include *i %A_ScriptDir%\Include\Utils.ahk
-#Include *i %A_ScriptDir%\Include\Logger_Module.ahk
+﻿#Include %A_ScriptDir%\Scripts\Include\Logger_Module.ahk
+#Include %A_ScriptDir%\Scripts\Include\Gdip_All.ahk
+#Include %A_ScriptDir%\Scripts\Include\Gdip_Imagesearch.ahk
+#Include %A_ScriptDir%\Scripts\Include\Utils.ahk
+#Include %A_ScriptDir%\Scripts\Include\Gdip_Extra.ahk
+#Include %A_ScriptDir%\Scripts\Include\StringCompare.ahk
+#Include %A_ScriptDir%\Scripts\Include\OCR.ahk
 
 version = Arturos PTCGP Bot
 #SingleInstance, force
@@ -383,7 +388,7 @@ Gui, Tab
 
 
 ; ========== Action Buttons ==========
-Gui, Add, Button, gOpenLink x5 y522 w117, Buy Me a Coffee
+Gui, Add, Button, gOpenLink x5 y580 w117, Buy Me a Coffee
 Gui, Add, Button, gOpenDiscord x+7 w117, Join Discord
 Gui, Add, Button, gArrangeWindows x+7 w118, Arrange Windows
 Gui, Add, Button, gLaunchAllMumu x+7 w118, Launch All Mumu
@@ -402,7 +407,7 @@ Gui, Add, GroupBox, x5 y515 w740 h50 %sectionColor%, Extra Settings
 Gui, Add, Text, x15 y535 %sectionColor%, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w300 x115 y534 h20 -E0x200 Background2A2A2A cWhite, %tesseractPath%
 Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x455 y535 " . sectionColor, Use Role-Based Filters
-Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x20 y500 " . sectionColor, Debug Mode
+Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x+7 y535 " . sectionColor, Debug Mode
 
 
 
@@ -962,71 +967,6 @@ Return
 
 GuiClose:
 ExitApp
-
-MonthToDays(year, month) {
-    static DaysInMonths := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    days := 0
-    Loop, % month - 1 {
-        days += DaysInMonths[A_Index]
-    }
-    if (month > 2 && IsLeapYear(year))
-        days += 1
-    return days
-}
-
-IsLeapYear(year) {
-    return (Mod(year, 4) = 0 && Mod(year, 100) != 0) || Mod(year, 400) = 0
-}
-
-DownloadFile(url, filename) {
-    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-    localPath = %A_ScriptDir%\%filename% ; Change to the folder you want to save the file
-
-    URLDownloadToFile, %url%, %localPath%
-
-    ; if ErrorLevel
-    ; MsgBox, Download failed!
-    ; else
-    ; MsgBox, File downloaded successfully!
-
-}
-
-resetWindows(Title, SelectedMonitorIndex) {
-    global Columns, runMain, Mains, scaleParam
-    RetryCount := 0
-    MaxRetries := 10
-    Loop
-    {
-        try {
-            ; Get monitor origin from index
-            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
-            if (runMain) {
-                if (InStr(Title, "Main") = 1) {
-                    instanceIndex := StrReplace(Title, "Main", "")
-                    if (instanceIndex = "")
-                        instanceIndex := 1
-                } else {
-                    instanceIndex := (Mains - 1) + Title + 1
-                }
-            } else {
-                instanceIndex := Title
-            }
-            rowHeight := 533  ; Adjust the height of each row
-            currentRow := Floor((instanceIndex - 1) / Columns)
-            y := currentRow * rowHeight
-            x := Mod((instanceIndex - 1), Columns) * scaleParam
-            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-            break
-        }
-        catch {
-            if (RetryCount > MaxRetries)
-                Pause
-        }
-        Sleep, 1000
-    }
-    return true
-}
 
 DisplayPackStatus(Message, X := 0, Y := 80) {
     global SelectedMonitorIndex

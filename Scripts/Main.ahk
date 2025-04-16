@@ -71,80 +71,6 @@ if (InStr(defaultLanguage, "100")) {
 } else {
     scaleParam := 277
 }
-CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80) {
-	global scriptName, winTitle, StatusText
-	global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
-	static hwnds := {}
-	if(!showStatus)
-		return
-	try {
-		; Check if GUI with this name already exists
-		if !hwnds.HasKey(GuiName) {
-			WinGetPos, xpos, ypos, Width, Height, %winTitle%
-			X := X + xpos + 5
-			Y := Y + ypos
-			if(!X)
-				X := 0
-			if(!Y)
-				Y := 0
-
-			; Create a new GUI with the given name, position, and message
-			Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-			Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-			Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-			Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-			hwnds[GuiName] := hCtrl
-			OwnerWND := WinExist(winTitle)
-			Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-			DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-				, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-			Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-		}
-		SetTextAndResize(hwnds[GuiName], Message)
-		Gui, %GuiName%:Show, NoActivate AutoSize
-	}
-}
-resetWindows()
-MaxRetries := 10
-RetryCount := 0
-Loop {
-    try {
-        WinGetPos, x, y, Width, Height, %winTitle%
-        sleep, 2000
-        ;Winset, Alwaysontop, On, %winTitle%
-        OwnerWND := WinExist(winTitle)
-        x4 := x + 5
-        y4 := y + 44
-        buttonWidth := 35
-        if (scaleParam = 287)
-            buttonWidth := buttonWidth + 6
-
-        Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
-        Gui, Toolbar: Default
-        Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
-        Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
-        DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-        Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
-        break
-    }
-    catch {
-        RetryCount++
-        if (RetryCount >= MaxRetries) {
-            CreateStatusMessage("Failed to create button GUI.",,,, false)
-            break
-        }
-        Sleep, 1000
-    }
-    Sleep, %Delay%
-    CreateStatusMessage("Creating button GUI...",,,, false)
-}
 
 rerollTime := A_TickCount
 
@@ -458,42 +384,6 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
     return confirmed
 }
 
-resetWindows(){
-	global Columns, winTitle, SelectedMonitorIndex, scaleParam
-	CreateStatusMessage("Arranging window positions and sizes")
-	LogDebug("Arranging window positions and sizes")
-	RetryCount := 0
-	MaxRetries := 10
-	Loop
-	{
-		try {
-			; Get monitor origin from index
-			SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-			SysGet, Monitor, Monitor, %SelectedMonitorIndex%
-			Title := winTitle
-
-            instanceIndex := StrReplace(Title, "Main", "")
-            if (instanceIndex = "")
-                instanceIndex := 1
-
-			rowHeight := 533  ; Adjust the height of each row
-			currentRow := Floor((instanceIndex - 1) / Columns)
-			y := currentRow * rowHeight
-			x := Mod((instanceIndex - 1), Columns) * scaleParam
-			WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-			break
-		}
-		catch {
-			if (RetryCount > MaxRetries) 
-				CreateStatusMessage("Pausing. Can't find window " . winTitle)
-				LogError("Pausing. Can't find window " . winTitle)
-			Pause
-		}
-		Sleep, 1000
-	}
-	return true
-}
-
 restartGameInstance(reason, RL := true) {
     global debugMode, Delay, scriptName, adbShell, adbPath, adbPort
 
@@ -517,10 +407,6 @@ restartGameInstance(reason, RL := true) {
 	}
 }
 
-ControlClick(X, Y) {
-    global winTitle
-    ControlClick, x%X% y%Y%, %winTitle%
-}
 
 RandomUsername() {
     FileRead, content, %A_ScriptDir%\..\usernames.txt

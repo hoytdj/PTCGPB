@@ -1,10 +1,3 @@
-#Include %A_ScriptDir%\Include\Logger_Module.ahk
-#Include %A_ScriptDir%\Include\Gdip_All.ahk
-#Include %A_ScriptDir%\Include\Gdip_Imagesearch.ahk
-#Include *i %A_ScriptDir%\Include\Gdip_Extra.ahk
-#Include *i %A_ScriptDir%\Include\StringCompare.ahk
-#Include *i %A_ScriptDir%\Include\OCR.ahk
-
 ; ============================================================================
 ; Image Recognition Functions
 ; ============================================================================
@@ -21,6 +14,174 @@ GetNeedle(Path) {
 ; ============================================================================
 ; Status Display Functions
 ; ============================================================================
+; filepath: c:\Users\Gabriel\Documents\GitHub\PTCGPB\Scripts\Include\Utils.ahk
+; Add this function to the Utils.ahk file
+
+CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enableThrottling := true, updateInterval := 0.5) {
+    global scriptName, winTitle, StatusText, showStatus
+    static statusLastMessage := {}, statusLastUpdateTime := {}, hwnds := {}
+    static statusUpdateInterval := updateInterval
+    
+    if(!showStatus)
+        return
+    
+    ; Handle the different types of GuiName (string or number)
+    if GuiName is integer
+        uniqueGuiName := GuiName . scriptName
+    else
+        uniqueGuiName := GuiName
+    
+    ; Create a unique key for this GuiName/position combination
+    messageKey := uniqueGuiName . ":" . X . ":" . Y
+    currentTime := A_TickCount / 1000
+    
+    ; If throttling is enabled and the same message was displayed recently in the same location
+    if (enableThrottling && statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
+        ; Only update if enough time has passed since the last update
+        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
+            return
+        }
+    }
+    
+    ; Update our record of this message
+    statusLastMessage[messageKey] := Message
+    statusLastUpdateTime[messageKey] := currentTime
+    
+    try {
+        ; Check if GUI with this name already exists
+        if !hwnds.HasKey(uniqueGuiName) {
+            WinGetPos, xpos, ypos, Width, Height, %winTitle%
+            X := X + xpos + 5
+            Y := Y + ypos
+            if(!X)
+                X := 0
+            if(!Y)
+                Y := 0
+
+            ; Create a new GUI with the given name, position, and message
+            Gui, %uniqueGuiName%:New, -AlwaysOnTop +ToolWindow -Caption
+            Gui, %uniqueGuiName%:Margin, 2, 2  ; Set margin for the GUI
+            Gui, %uniqueGuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+            Gui, %uniqueGuiName%:Add, Text, hwndhCtrl vStatusText,
+            hwnds[uniqueGuiName] := hCtrl
+            OwnerWND := WinExist(winTitle)
+            Gui, %uniqueGuiName%:+Owner%OwnerWND% +LastFound
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+            Gui, %uniqueGuiName%:Show, NoActivate x%X% y%Y% AutoSize
+        }
+        SetTextAndResize(hwnds[uniqueGuiName], Message)
+        Gui, %uniqueGuiName%:Show, NoActivate AutoSize
+    }
+}
+
+resetWindows(instanceName := "", monitorOverride := "") {
+    global Columns, winTitle, SelectedMonitorIndex, scaleParam, Delay, runMain, Mains
+    
+    ; Use standard variable assignment instead of "local" keyword
+    currentWinTitle := instanceName ? instanceName : winTitle
+    currentMonitor := monitorOverride ? monitorOverride : SelectedMonitorIndex
+    
+    CreateStatusMessage("Arranging window positions and sizes")
+    LogDebug("Arranging window positions and sizes")
+    RetryCount := 0
+    MaxRetries := 10
+    
+    ; First position the window
+    Loop {
+        try {
+            ; Get monitor origin from index
+            currentMonitor := RegExReplace(currentMonitor, ":.*$")
+            SysGet, Monitor, Monitor, %currentMonitor%
+            Title := currentWinTitle
+
+            ; Calculate instance index based on whether it's a main instance or not
+            if (InStr(Title, "Main")) {
+                ; Extract the number after "Main", defaulting to 1
+                mainNumber := RegExReplace(Title, "Main(\d*)", "$1")
+                if (mainNumber == "")
+                    mainNumber := 1
+                    
+                instanceIndex := mainNumber
+            } else {
+                instanceIndex := Title
+            }
+
+            rowHeight := 533  ; Adjust the height of each row
+            currentRow := Floor((instanceIndex - 1) / Columns)
+            y := currentRow * rowHeight
+            x := Mod((instanceIndex - 1), Columns) * scaleParam
+            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+            break
+        }
+        catch {
+            RetryCount++
+            if (RetryCount >= MaxRetries) {
+                CreateStatusMessage("Pausing. Can't find window " . currentWinTitle)
+                LogError("Pausing. Can't find window " . currentWinTitle)
+                return false
+            }
+            Sleep, 1000
+        }
+    }
+    
+    ; Now create the toolbar GUI
+    RetryCount := 0
+    Loop {
+        try {
+            WinGetPos, x, y, Width, Height, %currentWinTitle%
+            Sleep, 2000
+            
+            ; Calculate GUI position
+            OwnerWND := WinExist(currentWinTitle)
+            x4 := x + 5
+            y4 := y + 44
+            buttonWidth := 40
+            
+            ; Adjust button width for different scales
+            if (scaleParam = 287)
+                buttonWidth := buttonWidth + 5
+                
+            ; Create the toolbar GUI
+            Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
+            Gui, Toolbar: Default
+            Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
+            Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
+            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
+            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
+            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
+            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
+            Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+            
+            ; Add the GP Test button if we're in Main.ahk
+            if (InStr(currentWinTitle, "Main")) {
+                Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
+            }
+            
+            ; Position the GUI at the bottom of the Z-order
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
+                    , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
+            
+            ; Show the GUI
+            Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
+            break
+        }
+        catch {
+            RetryCount++
+            if (RetryCount >= MaxRetries) {
+                CreateStatusMessage("Failed to create button GUI.",,,, false)
+                LogError("Failed to create button GUI.")
+                break
+            }
+            Sleep, 1000
+        }
+        Sleep, % (Delay ? Delay : 250)
+        CreateStatusMessage("Creating button GUI...",,,, false)
+    }
+    
+    return true
+}
+
 
 ToggleStatusMessages() {
     global showStatus
@@ -282,10 +443,40 @@ adbInputEvent(event) {
     waitadb()
 }
 
-; Simulates a swipe gesture on an Android device, swiping from one X/Y-coordinate to another.
-adbSwipe(params) {
-    adbShell.StdIn.WriteLine("input swipe " . params)
-    waitadb()
+adbSwipeUp() {
+	global adbShell, adbPath, adbPort
+	initializeAdbShell()
+	adbShell.StdIn.WriteLine("input swipe 309 816 309 355 60")
+	;adbShell.StdIn.WriteLine("input swipe 309 816 309 555 30")
+	Sleep, 150
+}
+
+adbSwipe() {
+	global adbShell, setSpeed, swipeSpeed, adbPath, adbPort
+	initializeAdbShell()
+	X1 := 35
+	Y1 := 327
+	X2 := 267
+	Y2 := 327
+	X1 := Round(X1 / 277 * 535)
+	Y1 := Round((Y1 - 44) / 489 * 960)
+	X2 := Round(X2 / 44 * 535)
+	Y2 := Round((Y2 - 44) / 489 * 960)
+	if(setSpeed = 1) {
+		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
+		sleepDuration := swipeSpeed * 1.2
+		Sleep, %sleepDuration%
+	}
+	else if(setSpeed = 2) {
+		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
+		sleepDuration := swipeSpeed * 1.2
+		Sleep, %sleepDuration%
+	}
+	else {
+		adbShell.StdIn.WriteLine("input swipe " . X1 . " " . Y1 . " " . X2 . " " . Y2 . " " . swipeSpeed)
+		sleepDuration := swipeSpeed * 1.2
+		Sleep, %sleepDuration%
+	}
 }
 
 ; Simulates a touch gesture on an Android device to scroll in a controlled way.
@@ -385,31 +576,6 @@ bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 ; File and Data Handling Functions
 ; ============================================================================
 
-Screenshot(filename := "Valid") {
-    global adbShell, adbPath, packs, winTitle, scaleParam
-    SetWorkingDir %A_ScriptDir%  ; Ensures the working directory is the script's directory
-
-    ; Define folder and file paths
-    screenshotsDir := A_ScriptDir "\..\Screenshots"
-    if !FileExist(screenshotsDir)
-        FileCreateDir, %screenshotsDir%
-
-    ; File path for saving the screenshot locally
-    screenshotFile := screenshotsDir "\" . A_Now . "_" . winTitle . "_" . filename . "_" . packs . "_packs.png"
-    pBitmapW := from_window(WinExist(winTitle))
-    pBitmap := Gdip_CloneBitmapArea(pBitmapW, 18, 175, 240, 227)
-    ;scale 100%
-    if (scaleParam = 287) {
-        pBitmap := Gdip_CloneBitmapArea(pBitmapW, 17, 168, 245, 230)
-    }
-    Gdip_DisposeImage(pBitmapW)
-
-    Gdip_SaveBitmapToFile(pBitmap, screenshotFile)
-
-    Gdip_DisposeImage(pBitmap)
-    return screenshotFile
-}
-
 EscapeForJson(text) {
     ; First escape backslashes (must come first)
     text := StrReplace(text, "\", "\\")
@@ -478,7 +644,7 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
                 ; Add the webhook
                 curlCommand := curlCommand . webhookURL
 
-                LogToFile(curlCommand, "Discord.txt")
+                LogDiscord(curlCommand)
 
                 ; Send the message using curl
                 RunWait, %curlCommand%,, Hide
@@ -494,6 +660,41 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
             }
             Sleep, 250
         }
+    }
+}
+
+ReadFile(filename, numbers := false) {
+    FileRead, content, %A_ScriptDir%\..\%filename%.txt
+
+    if (!content)
+        return false
+
+    values := []
+    for _, val in StrSplit(Trim(content), "`n") {
+        ; Don't strip non-alphanumeric characters - we need to keep the | and ,
+		trimmedVal := Trim(val, " `t`n`r")
+        if (trimmedVal != "")
+            values.Push(trimmedVal)
+    }
+
+    return values.MaxIndex() ? values : false
+}
+DownloadFile(url, filename) {
+    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
+    localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
+    errored := false
+    try {
+        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        whr.Open("GET", url, true)
+        whr.Send()
+        whr.WaitForResponse()
+        ids := whr.ResponseText
+    } catch {
+        errored := true
+    }
+    if(!errored) {
+        FileDelete, %localPath%
+        FileAppend, %ids%, %localPath%
     }
 }
 ; ============================================================================

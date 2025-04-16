@@ -350,7 +350,7 @@ if(DeadCheck = 1){
         mminutes := Floor(totalSeconds / 60) ; Total minutes
         sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
         CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s | Runs: " . rerolls, "AvgRuns", 0, 510, false, true)
-        LogToFile("Packs: " . packs . " | Total time: " . mminutes . "m " . sseconds . "s | Avg: " . minutes . "m " . seconds . "s | Runs: " . rerolls)
+        LogInfo("Packs: " . packs . " | Total time: " . mminutes . "m " . sseconds . "s | Avg: " . minutes . "m " . seconds . "s | Runs: " . rerolls)
 
         if ((!injectMethod || !loadedAccount) && (!nukeAccount || keepAccount)) {
             ; Doing the following because:
@@ -817,59 +817,7 @@ EraseInput(num := 0, total := 0) {
 	failSafeTime := (A_TickCount - failSafe) // 1000
 	LogDebug("In failsafe for Erase. ")
 }
-CreateStatusMessage(Message, GuiName := 50, X := 0, Y := 80) {
-    global scriptName, winTitle, StatusText, showStatus
-    global statusLastMessage, statusLastUpdateTime, statusUpdateInterval
-    static hwnds = {}
-    
-    if(!showStatus) {
-        return
-    }
-    
-    ; Create a unique key for this GuiName/position combination
-    messageKey := GuiName . ":" . X . ":" . Y
-    currentTime := A_TickCount / 1000
-    
-    ; If the same message was displayed recently in the same location, check interval
-    if (statusLastMessage.HasKey(messageKey) && statusLastMessage[messageKey] = Message) {
-        ; Only update if enough time has passed since the last update
-        if (currentTime - statusLastUpdateTime[messageKey] < statusUpdateInterval) {
-            return
-        }
-    }
-    
-    ; Update our record of this message
-    statusLastMessage[messageKey] := Message
-    statusLastUpdateTime[messageKey] := currentTime
-    
-    try {
-        ; Check if GUI with this name already exists
-        GuiName := GuiName+scriptName
-        if !hwnds.HasKey(GuiName) {
-            WinGetPos, xpos, ypos, Width, Height, %winTitle%
-            X := X + xpos + 5
-            Y := Y + ypos
-            if(!X)
-                X := 0
-            if(!Y)
-                Y := 0
 
-            ; Create a new GUI with the given name, position, and message
-            Gui, %GuiName%:New, -AlwaysOnTop +ToolWindow -Caption
-            Gui, %GuiName%:Margin, 2, 2  ; Set margin for the GUI
-            Gui, %GuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
-            Gui, %GuiName%:Add, Text, hwndhCtrl vStatusText,
-            hwnds[GuiName] := hCtrl
-            OwnerWND := WinExist(winTitle)
-            Gui, %GuiName%:+Owner%OwnerWND% +LastFound
-            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-            Gui, %GuiName%:Show, NoActivate x%X% y%Y% AutoSize
-        }
-        SetTextAndResize(hwnds[GuiName], Message)
-        Gui, %GuiName%:Show, NoActivate AutoSize
-    }
-}
 FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
     global winTitle, failSafe, statusLastMessage, statusLastUpdateTime, statusUpdateInterval
 	if(slowMotion) {
@@ -1190,46 +1138,6 @@ LevelUp() {
         adbClick(pos1, pos2)
     }
     Delay(1)
-}
-
-resetWindows(){
-	global Columns, winTitle, SelectedMonitorIndex, scaleParam
-	CreateStatusMessage("Arranging window positions and sizes")
-	LogDebug("Arranging window positions and sizes")
-	RetryCount := 0
-	MaxRetries := 10
-	Loop
-	{
-		try {
-			; Get monitor origin from index
-			SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-			SysGet, Monitor, Monitor, %SelectedMonitorIndex%
-			Title := winTitle
-
-            if (runMain) {
-                instanceIndex := (Mains - 1) + Title + 1
-            } else {
-                instanceIndex := Title
-            }
-
-			rowHeight := 533  ; Adjust the height of each row
-			currentRow := Floor((instanceIndex - 1) / Columns)
-			y := currentRow * rowHeight
-			x := Mod((instanceIndex - 1), Columns) * scaleParam
-			WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-			break
-		}
-		catch {
-			if (RetryCount > MaxRetries) {
-				CreateStatusMessage("Pausing. Can't find window " . winTitle)
-				LogError("Pausing. Can't find window " . winTitle)
-				Pause
-			}
-			RetryCount++
-		}
-		Sleep, 1000
-	}
-	return true
 }
 
 restartGameInstance(reason, RL := true){
@@ -2079,47 +1987,6 @@ saveAccount(file := "Valid", ByRef filePath := "", packDetails := "") {
     }
 
     return xmlFile
-}
-
-ControlClick(X, Y) {
-    global winTitle
-    ControlClick, x%X% y%Y%, %winTitle%
-}
-
-DownloadFile(url, filename) {
-    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-    localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
-    errored := false
-    try {
-        whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", url, true)
-        whr.Send()
-        whr.WaitForResponse()
-        ids := whr.ResponseText
-    } catch {
-        errored := true
-    }
-    if(!errored) {
-        FileDelete, %localPath%
-        FileAppend, %ids%, %localPath%
-    }
-}
-
-ReadFile(filename, numbers := false) {
-    FileRead, content, %A_ScriptDir%\..\%filename%.txt
-
-    if (!content)
-        return false
-
-    values := []
-    for _, val in StrSplit(Trim(content), "`n") {
-        ; Don't strip non-alphanumeric characters - we need to keep the | and ,
-		trimmedVal := Trim(val, " `t`n`r")
-        if (trimmedVal != "")
-            values.Push(trimmedVal)
-    }
-
-    return values.MaxIndex() ? values : false
 }
 
 Screenshot(fileType := "Valid", subDir := "", ByRef fileName := "") {
