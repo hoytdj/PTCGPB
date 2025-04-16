@@ -7,6 +7,9 @@ Logs/*
 !Logs/1.txt
 Screenshots/*
 !Screenshots/1.txt
+Screenshots/Trades/**
+!Screenshots/Trades/
+!Screenshots/Trades/.gitignore
 Scripts/*.ahk
 Scripts/*.ini
 !Scripts/1.ahk
@@ -18,5 +21,7 @@ Settings.ini
 /Scripts/sample
 *.txt
 *.bak
+*.ini
+!.gitkeep
 .DS_Store
 temp/*
