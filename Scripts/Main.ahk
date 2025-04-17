@@ -34,6 +34,8 @@ IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
 IniRead, Instances, %A_ScriptDir%\..\Settings.ini, UserSettings, Instances
 IniRead, Delay, %A_ScriptDir%\..\Settings.ini, UserSettings, Delay, 250
 IniRead, folderPath, %A_ScriptDir%\..\Settings.ini, UserSettings, folderPath, C:\Program Files\Netease
+IniRead, discordWebhookURL, %A_ScriptDir%\..\Settings.ini, UserSettings, discordWebhookURL, ""
+IniRead, discordUserId, %A_ScriptDir%\..\Settings.ini, UserSettings, discordUserId, ""
 IniRead, Variation, %A_ScriptDir%\..\Settings.ini, UserSettings, Variation, 20
 IniRead, Columns, %A_ScriptDir%\..\Settings.ini, UserSettings, Columns, 5
 IniRead, openPack, %A_ScriptDir%\..\Settings.ini, UserSettings, openPack, 1
