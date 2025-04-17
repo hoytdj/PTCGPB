@@ -114,27 +114,25 @@ _ActuallyLogMessage(message, level, logCategory := "") {
     else if (level == LOG_CRITICAL)
         levelName := "CRITICAL"
     
-    ; Determine log file based on category and level
-    logFile := ""
-    if (logCategory != "") {
-        ; Use specific category for the log file
-        logFile := logBasePath . logCategory . ".txt"
-    }
-    else if (level >= LOG_ERROR) {
-        ; Errors go by default to Errors.txt
-        logFile := logBasePath . "Errors.txt"
-    }
-    else {
-        ; Default logs go to Logs{scriptName}.txt
-        logFile := logBasePath . "Logs" . scriptName . ".txt"
-    }
-    
     ; Format the log entry with timestamp, level, and message
     FormatTime, readableTime, %A_Now%, yyyy-MM-dd HH:mm:ss
     logEntry := % "[" readableTime "][" levelName "][" scriptName "] " message
     
-    ; Write to log file
-    FileAppend, % logEntry "`n", %logFile%
+    ; Always write to the normal log file
+    normalLogFile := logBasePath . "Logs" . scriptName . ".txt"
+    FileAppend, % logEntry "`n", %normalLogFile%
+    
+    ; Additionally write to specific log files if applicable
+    if (logCategory != "") {
+        ; Use specific category for the log file
+        specificLogFile := logBasePath . logCategory . ".txt"
+        FileAppend, % logEntry "`n", %specificLogFile%
+    }
+    else if (level >= LOG_ERROR) {
+        ; Errors go to Errors.txt
+        errorLogFile := logBasePath . "Errors.txt"
+        FileAppend, % logEntry "`n", %errorLogFile%
+    }
 }
 
 ; Main logging function
@@ -177,7 +175,7 @@ LogCritical(message, logCategory := "") {
     
     ; Automatically send critical errors to Discord
     if (discordWebhookURL != "")
-        LogToDiscord("CRITICAL ERROR: " . message, , discordUserId)
+        LogToDiscord("CRITICAL ERROR: " . message, true, discordUserId)
 }
 
 ; Category-specific convenience functions

@@ -73,48 +73,6 @@ if (InStr(defaultLanguage, "100")) {
 }
 
 resetWindows()
-MaxRetries := 10
-RetryCount := 0
-Loop {
-    try {
-        WinGetPos, x, y, Width, Height, %winTitle%
-        sleep, 2000
-        ;Winset, Alwaysontop, On, %winTitle%
-        OwnerWND := WinExist(winTitle)
-        x4 := x + 5
-        y4 := y + 44
-        buttonWidth := 35
-        if (scaleParam = 287)
-            buttonWidth := buttonWidth + 6
-
-        Gui, Toolbar: New, +Owner%OwnerWND% -AlwaysOnTop +ToolWindow -Caption +LastFound
-        Gui, Toolbar: Default
-        Gui, Toolbar: Margin, 4, 4  ; Set margin for the GUI
-        Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI  ; Normal font for input labels
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
-        Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
-        DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1  ; HWND_BOTTOM
-                , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)  ; SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE
-        Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
-        break
-    }
-    catch {
-        RetryCount++
-        if (RetryCount >= MaxRetries) {
-            CreateStatusMessage("Failed to create button GUI.")
-            LogError("Failed to create button GUI.")
-            break
-        }
-        Sleep, 1000
-    }
-    Sleep, %Delay%
-    CreateStatusMessage("Creating button GUI...")
-    LogInfo("Creating button GUI...")
-}
 
 rerollTime := A_TickCount
 
@@ -435,7 +393,7 @@ restartGameInstance(reason, RL := true) {
 		return
 
 	initializeAdbShell()
-	CreateStatusMessage("Restarting game reason: " reason)
+	CreateStatusMessage("Restarting game reason: `n" reason)
 	LogRestart("Restarting game reason: " . reason)
 
     adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
@@ -1069,37 +1027,4 @@ GetTempDirectory() {
     if !FileExist(tempDir)
         FileCreateDir, %tempDir%
     return tempDir
-}
-resetWindows(){
-    global Columns, winTitle, SelectedMonitorIndex, scaleParam
-    CreateStatusMessage("Arranging window positions and sizes")
-    RetryCount := 0
-    MaxRetries := 10
-    Loop
-    {
-        try {
-            ; Get monitor origin from index
-            SelectedMonitorIndex := RegExReplace(SelectedMonitorIndex, ":.*$")
-            SysGet, Monitor, Monitor, %SelectedMonitorIndex%
-            Title := winTitle
-
-            instanceIndex := StrReplace(Title, "Main", "")
-            if (instanceIndex = "")
-                instanceIndex := 1
-
-            rowHeight := 533  ; Adjust the height of each row
-            currentRow := Floor((instanceIndex - 1) / Columns)
-            y := currentRow * rowHeight
-            x := Mod((instanceIndex - 1), Columns) * scaleParam
-            WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-            break
-        }
-        catch {
-            if (RetryCount > MaxRetries)
-                CreateStatusMessage("Pausing. Can't find window " . winTitle . ".",,,, false)
-            Pause
-        }
-        Sleep, 1000
-    }
-    return true
 }

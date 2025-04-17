@@ -75,110 +75,161 @@ CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enable
         Gui, %uniqueGuiName%:Show, NoActivate AutoSize
     }
 }
-
-; resetWindows(instanceName := "", monitorOverride := "") {
-;     global Columns, winTitle, SelectedMonitorIndex, scaleParam, Delay
+resetWindows(Title="", UseSelectedMonitor="") {
+    global Columns, runMain, Mains, scaleParam, winTitle, SelectedMonitorIndex, scriptName
     
-;     currentWinTitle := instanceName ? instanceName : winTitle
-;     currentMonitor := monitorOverride ? monitorOverride : SelectedMonitorIndex
+    LogDebug("resetWindows started. Title: [" . Title . "], Monitor: [" . UseSelectedMonitor . "]")
+    CreateStatusMessage("Arranging window positions and sizes")
+    RetryCount := 0
+    MaxRetries := 10
     
-;     CreateStatusMessage("Arranging window positions and sizes for " . currentWinTitle)
-;     LogDebug("Arranging window positions and sizes for " . currentWinTitle)
+    ; Use parameters if provided, otherwise use global variables
+    currentTitle := (Title != "") ? Title : winTitle
+    currentMonitor := (UseSelectedMonitor != "") ? UseSelectedMonitor : SelectedMonitorIndex
     
-;     RetryCount := 0
-;     MaxRetries := 10
+    ; Strip .ahk from scriptName for comparison
+    baseScriptName := RegExReplace(scriptName, "\.ahk$", "")
     
-;     ; First position the window
-;     Loop {
-;         try {
-;             ; Get monitor origin from index
-;             currentMonitor := RegExReplace(currentMonitor, ":.*$")
-;             SysGet, MonitorCount, MonitorCount
-;             if (currentMonitor > MonitorCount || currentMonitor < 1) {
-;                 currentMonitor := 1
-;             }
+    LogDebug("Using title: [" . currentTitle . "], monitor: [" . currentMonitor . "]")
+    
+    Loop {
+        try {
+            ; Get monitor origin from index
+            currentMonitor := RegExReplace(currentMonitor, ":.*$")
+            SysGet, Monitor, Monitor, %currentMonitor%
             
-;             SysGet, Monitor, Monitor, %currentMonitor%
-;             Title := currentWinTitle
+            ; Determine instance index based on title
+            if (InStr(currentTitle, "Main") = 1) {
+                ; Handle Main, Main2, Main3, etc.
+                instanceIndex := StrReplace(currentTitle, "Main", "")
+                instanceIndex := (instanceIndex = "") ? 1 : instanceIndex
+                LogDebug("Main window detected. Instance index: " . instanceIndex)
+            } else {
+                ; Handle numeric titles (1, 2, 3, etc)
+                instanceIndex := (runMain && Mains > 0) ? (Mains + currentTitle) : currentTitle
+                LogDebug("Numeric window detected. Instance index: " . instanceIndex)
+            }
             
-;             ; Check if window exists
-;             if (!WinExist(Title)) {
-;                 RetryCount++
-;                 if (RetryCount >= MaxRetries) {
-;                     CreateStatusMessage("Can't find window " . currentWinTitle)
-;                     LogError("Can't find window " . currentWinTitle)
-;                     return false
-;                 }
-;                 Sleep, 1000
-;                 continue
-;             }
-
-;             ; Extract instance number for positioning
-;             if (Title = "Main" || RegExMatch(Title, "^Main\.ahk$")) {
-;                 ; First main instance is always 1
-;                 instanceIndex := 1
-;             } else if (RegExMatch(Title, "^Main(\d+)(\.ahk)?$", match)) {
-;                 ; Main2.ahk -> 2, Main3 -> 3, etc.
-;                 instanceIndex := match1
-;             } else {
-;                 ; Regular numbered instances
-;                 instanceIndex := Title
-;             }
-
-;             rowHeight := 533
-;             currentRow := Floor((instanceIndex - 1) / Columns)
-;             y := currentRow * rowHeight
-;             x := Mod((instanceIndex - 1), Columns) * scaleParam
+            ; Calculate position
+            rowHeight := 533
+            currentRow := Floor((instanceIndex - 1) / Columns)
+            y := currentRow * rowHeight
+            x := Mod((instanceIndex - 1), Columns) * scaleParam
             
-;             WinMove, %Title%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-;             Sleep, 500
-;             break
-;         }
-;         catch e {
-;             RetryCount++
-;             LogError("Error positioning window: " . e.message)
-;             if (RetryCount >= MaxRetries) {
-;                 return false
-;             }
-;             Sleep, 1000
-;         }
-;     }
+            ; Move the window
+            WinMove, %currentTitle%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+            
+            ; After moving the window, create the toolbar GUI
+            if (currentTitle != "PTCGPB") {
+                Sleep, 500  ; Small delay to ensure the window is stable
+                LogDebug("Attempting to create toolbar for " . currentTitle . " (baseScriptName = " . baseScriptName . ")")
+                CreateToolbarGUI(currentTitle, scaleParam)
+            } else {
+                LogDebug("Skipping toolbar creation for " . currentTitle)
+            }
+            break
+        }
+        catch e {
+            RetryCount++
+            if (RetryCount > MaxRetries) {
+                CreateStatusMessage("Pausing. Can't find window " . currentTitle . ".")
+                LogError("Window positioning failed: " . e.Message)
+                Pause
+            }
+        }
+        Sleep, 1000
+    }
+    return true
+}
+CreateToolbarGUI(targetWindow, scaleParam) {
+    global Delay, scriptName
     
-;     ; Create toolbar GUI with proper delays
-;     try {
-;         WinGetPos, x, y, Width, Height, %Title%
-;         x4 := x + 5
-;         y4 := y + 44
-;         buttonWidth := 40
-        
-;         if (scaleParam = 287)
-;             buttonWidth := buttonWidth + 5
-            
-;         Gui, Toolbar: New, +ToolWindow -Caption
-;         Gui, Toolbar: Default
-;         Gui, Toolbar: Margin, 4, 4
-;         Gui, Toolbar: Font, s5 cGray Norm Bold, Segoe UI
-;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload  (Shift+F5)
-;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-;         Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
-        
-;         ; Add GP Test button if it's a main instance
-;         if (InStr(Title, "Main")) {
-;             Gui, Toolbar: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
-;         }
-        
-;         Gui, Toolbar: Show, NoActivate x%x4% y%y4% AutoSize
-;     }
-;     catch e {
-;         LogError("Failed to create toolbar: " . e.message)
-;     }
+    ; Strip .ahk from scriptName for comparison
+    baseScriptName := RegExReplace(scriptName, "\.ahk$", "")
     
-;     return true
-; }
-
-
+    ; Skip only for PTCGPB window, but allow for Main windows
+    if (targetWindow = "PTCGPB") {
+        LogDebug("Skipping toolbar for PTCGPB window")
+        return true
+    }
+    
+    MaxRetries := 10
+    RetryCount := 0
+    
+    CreateStatusMessage("Creating toolbar for " . targetWindow . "...")
+    LogInfo("Creating toolbar for " . targetWindow . "...")
+    
+    ; Check if this is a Main window
+    isMainWindow := InStr(targetWindow, "Main") = 1
+    
+    Loop {
+        try {
+            ; Ensure window exists and get position
+            if (!WinExist(targetWindow)) {
+                throw Exception("Window not found: " . targetWindow)
+            }
+            
+            WinGetPos, x, y, Width, Height, %targetWindow%
+            if (ErrorLevel) {
+                throw Exception("Failed to get window position")
+            }
+            
+            ; Calculate toolbar position
+            x4 := x + 5
+            y4 := y + 44
+            buttonWidth := 45
+            if (scaleParam = 287)
+                buttonWidth := buttonWidth + 5
+            
+            ; Get window handle
+            OwnerWND := WinExist(targetWindow)
+            
+            ; Create unique toolbar name
+            toolbarName := targetWindow . "Toolbar"
+            
+            ; Destroy existing toolbar if any
+            Gui, %toolbarName%: Destroy
+            
+            ; Create new toolbar GUI
+            Gui, %toolbarName%: New, +Owner%OwnerWND% +ToolWindow -Caption +LastFound
+            Gui, %toolbarName%: Default
+            Gui, %toolbarName%: Margin, 4, 4
+            Gui, %toolbarName%: Font, s6 cGray Norm Bold, Segoe UI
+            
+            ; Always add these buttons
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload (Shift+F5)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+            
+            ; Only add GP Test button for Main windows
+            if (isMainWindow) {
+                Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
+            }
+            
+            ; Show the toolbar
+            Gui, %toolbarName%: Show, NoActivate x%x4% y%y4% AutoSize
+            
+            ; Set window position (bottom layer)
+            DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1
+                    , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)
+            
+            LogDebug("Toolbar successfully created for: " . targetWindow)
+            return true
+        }
+        catch e {
+            RetryCount++
+            if (RetryCount >= MaxRetries) {
+                CreateStatusMessage("Failed to create toolbar for " . targetWindow . ": " . e.Message)
+                LogError("Failed to create toolbar: " . e.Message)
+                break
+            }
+            Sleep, 1000
+        }
+    }
+    return false
+}
 ToggleStatusMessages() {
     global showStatus
     
