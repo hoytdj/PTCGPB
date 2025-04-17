@@ -59,7 +59,7 @@ IniRead, tesseractPath, %A_ScriptDir%\..\Settings.ini, UserSettings, tesseractPa
 IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
 
 InitLogger()
-LogInfo("Status display is set to: " . (showStatus ? "ON" : "OFF"))
+
 
 ; connect adb
 instanceSleep := scriptName * 1000
@@ -549,7 +549,7 @@ RemoveNonVipFriends() {
 
 	CreateStatusMessage("Downloading vip_ids.txt.")
 	LogInfo("Downloading vip_ids.txt.")
-	if (vipIdsURL != "" && !DownloadFile(vipIdsURL, "vip_ids.txt")) {
+	if (vipIdsURL != "" && !DownloadFile(vipIdsURL, "vip_ids.txt", true)) {
 		CreateStatusMessage("Failed to download vip_ids.txt. Aborting test...")
 		LogError("Failed to download vip_ids.txt.")
 		return

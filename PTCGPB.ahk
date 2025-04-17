@@ -1426,4 +1426,5 @@ SendAllInstancesOfflineStatus() {
     
     ; Display confirmation in the status bar
     DisplayPackStatus("Discord notification sent: All instances marked as OFFLINE", ((runMain ? Mains * scaleParam : 0) + 5), 490)
+    ExitApp
 }

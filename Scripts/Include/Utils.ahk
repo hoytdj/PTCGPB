@@ -631,34 +631,34 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
 
     if (ping) {
         userId := (altUserId ? altUserId : discordUserId)
-        LogDiscord("Creating ping for user ID: " . userId)
+        LogDebug("Creating ping for user ID: " . userId)
 
         discordPing := "<@" . userId . "> "
         discordFriends := ReadFile("discord")
         if (discordFriends) {
-            LogDiscord("Found " . discordFriends.MaxIndex() . " additional users to ping")
+            LogDebug("Found " . discordFriends.MaxIndex() . " additional users to ping")
             for index, value in discordFriends {
                 if (value = userId)
                     continue
                 discordPing .= "<@" . value . "> "
             }
         } else {
-            LogDiscord("No additional users found in discord.txt")
+            LogDebug("No additional users found in discord.txt")
         }
     } else {
-        LogDiscord("Ping disabled for this message")
+        LogDebug("Ping disabled for this message")
     }
 
     webhookURL := (altWebhookURL ? altWebhookURL : discordWebhookURL)
     
     if (webhookURL != "") {
-        LogDiscord("Using webhook URL: " . SubStr(webhookURL, 1, 30) . "...")
+        LogDebug("Using webhook URL: " . SubStr(webhookURL, 1, 30) . "...")
         
         MaxRetries := 10
         RetryCount := 0
         Loop {
             try {
-                LogDiscord("Building curl command (attempt " . (RetryCount + 1) . "/" . MaxRetries . ")")
+                LogDebug("Building curl command (attempt " . (RetryCount + 1) . "/" . MaxRetries . ")")
                 
                 ; Base command
                 curlCommand := "curl -k "
@@ -676,47 +676,47 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
                 LogDiscord(attachmentMsg)
                 
                 if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
-                    LogDiscord("Using multi-file attachment format")
+                    LogDebug("Using multi-file attachment format")
                     fileIndex := 0
                     if (sendScreenshot1) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
-                        LogDiscord("Added screenshot1 as file" . fileIndex)
+                        LogDebug("Added screenshot1 as file" . fileIndex)
                     }
                     if (sendScreenshot2) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
-                        LogDiscord("Added screenshot2 as file" . fileIndex)
+                        LogDebug("Added screenshot2 as file" . fileIndex)
                     }
                     if (sendAccountXml) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
-                        LogDiscord("Added XML as file" . fileIndex)
+                        LogDebug("Added XML as file" . fileIndex)
                     }
                 }
                 else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
-                    LogDiscord("Using single-file attachment format")
+                    LogDebug("Using single-file attachment format")
                     if (sendScreenshot1) {
                         curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-                        LogDiscord("Added screenshot1 as file")
+                        LogDebug("Added screenshot1 as file")
                     }
                     if (sendScreenshot2) {
                         curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
-                        LogDiscord("Added screenshot2 as file")
+                        LogDebug("Added screenshot2 as file")
                     }
                     if (sendAccountXml) {
                         curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
-                        LogDiscord("Added XML as file")
+                        LogDebug("Added XML as file")
                     }
                 } else {
-                    LogDiscord("No files to attach")
+                    LogDebug("No files to attach")
                 }
                 
                 ; Add the webhook
                 curlCommand := curlCommand . webhookURL
                 
                 ; Log abbreviated command to avoid exposing full webhook URL
-                LogDiscord("Executing Discord webhook request...")
+                LogDebug("Executing Discord webhook request...")
                 
                 ; Send the message using curl
                 RunWait, %curlCommand%,, Hide
@@ -726,22 +726,22 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
             }
             catch e {
                 errorMessage := IsObject(e) && e.HasKey("message") ? e.message : "Unknown error"
-                LogDiscord("Error sending Discord message: " . errorMessage, 30)
+                LogDebug("Error sending Discord message: " . errorMessage, 30)
                 
                 RetryCount++
                 if (RetryCount >= MaxRetries) {
-                    LogDiscord("Failed to send Discord message after " . MaxRetries . " attempts", 40)
+                    LogError("Failed to send Discord message after " . MaxRetries . " attempts", 40)
                     CreateStatusMessage("Failed to send discord message.")
                     break
                 }
                 
-                LogDiscord("Retrying in 250ms... (attempt " . RetryCount . "/" . MaxRetries . ")")
+                LogDebug("Retrying in 250ms... (attempt " . RetryCount . "/" . MaxRetries . ")")
                 Sleep, 250
             }
             Sleep, 250
         }
     } else {
-        LogDiscord("No webhook URL configured, skipping Discord notification")
+        LogError("No webhook URL configured, skipping Discord notification")
     }
 }
 
@@ -762,31 +762,61 @@ ReadFile(filename, numbers := false) {
     return values.MaxIndex() ? values : false
 }
 
-DownloadFile(url, filename) {
-    localPath = %A_ScriptDir%\..\%filename%
-    success := false
+DownloadFile(url, filename, useParentDir := false) {
+    global debugMode
     
+    ; Determine the path based on user preference
+    if (useParentDir)
+        localPath := A_ScriptDir . "\..\" . filename
+    else
+        localPath := A_ScriptDir . "\" . filename
+    
+    ; Try the download using the most reliable method first
     try {
         whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", url, true)
         whr.Send()
         whr.WaitForResponse()
         
-        if (whr.Status = 200) {
-            ids := whr.ResponseText
-            FileDelete, %localPath%
-            FileAppend, %ids%, %localPath%
-            
-            if (FileExist(localPath))
-                success := true
-        } else {
-            LogError("Download failed with status code: " . whr.Status)
+        if (whr.Status != 200) {
+            if (debugMode)
+                MsgBox, % "Download failed! Status: " . whr.Status
+            return false
         }
-    } catch e {
-        LogError("Download error: " . (IsObject(e) ? e.Message : "Unknown error"))
+        
+        contents := whr.ResponseText
+        
+        ; Try to delete the existing file and write the new content
+        FileDelete, %localPath%
+        FileAppend, %contents%, %localPath%
+        
+        if (debugMode)
+            MsgBox, File downloaded successfully!
+        
+        return true
     }
-    
-    return success
+    catch e {
+        ; If the main method fails, try the alternative method
+        try {
+            URLDownloadToFile, %url%, %localPath%
+            
+            if ErrorLevel {
+                if (debugMode)
+                    MsgBox, % "Download failed! Error: " . e.Message
+                return false
+            }
+            else {
+                if (debugMode)
+                    MsgBox, File downloaded successfully!
+                return true
+            }
+        }
+        catch e2 {
+            if (debugMode)
+                MsgBox, % "All download methods failed! Error: " . e2.Message
+            return false
+        }
+    }
 }
 
 ; ============================================================================

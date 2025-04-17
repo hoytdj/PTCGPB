@@ -103,8 +103,6 @@ IniRead, applyRoleFilters, %A_ScriptDir%\..\Settings.ini, UserSettings, applyRol
 IniRead, debugMode, %A_ScriptDir%\..\Settings.ini, UserSettings, debugMode, 0
 
 InitLogger()
-LogInfo("Debug mode is set to: " . (debugMode ? "ON" : "OFF"))
-LogInfo("Status display is set to: " . (showStatus ? "ON" : "OFF"))
 
 pokemonList := ["Palkia", "Dialga", "Mew", "Pikachu", "Charizard", "Mewtwo", "Arceus", "Shining"]
 
@@ -948,6 +946,11 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
             Y1 := 130
             X2 := 174
             Y2 := 155
+        } else if (imageName = "Profile") { ; ChangeTag GP found
+            X1 := 213
+            Y1 := 273
+            X2 := 226
+            Y2 := 286
         } else if (imageName = "ChosenTag") { ; ChangeTag GP found
             X1 := 218
             Y1 := 307
@@ -1374,48 +1377,48 @@ CheckPack() {
 		LogRestart("Restarted game, reason: God Pack found")
         return
     }
+    if (!CheckShiningPackOnly || openPack = "Shining") {
+        ; Check for 2-star cards.
+        foundTrainer := (MockSinglePack == "Trainer")
+        foundRainbow := (MockSinglePack == "Rainbow")
+        foundFullArt := (MockSinglePack == "Full Art")
+        2starCount := (MockSinglePack == "Double two star") ? 2 : 0
 
-    ; Check for 2-star cards.
-    foundTrainer := (MockSinglePack == "Trainer")
-    foundRainbow := (MockSinglePack == "Rainbow")
-    foundFullArt := (MockSinglePack == "Full Art")
-    2starCount := (MockSinglePack == "Double two star") ? 2 : 0
+        if (MockSinglePack)
+            foundLabel := MockSinglePack
 
-    if (MockSinglePack)
-        foundLabel := MockSinglePack
-
-    if (TrainerCheck && !foundLabel) {
-        foundTrainer := FindBorders("trainer")
-        if (foundTrainer)
-            foundLabel := "Trainer"
-    }
-    if (RainbowCheck && !foundLabel) {
-        foundRainbow := FindBorders("rainbow")
-        if (foundRainbow)
-            foundLabel := "Rainbow"
-    }
-    if (FullArtCheck && !foundLabel) {
-        foundFullArt := FindBorders("fullart")
-        if (foundFullArt)
-            foundLabel := "Full Art"
-    }
-    if (PseudoGodPack && !foundLabel) {
-        2starCount := FindBorders("trainer") + FindBorders("rainbow") + FindBorders("fullart")
-        if (2starCount > 1)
-            foundLabel := "Double two star"
-    }
-
-    if (foundLabel) {
-        if (loadedAccount) {
-            FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
-            IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+        if (TrainerCheck && !foundLabel) {
+            foundTrainer := FindBorders("trainer")
+            if (foundTrainer)
+                foundLabel := "Trainer"
+        }
+        if (RainbowCheck && !foundLabel) {
+            foundRainbow := FindBorders("rainbow")
+            if (foundRainbow)
+                foundLabel := "Rainbow"
+        }
+        if (FullArtCheck && !foundLabel) {
+            foundFullArt := FindBorders("fullart")
+            if (foundFullArt)
+                foundLabel := "Full Art"
+        }
+        if (PseudoGodPack && !foundLabel) {
+            2starCount := FindBorders("trainer") + FindBorders("rainbow") + FindBorders("fullart")
+            if (2starCount > 1)
+                foundLabel := "Double two star"
         }
 
-        FoundStars(foundLabel)
-        restartGameInstance(foundLabel . " found. Continuing...", "GodPack")
-		LogRestart("Restarted game, reason: " . foundLabel . " found")
-    }
+        if (foundLabel) {
+            if (loadedAccount) {
+                FileDelete, %loadedAccount% ;delete xml file from folder if using inject method
+                IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+            }
 
+            FoundStars(foundLabel)
+            restartGameInstance(foundLabel . " found. Continuing...", "GodPack")
+            LogRestart("Restarted game, reason: " . foundLabel . " found")
+        }
+    }
     ; Check for tradeable cards.
     if (s4tEnabled) {
         found3Dmnd := 0
