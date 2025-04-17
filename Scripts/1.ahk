@@ -35,7 +35,7 @@ jsonFileName := A_ScriptDir . "\..\json\Packs.json"
 
 ; Trainer, Rainbow, Full Art, Shiny, Immersive, Crown, Double two star
 ; TODO: Be sure these are false before release!
-MockGodPack := true ; DEBUG
+MockGodPack := false ; DEBUG
 MockSinglePack := false ; DEBUG - e.g., "Trainer"
 
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
