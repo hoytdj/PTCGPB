@@ -177,9 +177,9 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Calculate toolbar position
             x4 := x + 5
             y4 := y + 44
-            buttonWidth := 45
+            buttonWidth := 40
             if (scaleParam = 287)
-                buttonWidth := buttonWidth + 5
+                buttonWidth := buttonWidth + 6
             
             ; Get window handle
             OwnerWND := WinExist(targetWindow)
@@ -717,24 +717,34 @@ ReadFile(filename, numbers := false) {
 
     return values.MaxIndex() ? values : false
 }
+
 DownloadFile(url, filename) {
-    url := url  ; Change to your hosted .txt URL "https://pastebin.com/raw/vYxsiqSs"
-    localPath = %A_ScriptDir%\..\%filename% ; Change to the folder you want to save the file
-    errored := false
+    localPath = %A_ScriptDir%\..\%filename%
+    success := false
+    
     try {
         whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", url, true)
         whr.Send()
         whr.WaitForResponse()
-        ids := whr.ResponseText
-    } catch {
-        errored := true
+        
+        if (whr.Status = 200) {
+            ids := whr.ResponseText
+            FileDelete, %localPath%
+            FileAppend, %ids%, %localPath%
+            
+            if (FileExist(localPath))
+                success := true
+        } else {
+            LogError("Download failed with status code: " . whr.Status)
+        }
+    } catch e {
+        LogError("Download error: " . (IsObject(e) ? e.Message : "Unknown error"))
     }
-    if(!errored) {
-        FileDelete, %localPath%
-        FileAppend, %ids%, %localPath%
-    }
+    
+    return success
 }
+
 ; ============================================================================
 ; Date and Time Functions
 ; ============================================================================

@@ -66,6 +66,8 @@ IniRead, FriendID, Settings.ini, UserSettings, FriendID
 IniRead, waitTime, Settings.ini, UserSettings, waitTime, 5
 IniRead, Delay, Settings.ini, UserSettings, Delay, 250
 IniRead, folderPath, Settings.ini, UserSettings, folderPath, C:\Program Files\Netease
+IniRead, discordWebhookURL, Settings.ini, UserSettings, discordWebhookURL, ""
+IniRead, discordUserId, Settings.ini, UserSettings, discordUserId, ""
 IniRead, Columns, Settings.ini, UserSettings, Columns, 5
 IniRead, godPack, Settings.ini, UserSettings, godPack, Continue
 IniRead, Instances, Settings.ini, UserSettings, Instances, 1
@@ -930,7 +932,17 @@ Start:
 				; Don't reset the value to keep Main showing as offline during GP Test
 			}
 			
-			; Use existing instance status values
+			 ; Initialize and populate the Online array
+			Online := []
+			Loop %Instances% {
+				IniRead, value, HeartBeat.ini, HeartBeat, Instance%A_Index%
+				if(value)
+					Online.Push(1)
+				else
+					Online.Push(0)
+			}
+			
+			; Use the populated Online array
 			for index, value in Online {
 				if(index = Online.MaxIndex())
 					commaSeparate := "."
@@ -953,7 +965,7 @@ Start:
 			discMessage .= selectMsg
 			if(heartBeatName)
 				discordUserID := heartBeatName
-			LogToDiscord(discMessage, , discordUserID)
+			LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
 		}
         
         if(heartBeat)
@@ -1390,6 +1402,6 @@ VersionCompare(v1, v2) {
     if(heartBeatName)
         discordUserID := heartBeatName
     
-    LogToDiscord(discMessage, , discordUserID)
+    LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
     ExitApp
 return

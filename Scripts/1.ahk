@@ -1366,6 +1366,9 @@ CheckPack() {
     foundFullArt := (MockSinglePack == "Full Art")
     2starCount := (MockSinglePack == "Double two star") ? 2 : 0
 
+    if (MockSinglePack)
+        foundLabel := MockSinglePack
+
     if (TrainerCheck && !foundLabel) {
         foundTrainer := FindBorders("trainer")
         if (foundTrainer)
@@ -1602,9 +1605,18 @@ FoundStars(star) {
 		}
 	}
 
-	logMessage := star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs, " . openPack . " booster)\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
-	LogGP(star . " found by " . username . " (" . friendCode . ") in instance: " . scriptName . " (" . packs . " packs, " . openPack . " booster)\nFile name: " . accountFile . "Backing up to the Accounts\\SpecificCards folder and continuing...")
-	LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
+    CreateStatusMessage(star . " found!")
+    LogInfo(star . " found!")
+
+    statusMessage := star . " found"
+    if (username)
+        statusMessage .= " by " . username
+    if (friendCode)
+        statusMessage .= " (" . friendCode . ")"
+
+    logMessage := statusMessage . " in instance: " . scriptName . " (" . packs . " packs, " . openPack . ")\nFile name: " . accountFile . "\nBacking up to the Accounts\\SpecificCards folder and continuing..."
+    LogToDiscord(logMessage, screenShot, true, (sendAccountXml ? accountFullPath : ""), fcScreenshot)
+    LogGP(star . " found :(" . packs . " packs, " . openPack . ") File name: " . accountFile)
 	
 	if(star != "Crown" && star != "Immersive" && star != "Shiny") {
 		ChooseTag()
@@ -1699,7 +1711,7 @@ FindCard(prefix) {
 FindGodPack(invalidPack := false) {
 	LogInfo("Finding God Pack")
     ; Check for normal borders.
-    normalBorders := FindBorders("normal")
+    normalBorders := MockGodPack ? 0 : FindBorders("normal")
     if (normalBorders) {
         CreateStatusMessage("Not a God Pack...")
 		LogInfo("Not a God Pack...")
@@ -1730,7 +1742,7 @@ FindGodPack(invalidPack := false) {
     }
 
     if (!invalidPack && packMinStars > 0) {
-        starCount := 5 - FindBorders("1star")
+        starCount := MockGodPack ? 5 : (5 - FindBorders("1star"))
         if (starCount < packMinStars) {
             CreateStatusMessage("Pack doesn't contain enough 2 stars...")
 			LogInfo("Pack doesn't contain enough 2 stars...")
@@ -1804,9 +1816,11 @@ GodPackFound(validity) {
     ; Adjust the below to only send a 'ping' to Discord friends on Valid packs
     if (validity = "Valid") {
         LogToDiscord(logMessage, screenShot, true, (sendAccountXml ? accountFullPath : ""), fcScreenshot)
+        LogDiscord("Sended a message to Discord")
         ChooseTag()
     } else if (!InvalidCheck) {
         LogToDiscord(logMessage, screenShot, true, (sendAccountXml ? accountFullPath : ""), fcScreenshot)
+        LogDiscord("Sended a message to Discord")
     }
 }
 
@@ -1941,6 +1955,7 @@ saveAccount(file := "Valid", ByRef filePath := "", packDetails := "") {
             CreateStatusMessage("Account not saved. Pausing...")
 			LogWarning("Account not saved. Pausing...")
             LogToDiscord("Attempted to save account in " . scriptName . " but was unsuccessful. Pausing. You will need to manually extract.", Screenshot(), true)
+            LogDiscord("Attempted to save account but was unsuccessful. Pausing. You will need to manually extract.")
             Pause, On
         }
         count++
