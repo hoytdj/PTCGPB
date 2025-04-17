@@ -1,4 +1,5 @@
-global adbPort, adbShell, adbPath, debugMode
+global adbPort, adbShell, adbPath, debugMode, discordWebhookURL, discordUserId, sendAccountXml
+
 ; ============================================================================
 ; Image Recognition Functions
 ; ============================================================================
@@ -177,7 +178,7 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Calculate toolbar position
             x4 := x + 5
             y4 := y + 44
-            buttonWidth := 40
+            buttonWidth := 38
             if (scaleParam = 287)
                 buttonWidth := buttonWidth + 6
             
@@ -625,29 +626,40 @@ EscapeForJson(text) {
 }
 
 LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screenshotFile2 := "", altWebhookURL := "", altUserId := "") {
+    LogDiscord("Starting Discord message preparation")
     discordPing := ""
 
     if (ping) {
         userId := (altUserId ? altUserId : discordUserId)
+        LogDiscord("Creating ping for user ID: " . userId)
 
         discordPing := "<@" . userId . "> "
         discordFriends := ReadFile("discord")
         if (discordFriends) {
+            LogDiscord("Found " . discordFriends.MaxIndex() . " additional users to ping")
             for index, value in discordFriends {
                 if (value = userId)
                     continue
                 discordPing .= "<@" . value . "> "
             }
+        } else {
+            LogDiscord("No additional users found in discord.txt")
         }
+    } else {
+        LogDiscord("Ping disabled for this message")
     }
 
     webhookURL := (altWebhookURL ? altWebhookURL : discordWebhookURL)
-
+    
     if (webhookURL != "") {
+        LogDiscord("Using webhook URL: " . SubStr(webhookURL, 1, 30) . "...")
+        
         MaxRetries := 10
         RetryCount := 0
         Loop {
             try {
+                LogDiscord("Building curl command (attempt " . (RetryCount + 1) . "/" . MaxRetries . ")")
+                
                 ; Base command
                 curlCommand := "curl -k "
                     . "-F ""payload_json={\""content\"":\""" . discordPing . message . "\""};type=application/json;charset=UTF-8"" "
@@ -656,48 +668,80 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
                 sendScreenshot1 := screenshotFile != "" && FileExist(screenshotFile)
                 sendScreenshot2 := screenshotFile2 != "" && FileExist(screenshotFile2)
                 sendAccountXml := xmlFile != "" && FileExist(xmlFile)
+                
+                ; Build log message string without using line continuation
+                attachmentMsg := "Attachments - Screenshot1: " . (sendScreenshot1 ? "YES (" . screenshotFile . ")" : "NO")
+                attachmentMsg .= ", Screenshot2: " . (sendScreenshot2 ? "YES (" . screenshotFile2 . ")" : "NO")
+                attachmentMsg .= ", XML: " . (sendAccountXml ? "YES (" . xmlFile . ")" : "NO")
+                LogDiscord(attachmentMsg)
+                
                 if (sendScreenshot1 + sendScreenshot2 + sendAccountXml > 1) {
+                    LogDiscord("Using multi-file attachment format")
                     fileIndex := 0
                     if (sendScreenshot1) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile . """ "
+                        LogDiscord("Added screenshot1 as file" . fileIndex)
                     }
                     if (sendScreenshot2) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . screenshotFile2 . """ "
+                        LogDiscord("Added screenshot2 as file" . fileIndex)
                     }
                     if (sendAccountXml) {
                         fileIndex++
                         curlCommand := curlCommand . "-F ""file" . fileIndex . "=@" . xmlFile . """ "
+                        LogDiscord("Added XML as file" . fileIndex)
                     }
                 }
                 else if (sendScreenshot1 + sendScreenshot2 + sendAccountXml == 1) {
-                    if (sendScreenshot1)
+                    LogDiscord("Using single-file attachment format")
+                    if (sendScreenshot1) {
                         curlCommand := curlCommand . "-F ""file=@" . screenshotFile . """ "
-                    if (sendScreenshot2)
+                        LogDiscord("Added screenshot1 as file")
+                    }
+                    if (sendScreenshot2) {
                         curlCommand := curlCommand . "-F ""file=@" . screenshotFile2 . """ "
-                    if (sendAccountXml)
+                        LogDiscord("Added screenshot2 as file")
+                    }
+                    if (sendAccountXml) {
                         curlCommand := curlCommand . "-F ""file=@" . xmlFile . """ "
+                        LogDiscord("Added XML as file")
+                    }
+                } else {
+                    LogDiscord("No files to attach")
                 }
+                
                 ; Add the webhook
                 curlCommand := curlCommand . webhookURL
-
-                LogDiscord(curlCommand)
-
+                
+                ; Log abbreviated command to avoid exposing full webhook URL
+                LogDiscord("Executing Discord webhook request...")
+                
                 ; Send the message using curl
                 RunWait, %curlCommand%,, Hide
+                
+                LogDiscord("Discord message sent successfully!")
                 break
             }
-            catch {
+            catch e {
+                errorMessage := IsObject(e) && e.HasKey("message") ? e.message : "Unknown error"
+                LogDiscord("Error sending Discord message: " . errorMessage, 30)
+                
                 RetryCount++
                 if (RetryCount >= MaxRetries) {
+                    LogDiscord("Failed to send Discord message after " . MaxRetries . " attempts", 40)
                     CreateStatusMessage("Failed to send discord message.")
                     break
                 }
+                
+                LogDiscord("Retrying in 250ms... (attempt " . RetryCount . "/" . MaxRetries . ")")
                 Sleep, 250
             }
             Sleep, 250
         }
+    } else {
+        LogDiscord("No webhook URL configured, skipping Discord notification")
     }
 }
 

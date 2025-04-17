@@ -35,7 +35,7 @@ jsonFileName := A_ScriptDir . "\..\json\Packs.json"
 
 ; Trainer, Rainbow, Full Art, Shiny, Immersive, Crown, Double two star
 ; TODO: Be sure these are false before release!
-MockGodPack := false ; DEBUG
+MockGodPack := true ; DEBUG
 MockSinglePack := false ; DEBUG - e.g., "Trainer"
 
 IniRead, FriendID, %A_ScriptDir%\..\Settings.ini, UserSettings, FriendID
@@ -324,17 +324,25 @@ if(DeadCheck = 1){
 			ResetLogThrottling()
             if (stopToggle) {
                 CreateStatusMessage("Stopping...")
+                LogInfo("Stopping after completing run")
                 ExitApp
             }
 
             restartGameInstance("New Run", false)
-			LogInfo("Restarting game instance...")
-			Sleep, 1000
-		} else if (nukeAccount && !keepAccount && !injectMethod) {
-			; Doing the following because:
-			; - using the inject method
-			; - or the account was deleted because no desirable packs were found during the last run
-			AppendToJsonFile(packs)
+            LogInfo("Restarting game instance...")
+            Sleep, 1000
+        } else if (nukeAccount && !keepAccount && !injectMethod) {
+            ; Doing the following because:
+            ; - using the inject method
+            ; - or the account was deleted because no desirable packs were found during the last run
+            AppendToJsonFile(packs)
+            
+            ; Check stopToggle before continuing
+            if (stopToggle) {
+                CreateStatusMessage("Stopping...")
+                LogInfo("Stopping after completing run")
+                ExitApp
+            }
         } else {
             ; Reached here because:
             ; - using the inject method
@@ -344,7 +352,7 @@ if(DeadCheck = 1){
 
             if (stopToggle) {
                 CreateStatusMessage("Stopping...")
-				LogInfo("Stopping...")
+                LogInfo("Stopping after completing run")
                 ExitApp
             }
 
@@ -1102,40 +1110,45 @@ LevelUp() {
 }
 
 restartGameInstance(reason, RL := true){
-	global Delay, scriptName, adbShell, adbPath, adbPort, friended, loadedAccount, DeadCheck, openPack
-	;initializeAdbShell()
-	CreateStatusMessage("Restarting game reason: `n" reason)
-	LogWarning("Restarting game reason: " . reason)
+    AppendToJsonFile(packs)
 
-	if(!RL || RL != "GodPack") {
-		adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
-		waitadb()
-		if(!RL && DeadCheck==0)
-			adbShell.StdIn.WriteLine("rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml") ; delete account data
-		waitadb()
-		adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
-		waitadb()
-	}
-	Sleep, 4500
+    if (debugMode)
+        CreateStatusMessage("Restarting game reason:`n" . reason)
+    else if (InStr(reason, "Stuck"))
+        CreateStatusMessage("Stuck! Restarting game...")
+    else
+        CreateStatusMessage("Restarting game...")
 
-	if(RL = "GodPack") {
-		LogRestart("Restarted game, reason: " . reason)
-		IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+    if (RL = "GodPack") {
+        LogRestart("Restarted game for reason: " . reason)
+        IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
 
-		Reload
-	} else if(RL) {
-		; Only do the additional processing if this is not from a God Pack restart
-		if(menuDeleteStart() && reason != "God Pack found. Continuing...") {
-			IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
-			logMessage := "\n" . username . "\n[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found in instance: " . scriptName . "\nFile name: " . accountFile . "\nGot stuck getting friend code."
-			LogGP(username . "[" . starCount . "/5][" . packs . "P][" . openPack . " Booster] " . invalid . " God pack found, File name: " . accountFile . "Got stuck getting friend code.")
-			LogToDiscord(logMessage, screenShot, discordUserId, accountFullPath, fcScreenshot)
-		}
-		LogRestart("Restarted game, Reason: " . reason)
+        Reload
+    } else {
+        adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
+        waitadb()
+        if (!RL && DeadCheck = 0) {
+            adbShell.StdIn.WriteLine("rm /data/data/jp.pokemon.pokemontcgp/shared_prefs/deviceAccount:.xml") ; delete account data
+        }
+        waitadb()
+        adbShell.StdIn.WriteLine("am start -n jp.pokemon.pokemontcgp/com.unity3d.player.UnityPlayerActivity")
+        waitadb()
+        Sleep, 5000
+
+        if (RL) {
+            if (menuDeleteStart()) {
+                IniWrite, 0, %A_ScriptDir%\%scriptName%.ini, UserSettings, DeadCheck
+                logMessage := "\n" . username . "\n[" . (starCount ? starCount : "0") . "/5][" . (packs ? packs : 0) . "P][" . openPack . "] " . (invalid ? invalid . " God Pack" : "Some sort of pack") . " found, file name: " . accountFile . "\nGot stuck doing something"
+                LogInfo(Trim(StrReplace(logMessage, "\n", " ")))
+                ; Logging to Discord is temporarily disabled until all of the scenarios which could cause the script to end up here are fully understood.
+                ;LogToDiscord(logMessage,, true)
+            }
+            LogRestart("Restarted game for reason: " . reason)
 
             Reload
         }
     }
+}
 
 menuDelete() {
 	sleep, %Delay%
@@ -2012,6 +2025,8 @@ return
 ; Stop Script
 StopScript:
     ToggleStop()
+    CreateStatusMessage("Stopping script...")
+    LogInfo("Stopping script...")
 return
 
 ShowStatusMessages:
@@ -2022,34 +2037,15 @@ ReloadScript:
     Reload
 return
 
-TestScript:
-    ToggleTestScript()
-return
-
 ToggleStop() {
     global stopToggle, friended
     stopToggle := true
     if (!friended)
         ExitApp
-    else
+    else {
         CreateStatusMessage("Stopping script at the end of the run...")
-		LogInfo("Stopping script at the end of the run...")
-}
-
-ToggleTestScript()
-{
-	global GPTest
-	if(!GPTest) {
-		CreateStatusMessage("In GP Test Mode")
-		LogInfo("In GP Test Mode")
-		GPTest := true
-	}
-	else {
-		CreateStatusMessage("Exiting GP Test Mode")
-		LogInfo("Exiting GP Test Mode")
-		;Winset, Alwaysontop, On, %winTitle%
-		GPTest := false
-	}
+        LogInfo("Stopping script at the end of the run...")
+    }
 }
 
 ; Function to append a time and variable pair to the JSON file
@@ -2893,19 +2889,19 @@ DoWonderPick() {
 	failSafe := A_TickCount
 	failSafeTime := 0
 	Loop {
-		Delay(1)
-		adbClick(139, 424)
-		Delay(1)
-		clickButton := FindOrLoseImage(145, 447, 258, 480, 80, "Button", 0, failSafeTime)
-		if(clickButton) {
-			adbClick(110, 369)
-		}
-		else if(FindOrLoseImage(191, 393, 211, 411, , "Shop", 1, failSafeTime))
-			adbInputEvent("111") ;send ESC
-		else
-			break
-		failSafeTime := (A_TickCount - failSafe) // 1000
-		LogDebug("In failsafe for WonderPick. ")
+        Delay(1)
+        adbClick(139, 424)
+        Delay(1)
+        clickButton := FindOrLoseImage(145, 447, 258, 480, 80, "Button", 0, failSafeTime)
+        if(clickButton) {
+            adbClick(110, 369)
+        }
+        else if(FindOrLoseImage(191, 393, 211, 411, , "Shop", 1, failSafeTime))
+            adbInputEvent("111") ;send ESC
+        else
+            break
+        failSafeTime := (A_TickCount - failSafe) // 1000
+        LogDebug("In failsafe for WonderPick. ")
 	}
 	return true
 	LogInfo("WonderPick completed.")

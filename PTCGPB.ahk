@@ -897,6 +897,86 @@ Start:
     Loop {
         Sleep, 30000
 
+        ; Check if Main toggled GP Test Mode and send notification if needed
+        IniRead, mainTestMode, HeartBeat.ini, TestMode, Main, -1
+        if (mainTestMode != -1) {
+            ; Main has toggled test mode, get status and send notification
+            IniRead, mainStatus, HeartBeat.ini, HeartBeat, Main, 0
+            
+            onlineAHK := ""
+            offlineAHK := ""
+            Online := []
+
+            Loop %Instances% {
+                IniRead, value, HeartBeat.ini, HeartBeat, Instance%A_Index%
+                if(value)
+                    Online.push(1)
+                else
+                    Online.Push(0)
+            }
+
+            for index, value in Online {
+                if(index = Online.MaxIndex())
+                    commaSeparate := ""
+                else
+                    commaSeparate := ", "
+                if(value)
+                    onlineAHK .= A_Index . commaSeparate
+                else
+                    offlineAHK .= A_Index . commaSeparate
+            }
+
+            if (runMain) {
+                if(mainStatus) {
+                    if (onlineAHK)
+                        onlineAHK := "Main, " . onlineAHK
+                    else
+                        onlineAHK := "Main"
+                }
+                else {
+                    if (offlineAHK)
+                        offlineAHK := "Main, " . offlineAHK
+                    else
+                        offlineAHK := "Main"
+                }
+            }
+
+            if(offlineAHK = "")
+                offlineAHK := "Offline: none"
+            else
+                offlineAHK := "Offline: " . RTrim(offlineAHK, ", ")
+            if(onlineAHK = "")
+                onlineAHK := "Online: none"
+            else
+                onlineAHK := "Online: " . RTrim(onlineAHK, ", ")
+
+            ; Create status message with all regular heartbeat info
+            discMessage := heartBeatName ? "\n" . heartBeatName : ""
+            discMessage .= "\n" . onlineAHK . "\n" . offlineAHK
+            
+            total := SumVariablesInJsonFile()
+            totalSeconds := Round((A_TickCount - rerollTime) / 1000)
+            mminutes := Floor(totalSeconds / 60)
+            packStatus := "Time: " . mminutes . "m | Packs: " . total
+            packStatus .= " | Avg: " . Round(total / mminutes, 2) . " packs/min"
+            
+            discMessage .= "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+            discMessage .= typeMsg
+            discMessage .= selectMsg
+            
+            ; Add special note about Main's test mode status
+            if (mainTestMode == "1")
+                discMessage .= "\n\nMain entered GP Test Mode ✕" ;We can change this later
+            else
+                discMessage .= "\n\nMain exited GP Test Mode ✓" ;We can change this later
+                
+            ; Send the message
+            LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
+            
+            ; Clear the flag
+            IniDelete, HeartBeat.ini, TestMode, Main
+        }
+
         ; Every 5 minutes, pull down the main ID list
         if(mainIdsURL != "" && Mod(A_Index, 10) = 0) {
             DownloadFile(mainIdsURL, "ids.txt")
@@ -913,61 +993,6 @@ Start:
         ; Display pack status at the bottom of the first reroll instance
         DisplayPackStatus(packStatus, ((runMain ? Mains * scaleParam : 0) + 5), 490)
 
-		; Check if we need to force a heartbeat check (GP Test was activated)
-		IniRead, forceCheck, HeartBeat.ini, HeartBeat, ForceCheck, 0
-		if(heartBeat && forceCheck = 1) {
-			; Reset the force check flag
-			IniWrite, 0, HeartBeat.ini, HeartBeat, ForceCheck
-			
-			onlineAHK := "Online: "
-			offlineAHK := "Offline: "
-			
-			; Check Main status (should be offline since GP Test was activated)
-			if(runMain) {
-				IniRead, value, HeartBeat.ini, HeartBeat, Main
-				if(value)
-					onlineAHK := "Online: Main, "
-				else
-					offlineAHK := "Offline: Main, "
-				; Don't reset the value to keep Main showing as offline during GP Test
-			}
-			
-			 ; Initialize and populate the Online array
-			Online := []
-			Loop %Instances% {
-				IniRead, value, HeartBeat.ini, HeartBeat, Instance%A_Index%
-				if(value)
-					Online.Push(1)
-				else
-					Online.Push(0)
-			}
-			
-			; Use the populated Online array
-			for index, value in Online {
-				if(index = Online.MaxIndex())
-					commaSeparate := "."
-				else
-					commaSeparate := ", "
-				if(value)
-					onlineAHK .= A_Index . commaSeparate
-				else
-					offlineAHK .= A_Index . commaSeparate
-			}
-			
-			if(offlineAHK = "Offline: ")
-				offlineAHK := "Offline: none."
-			if(onlineAHK = "Online: ")
-				onlineAHK := "Online: none."
-			
-			; Send the heartbeat message to Discord
-			discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
-			discMessage .= typeMsg
-			discMessage .= selectMsg
-			if(heartBeatName)
-				discordUserID := heartBeatName
-			LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
-		}
-        
         if(heartBeat)
             if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
                 onlineAHK := ""
@@ -1348,60 +1373,57 @@ VersionCompare(v1, v2) {
 }
 
 
-
+; New hotkey for sending "All Offline" message
 ~+F7::
-    ; Set heartbeat flags
-    IniWrite, 0, HeartBeat.ini, HeartBeat, Main
-    IniWrite, 1, HeartBeat.ini, HeartBeat, ForceCheck
+    SendAllInstancesOfflineStatus()
+return
+
+; Function to send a Discord message with all instances marked as offline
+SendAllInstancesOfflineStatus() {
+    global heartBeatName, heartBeatWebhookURL, localVersion, githubUser, Instances, runMain, Mains
+    global typeMsg, selectMsg, rerollTime, scaleParam
     
-    ; Prepare heartbeat message with all instances offline
-    offlineAHK := "Offline: Main"
-    onlineAHK := "Online: none."
+    ; Display visual feedback that the hotkey was triggered
+    DisplayPackStatus("Shift+F7 pressed - Sending offline heartbeat to Discord...", ((runMain ? Mains * scaleParam : 0) + 5), 490)
     
-    ; Count instances from settings
-    IniRead, Instances, Settings.ini, UserSettings, Instances, 1
-    
-    ; Add all instances to offline list
-    if (Instances > 0) {
-        offlineAHK .= ", "
-        Loop, %Instances% {
-            if (A_Index = Instances)
-                offlineAHK .= A_Index . "."
-            else
-                offlineAHK .= A_Index . ", "
+    ; Create message showing all instances as offline
+    offlineInstances := ""
+    if (runMain) {
+        offlineInstances := "Main"
+        if (Mains > 1) {
+            Loop, % Mains - 1
+                offlineInstances .= ", Main" . (A_Index + 1)
         }
-    } else {
-        offlineAHK .= "."
+        if (Instances > 0)
+            offlineInstances .= ", "
     }
     
-    ; Get needed settings
-    IniRead, heartBeatName, Settings.ini, UserSettings, heartBeatName, ""
-    IniRead, discordUserID, Settings.ini, UserSettings, discordUserId, ""
-    
-    ; Current stats
-    totalFile := A_ScriptDir . "\json\total.json"
-    if FileExist(totalFile) {
-        FileRead, totalContent, %totalFile%
-        RegExMatch(totalContent, """total_sum"":\s*(\d+)", totalMatch)
-        total := totalMatch1
-    } else {
-        total := 0
+    Loop, %Instances% {
+        offlineInstances .= A_Index
+        if (A_Index < Instances)
+            offlineInstances .= ", "
     }
     
-    ; Calculate runtime
+    ; Create status message with heartbeat info
+    discMessage := heartBeatName ? "\n" . heartBeatName : ""
+    discMessage .= "\nOnline: none"
+    discMessage .= "\nOffline: " . offlineInstances
+    
+    ; Add pack statistics
+    total := SumVariablesInJsonFile()
     totalSeconds := Round((A_TickCount - rerollTime) / 1000)
     mminutes := Floor(totalSeconds / 60)
-    packStatus := "Time: " . mminutes . "m Packs: " . total
-    packStatus .= "   |   Avg: " . Round(total / mminutes, 2) . " packs/min"
+    packStatus := "Time: " . mminutes . "m | Packs: " . total
+    packStatus .= " | Avg: " . Round(total / mminutes, 2) . " packs/min"
     
-    ; Send shutdown message
-    discMessage := "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+    discMessage .= "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
     discMessage .= typeMsg
     discMessage .= selectMsg
+    discMessage .= "\n\n All instances marked as OFFLINE" ; We can change this later
     
-    if(heartBeatName)
-        discordUserID := heartBeatName
-    
+    ; Send the message and log it
     LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
-    ExitApp
-return
+    
+    ; Display confirmation in the status bar
+    DisplayPackStatus("Discord notification sent: All instances marked as OFFLINE", ((runMain ? Mains * scaleParam : 0) + 5), 490)
+}

@@ -457,49 +457,45 @@ TestScript:
     ToggleTestScript()
 return
 
-ToggleTestScript()
-{
-	global debugMode, GPTest, triggerTestNeeded, testStartTime, firstRun, heartBeat, scriptName
-	if(!GPTest) {
-		GPTest := true
-		triggerTestNeeded := true
-		testStartTime := A_TickCount
-		CreateStatusMessage("In GP Test Mode")
-		LogInfo("In GP Test Mode")
-
-		; Set Main as offline immediately when entering GP Test Mode
-        if(heartBeat) {
+ToggleTestScript() {
+    global GPTest, triggerTestNeeded, testStartTime, firstRun, heartBeat
+    if(!GPTest) {
+        GPTest := true
+        triggerTestNeeded := true
+        testStartTime := A_TickCount
+        
+        ; Only update HeartBeat.ini if heartBeat is enabled
+        if (heartBeat) {
             IniWrite, 0, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
-            IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
-            LogInfo("Heartbeat set to offline for GP Test Mode")
+            IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, TestMode, Main
+            LogInfo("Setting HeartBeat status to offline and enabling TestMode notification")
         }
-
-		StartSkipTime := A_TickCount ;reset stuck timers
-		failSafe := A_TickCount
-	}
-	else {
-		GPTest := false
-		triggerTestNeeded := false
-		totalTestTime := (A_TickCount - testStartTime) // 1000
-		if (testStartTime != "" && (totalTestTime >= 180))
-		{
-			if (!debugMode)
-				firstRun := True
-			testStartTime := ""
-		}
-
-		        ; Restore normal heartbeat when exiting GP Test Mode
-        if(heartBeat) {
+        
+        CreateStatusMessage("In GP Test Mode")
+        LogInfo("In GP Test Mode")
+        StartSkipTime := A_TickCount ;reset stuck timers
+        failSafe := A_TickCount
+    }
+    else {
+        GPTest := false
+        triggerTestNeeded := false
+        totalTestTime := (A_TickCount - testStartTime) // 1000
+        if (testStartTime != "" && (totalTestTime >= 180))
+        {
+            firstRun := True
+            testStartTime := ""
+        }
+        
+        ; Only update HeartBeat.ini if heartBeat is enabled
+        if (heartBeat) {
             IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, Main
-			IniWrite, 1, %A_ScriptDir%\..\HeartBeat.ini, HeartBeat, ForceCheck
+            IniWrite, 2, %A_ScriptDir%\..\HeartBeat.ini, TestMode, Main
+            LogInfo("Setting HeartBeat status to online and enabling TestMode exit notification")
         }
-		
-		CreateStatusMessage("Exiting GP Test Mode")
-		LogInfo("Exiting GP Test Mode")
-		; Ensure the GUI is restored when exiting test mode
-        Delay(2)
-        CreateStatusMessage("Ready for normal operation")
-	}
+        
+        CreateStatusMessage("Exiting GP Test Mode")
+        LogInfo("Exiting GP Test Mode")
+    }
 }
 
 FriendAdded() {
