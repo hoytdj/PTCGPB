@@ -5,6 +5,7 @@
 #Include %A_ScriptDir%\Scripts\Include\Gdip_Extra.ahk
 #Include %A_ScriptDir%\Scripts\Include\StringCompare.ahk
 #Include %A_ScriptDir%\Scripts\Include\OCR.ahk
+#Include %A_ScriptDir%\Scripts\Include\ImagePut.ahk
 
 version = Arturos PTCGP Bot
 #SingleInstance, force
@@ -13,7 +14,7 @@ SetTitleMatchMode, 3
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.4.5.1"
+localVersion := "v1.4.5.5"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
