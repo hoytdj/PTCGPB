@@ -1,5 +1,10 @@
 global adbPort, adbShell, adbPath, debugMode, discordWebhookURL, discordUserId, sendAccountXml
 
+; New variables for window capture caching
+global lastWindowCapture := ""
+global lastCaptureTime := 0
+global captureExpiryTime := 250 ; milliseconds before recapturing
+
 ; ============================================================================
 ; Image Recognition Functions
 ; ============================================================================
@@ -13,6 +18,21 @@ GetNeedle(Path) {
         return pNeedle
     }
 }
+
+; New function to get cached window capture or create a new one
+CachedWindowCapture() {
+    global winTitle, lastWindowCapture, lastCaptureTime, captureExpiryTime
+    
+    if (A_TickCount - lastCaptureTime > captureExpiryTime || !lastWindowCapture) {
+        ; Create new capture if cache has expired or doesn't exist
+        Gdip_DisposeImage(lastWindowCapture) ; Clean up previous bitmap if it exists
+        lastWindowCapture := from_window(WinExist(winTitle))
+        lastCaptureTime := A_TickCount
+    }
+    
+    return lastWindowCapture
+}
+
 ; ============================================================================
 ; Status Display Functions
 ; ============================================================================
@@ -170,9 +190,21 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Calculate toolbar position
             x4 := x + 5
             y4 := y + 44
-            buttonWidth := 38
-            if (scaleParam = 287)
-                buttonWidth := buttonWidth + 6
+            
+            ; Number of buttons to display
+            numButtons := isMainWindow ? 6 : 5
+            
+            ; Available width for buttons (considering margins)
+            availableWidth := Width - 10 ; 5px margin on each side
+            
+            ; Calculate button width to fill the available space
+            buttonWidth := Floor(availableWidth / numButtons)
+            
+            ; Ensure minimum button width
+            minimumWidth := (scaleParam = 287) ? 44 : 38
+            if (buttonWidth < minimumWidth) {
+                buttonWidth := minimumWidth
+            }
             
             ; Get window handle
             OwnerWND := WinExist(targetWindow)
@@ -183,26 +215,30 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Destroy existing toolbar if any
             Gui, %toolbarName%: Destroy
             
-            ; Create new toolbar GUI
+            ; Create new toolbar GUI with width matching the window
+            ; Use reduced vertical margins (4,2) - more space at top, less at bottom
             Gui, %toolbarName%: New, +Owner%OwnerWND% +ToolWindow -Caption +LastFound
             Gui, %toolbarName%: Default
-            Gui, %toolbarName%: Margin, 4, 4
+            Gui, %toolbarName%: Margin, 4, 2
             Gui, %toolbarName%: Font, s6 cGray Norm Bold, Segoe UI
             
-            ; Always add these buttons
-            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h25 gReloadScript", Reload (Shift+F5)
-            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h25 gPauseScript", Pause (Shift+F6)
-            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h25 gResumeScript", Resume (Shift+F6)
-            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h25 gStopScript", Stop (Shift+F7)
-            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h25 gShowStatusMessages", Status (Shift+F8)
+            ; Always add these buttons with calculated width
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h29 gReloadScript", Reload (Shift+F5)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 1) . " y0 w" . buttonWidth . " h29 gPauseScript", Pause (Shift+F6)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 2) . " y0 w" . buttonWidth . " h29 gResumeScript", Resume (Shift+F6)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 3) . " y0 w" . buttonWidth . " h29 gStopScript", Stop (Shift+F7)
+            Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 4) . " y0 w" . buttonWidth . " h29 gShowStatusMessages", Status (Shift+F8)
             
             ; Only add GP Test button for Main windows
             if (isMainWindow) {
-                Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h25 gTestScript", GP Test (Shift+F9)
+                Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h29 gTestScript", GP Test (Shift+F9)
             }
             
-            ; Show the toolbar
-            Gui, %toolbarName%: Show, NoActivate x%x4% y%y4% AutoSize
+            ; Calculate the width for the toolbar to ensure it fits exactly inside the window
+            toolbarWidth := Width - 10
+            
+            ; Show the toolbar with specific width and reduced height (30 instead of 33)
+            Gui, %toolbarName%: Show, NoActivate x%x4% y%y4% w%toolbarWidth% h30
             
             ; Set window position (bottom layer)
             DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1
@@ -832,4 +868,15 @@ Delay(n) {
     global Delay
     msTime := Delay * n
     Sleep, msTime
+}
+
+; Function to clear bitmap cache when it's no longer needed
+ClearBitmapCache() {
+    global lastWindowCapture, lastCaptureTime
+    
+    if (lastWindowCapture) {
+        Gdip_DisposeImage(lastWindowCapture)
+        lastWindowCapture := ""
+        lastCaptureTime := 0
+    }
 }

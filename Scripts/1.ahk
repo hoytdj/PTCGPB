@@ -776,10 +776,9 @@ EraseInput(num := 0, total := 0) {
 	failSafeTime := 0
 	Loop {
 		FindImageAndClick(0, 475, 25, 495, , "OK2", 138, 454)
-		Loop 20 {
-			adbInputEvent("67")
-			Sleep, 10
-		}
+	    adbClick(50, 500)
+	    adbClick(50, 500)
+            adbInputEvent("67")
 		if(FindOrLoseImage(15, 500, 68, 520, , "Erase", 0, failSafeTime))
 			break
 	}
@@ -800,7 +799,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 
 	CreateStatusMessage(imageName)
 	LogDebug("Looking for image: " . imageName)
-	pBitmap := from_window(WinExist(winTitle))
+	pBitmap := CachedWindowCapture()
 	Path = %imagePath%%imageName%.png
 	pNeedle := GetNeedle(Path)
 
@@ -888,7 +887,7 @@ FindOrLoseImage(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", E
 		restartGameInstance("Instance has been stuck " . imageName)
 		failSafe := A_TickCount
 	}
-	Gdip_DisposeImage(pBitmap)
+
 	return confirmed
 }
 
@@ -1017,7 +1016,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 				FSTime := 45
 			if(!skip) {
 				if(ElapsedTime - messageTime > 0.5 || firstTime) {
-					LogDebug("Looking for " . imageName . " for " . ElapsedTime . "/" . FSTime . " seconds")
+					LogDebug("Looking for " . imageName)
 					messageTime := ElapsedTime
 					firstTime := false
 				}
@@ -1083,7 +1082,7 @@ FindImageAndClick(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT",
 		if(skip) {
 			ElapsedTime := (A_TickCount - StartSkipTime) // 1000
 			if(ElapsedTime - messageTime > 0.5 || firstTime) {
-				LogDebug(imageName . " " . ElapsedTime . "/" . skip . " seconds until skipping")
+				LogDebug(imageName . " until skipping")
 				messageTime := ElapsedTime
 				firstTime := false
 			}
@@ -1676,21 +1675,29 @@ FindBorders(prefix) {
             ,[153, 395, 211, 397]]
         }
     }
-    pBitmap := from_window(WinExist(winTitle))
-    ; imagePath := "C:\Users\Arturo\Desktop\PTCGP\GPs\" . Clipboard . ".png"
-    ; pBitmap := Gdip_CreateBitmapFromFile(imagePath)
-    for index, value in borderCoords {
-        coords := borderCoords[A_Index]
-        Path = %A_ScriptDir%\%defaultLanguage%\%prefix%%A_Index%.png
+    ; Get a single window capture for all searches
+    pBitmap := CachedWindowCapture()
+    
+    ; Prepare all needles at once to avoid repeated file checks
+    needles := []
+    for index, coords in borderCoords {
+        Path := A_ScriptDir . "\" . defaultLanguage . "\" . prefix . index . ".png"
         if (FileExist(Path)) {
-            pNeedle := GetNeedle(Path)
-            vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, coords[1], coords[2], coords[3], coords[4], searchVariation)
+            needles[index] := GetNeedle(Path)
+        }
+    }
+    
+    ; Perform all searches on the same bitmap
+    for index, coords in borderCoords {
+        if (needles[index]) {
+            vRet := Gdip_ImageSearch(pBitmap, needles[index], vPosXY, coords[1], coords[2], coords[3], coords[4], searchVariation)
             if (vRet = 1) {
                 count += 1
             }
         }
     }
-    Gdip_DisposeImage(pBitmap)
+    
+    ; Don't dispose the bitmap as it's now cached
     return count
 }
 
@@ -1710,19 +1717,29 @@ FindCard(prefix) {
             ,[64, 301, 122, 303]
             ,[148, 301, 206, 303]]
     }
-    pBitmap := from_window(WinExist(winTitle))
-    for index, value in borderCoords {
-        coords := borderCoords[A_Index]
-        Path = %A_ScriptDir%\%defaultLanguage%\%prefix%%A_Index%.png
+    ; Get a single window capture for all searches
+    pBitmap := CachedWindowCapture()
+    
+    ; Prepare all needles at once
+    needles := []
+    for index, coords in borderCoords {
+        Path := A_ScriptDir . "\" . defaultLanguage . "\" . prefix . index . ".png"
         if (FileExist(Path)) {
-            pNeedle := GetNeedle(Path)
-            vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, coords[1], coords[2], coords[3], coords[4], searchVariation)
+            needles[index] := GetNeedle(Path)
+        }
+    }
+    
+    ; Perform all searches on the same bitmap
+    for index, coords in borderCoords {
+        if (needles[index]) {
+            vRet := Gdip_ImageSearch(pBitmap, needles[index], vPosXY, coords[1], coords[2], coords[3], coords[4], searchVariation)
             if (vRet = 1) {
                 count += 1
             }
         }
     }
-    Gdip_DisposeImage(pBitmap)
+    
+    ; Don't dispose the bitmap as it's now cached
     return count
 }
 
@@ -1733,6 +1750,8 @@ FindGodPack(invalidPack := false) {
     if (normalBorders) {
         CreateStatusMessage("Not a God Pack...")
 		LogInfo("Not a God Pack...")
+        ; Clear bitmap cache after checks
+        ClearBitmapCache()
         return false
     }
 
@@ -1776,7 +1795,8 @@ FindGodPack(invalidPack := false) {
     } else {
         GodPackFound("Valid")
     }
-
+    ; Clear bitmap cache after processing
+    ClearBitmapCache()
     return keepAccount
 }
 
@@ -2339,7 +2359,7 @@ DoTutorial() {
 			break
 		}
 		failSafeTime := (A_TickCount - failSafe) // 1000
-		LogDebug("In failsafe for swipe up. ")	
+		LogDebug("In failsafe for Swipe up. ")	
 		Delay(1)
 	}
 
