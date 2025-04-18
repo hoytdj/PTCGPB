@@ -546,16 +546,34 @@ ArrangeWindows:
     GuiControlGet, Instances,, Instances
     GuiControlGet, Columns,, Columns
     GuiControlGet, SelectedMonitorIndex,, SelectedMonitorIndex
-    if (runMain) {
+    
+    windowsPositioned := 0
+    
+    if (runMain && Mains > 0) {
         Loop %Mains% {
             mainInstanceName := "Main" . (A_Index > 1 ? A_Index : "")
-            resetWindows(mainInstanceName, SelectedMonitorIndex)
-            sleep, 10
+            if (WinExist(mainInstanceName)) {
+                resetWindows(mainInstanceName, SelectedMonitorIndex, false)
+                windowsPositioned++
+                sleep, 10
+            }
         }
     }
-    Loop %Instances% {
-        resetWindows(A_Index, SelectedMonitorIndex)
-        sleep, 10
+    
+    if (Instances > 0) {
+        Loop %Instances% {
+            if (WinExist(A_Index)) {
+                resetWindows(A_Index, SelectedMonitorIndex, false)
+                windowsPositioned++
+                sleep, 10
+            }
+        }
+    }
+    
+    if (debugMode && windowsPositioned == 0) {
+        MsgBox, No windows found to arrange
+    } else {
+        MsgBox, Arranged %windowsPositioned% windows
     }
 return
 

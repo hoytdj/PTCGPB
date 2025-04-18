@@ -76,13 +76,10 @@ CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enable
         Gui, %uniqueGuiName%:Show, NoActivate AutoSize
     }
 }
-resetWindows(Title="", UseSelectedMonitor="") {
+resetWindows(Title="", UseSelectedMonitor="", createToolbar=true) {
     global Columns, runMain, Mains, scaleParam, winTitle, SelectedMonitorIndex, scriptName
     
     LogDebug("resetWindows started. Title: [" . Title . "], Monitor: [" . UseSelectedMonitor . "]")
-    CreateStatusMessage("Arranging window positions and sizes")
-    RetryCount := 0
-    MaxRetries := 10
     
     ; Use parameters if provided, otherwise use global variables
     currentTitle := (Title != "") ? Title : winTitle
@@ -93,53 +90,48 @@ resetWindows(Title="", UseSelectedMonitor="") {
     
     LogDebug("Using title: [" . currentTitle . "], monitor: [" . currentMonitor . "]")
     
-    Loop {
-        try {
-            ; Get monitor origin from index
-            currentMonitor := RegExReplace(currentMonitor, ":.*$")
-            SysGet, Monitor, Monitor, %currentMonitor%
-            
-            ; Determine instance index based on title
-            if (InStr(currentTitle, "Main") = 1) {
-                ; Handle Main, Main2, Main3, etc.
-                instanceIndex := StrReplace(currentTitle, "Main", "")
-                instanceIndex := (instanceIndex = "") ? 1 : instanceIndex
-                LogDebug("Main window detected. Instance index: " . instanceIndex)
-            } else {
-                ; Handle numeric titles (1, 2, 3, etc)
-                instanceIndex := (runMain && Mains > 0) ? (Mains + currentTitle) : currentTitle
-                LogDebug("Numeric window detected. Instance index: " . instanceIndex)
-            }
-            
-            ; Calculate position
-            rowHeight := 533
-            currentRow := Floor((instanceIndex - 1) / Columns)
-            y := currentRow * rowHeight
-            x := Mod((instanceIndex - 1), Columns) * scaleParam
-            
-            ; Move the window
-            WinMove, %currentTitle%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
-            
-            ; After moving the window, create the toolbar GUI
-            if (currentTitle != "PTCGPB") {
-                Sleep, 500  ; Small delay to ensure the window is stable
-                LogDebug("Attempting to create toolbar for " . currentTitle . " (baseScriptName = " . baseScriptName . ")")
-                CreateToolbarGUI(currentTitle, scaleParam)
-            } else {
-                LogDebug("Skipping toolbar creation for " . currentTitle)
-            }
-            break
-        }
-        catch e {
-            RetryCount++
-            if (RetryCount > MaxRetries) {
-                CreateStatusMessage("Pausing. Can't find window " . currentTitle . ".")
-                LogError("Window positioning failed: " . e.Message)
-                Pause
-            }
-        }
-        Sleep, 1000
+    ; Check if window exists before attempting to position it
+    if (!WinExist(currentTitle)) {
+        LogDebug("Window does not exist: " . currentTitle)
+        return false
     }
+    
+    CreateStatusMessage("Arranging window positions and sizes")
+    
+    ; Get monitor origin from index
+    currentMonitor := RegExReplace(currentMonitor, ":.*$")
+    SysGet, Monitor, Monitor, %currentMonitor%
+    
+    ; Determine instance index based on title
+    if (InStr(currentTitle, "Main") = 1) {
+        ; Handle Main, Main2, Main3, etc.
+        instanceIndex := StrReplace(currentTitle, "Main", "")
+        instanceIndex := (instanceIndex = "") ? 1 : instanceIndex
+        LogDebug("Main window detected. Instance index: " . instanceIndex)
+    } else {
+        ; Handle numeric titles (1, 2, 3, etc)
+        instanceIndex := (runMain && Mains > 0) ? (Mains + currentTitle) : currentTitle
+        LogDebug("Numeric window detected. Instance index: " . instanceIndex)
+    }
+    
+    ; Calculate position
+    rowHeight := 533
+    currentRow := Floor((instanceIndex - 1) / Columns)
+    y := currentRow * rowHeight
+    x := Mod((instanceIndex - 1), Columns) * scaleParam
+    
+    ; Move the window
+    WinMove, %currentTitle%, , % (MonitorLeft + x), % (MonitorTop + y), scaleParam, 537
+    
+    ; After moving the window, create the toolbar GUI only if requested
+    if (createToolbar && currentTitle != "PTCGPB") {
+        Sleep, 500  ; Small delay to ensure the window is stable
+        LogDebug("Attempting to create toolbar for " . currentTitle . " (baseScriptName = " . baseScriptName . ")")
+        CreateToolbarGUI(currentTitle, scaleParam)
+    } else {
+        LogDebug("Skipping toolbar creation for " . currentTitle)
+    }
+    
     return true
 }
 CreateToolbarGUI(targetWindow, scaleParam) {
@@ -148,9 +140,9 @@ CreateToolbarGUI(targetWindow, scaleParam) {
     ; Strip .ahk from scriptName for comparison
     baseScriptName := RegExReplace(scriptName, "\.ahk$", "")
     
-    ; Skip only for PTCGPB window, but allow for Main windows
-    if (targetWindow = "PTCGPB") {
-        LogDebug("Skipping toolbar for PTCGPB window")
+    ; Skip for PTCGPB window or if the title contains "PTCGPB Bot Setup"
+    if (targetWindow = "PTCGPB" || InStr(targetWindow, "PTCGPB Bot Setup")) {
+        LogDebug("Skipping toolbar for PTCGPB window: " . targetWindow)
         return true
     }
     
