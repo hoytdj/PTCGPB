@@ -49,6 +49,7 @@ global Pack_Divider1, Pack_Divider2, Pack_Divider3
 global SaveForTradeDivider_1, SaveForTradeDivider_2
 global Discord_Divider3
 global tesseractPath, applyRoleFilters, debugMode
+global tesseractOption
 
 if not A_IsAdmin
 {
@@ -343,6 +344,7 @@ SetAllTextColors(textColor) {
     
     ; Extra Settings
     GuiControl, +c%textColor%, ExtraSettingsHeading
+    GuiControl, +c%textColor%, tesseractOption
     GuiControl, +c%textColor%, Txt_TesseractPath
     GuiControl, +c%textColor%, applyRoleFilters
     GuiControl, +c%textColor%, debugMode
@@ -741,6 +743,7 @@ HideAllSections() {
     
     ; hide Extra Settings section
     GuiControl, Hide, ExtraSettingsHeading
+    GuiControl, Hide, tesseractOption
     GuiControl, Hide, Txt_TesseractPath
     GuiControl, Hide, tesseractPath
     GuiControl, Hide, applyRoleFilters
@@ -966,6 +969,47 @@ ShowSystemSettingsSection() {
         GuiControl, +c%LIGHT_TEXT%, applyRoleFilters
         GuiControl, +c%LIGHT_TEXT%, debugMode
         GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+    }
+    SetHeaderFont()
+    GuiControl, Show, ExtraSettingsHeading
+    if (isDarkTheme) {
+        GuiControl, +c%sectionColor%, ExtraSettingsHeading
+    } else {
+        GuiControl, +c%sectionColor%, ExtraSettingsHeading
+    }
+    SetNormalFont()
+    ; Show the tesseract option checkbox
+    GuiControl, Show, tesseractOption
+    
+    ; Show tesseract path controls conditionally based on checkbox state
+    GuiControlGet, tesseractOption
+    if (tesseractOption) {
+        GuiControl, Show, Txt_TesseractPath
+        GuiControl, Show, tesseractPath
+    } else {
+        GuiControl, Hide, Txt_TesseractPath
+        GuiControl, Hide, tesseractPath
+    }
+    
+    GuiControl, Show, applyRoleFilters
+    GuiControl, Show, debugMode
+
+    if (isDarkTheme) {
+        GuiControl, +c%DARK_TEXT%, tesseractOption
+        if (tesseractOption) {
+            GuiControl, +c%DARK_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%DARK_INPUT_BG% +c%DARK_INPUT_TEXT%, tesseractPath
+        }
+        GuiControl, +c%DARK_TEXT%, applyRoleFilters
+        GuiControl, +c%DARK_TEXT%, debugMode
+    } else {
+        GuiControl, +c%LIGHT_TEXT%, tesseractOption
+        if (tesseractOption) {
+            GuiControl, +c%LIGHT_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+        }
+        GuiControl, +c%LIGHT_TEXT%, applyRoleFilters
+        GuiControl, +c%LIGHT_TEXT%, debugMode
     }
 
     ; Update section headers with appropriate colors
@@ -1579,7 +1623,7 @@ LoadSettingsFromIni() {
         IniRead, tesseractPath, Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
         IniRead, applyRoleFilters, Settings.ini, UserSettings, applyRoleFilters, 0
         IniRead, debugMode, Settings.ini, UserSettings, debugMode, 0
-
+        IniRead, tesseractOption, Settings.ini, UserSettings, tesseractOption, 0
         ; Validate numeric values
         if (!IsNumeric(Instances) || Instances < 1)
             Instances := 1
@@ -1854,10 +1898,19 @@ Gui, Add, Checkbox, % (autoLaunchMonitor ? "Checked" : "") " vautoLaunchMonitor 
 SetHeaderFont()
 Gui, Add, Text, x170 y+30 Hidden vExtraSettingsHeading, Extra Settings
 SetNormalFont()
+
+; First add Role-Based Filters
+Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x170 y+10 Hidden", Use Role-Based Filters
+
+; Then add Debug Mode
+Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x170 y+10 Hidden", Debug Mode
+
+; Then add the Use Tesseract checkbox
+Gui, Add, Checkbox, % (tesseractOption ? "Checked" : "") " vtesseractOption gTesseractOptionSettings x170 y+10 Hidden", Use Tesseract
+
+; Keep Tesseract Path at the end
 Gui, Add, Text, x170 y+20 Hidden vTxt_TesseractPath, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w290 x170 y+5 h25 Hidden, %tesseractPath%
-Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x170 y+10 Hidden", Use Role-Based Filters
-Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x170 y+10 Hidden", Debug Mode
 
 ; ========== Pack Settings Section (Merged God Pack, Pack Selection and Card Detection) ==========
 SetHeaderFont()
@@ -2417,7 +2470,27 @@ s4tWPSettings:
         GuiControl, Hide, s4tWPMinCards
     }
 return
-
+TesseractOptionSettings:
+    Gui, Submit, NoHide
+    global isDarkTheme, DARK_TEXT, LIGHT_TEXT, DARK_INPUT_BG, DARK_INPUT_TEXT, LIGHT_INPUT_BG, LIGHT_INPUT_TEXT
+    
+    if (tesseractOption) {
+        GuiControl, Show, Txt_TesseractPath
+        GuiControl, Show, tesseractPath
+        
+        ; Apply theme-specific styling
+        if (isDarkTheme) {
+            GuiControl, +c%DARK_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%DARK_INPUT_BG% +c%DARK_INPUT_TEXT%, tesseractPath
+        } else {
+            GuiControl, +c%LIGHT_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+        }
+    } else {
+        GuiControl, Hide, Txt_TesseractPath
+        GuiControl, Hide, tesseractPath
+    }
+return
 deleteSettings:
     Gui, Submit, NoHide
     global isDarkTheme, DARK_TEXT, LIGHT_TEXT
@@ -2598,6 +2671,7 @@ SaveReload:
     IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
     IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
     IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
+    IniWrite, %tesseractOption%, Settings.ini, UserSettings, tesseractOption
 
     ; Save theme setting
     IniWrite, %isDarkTheme%, Settings.ini, UserSettings, isDarkTheme
@@ -2699,6 +2773,7 @@ StartBot:
     IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
     IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
     IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
+    IniWrite, %tesseractOption%, Settings.ini, UserSettings, tesseractOption
     
     IniWrite, %isDarkTheme%, Settings.ini, UserSettings, isDarkTheme
     IniWrite, %useBackgroundImage%, Settings.ini, UserSettings, useBackgroundImage
@@ -2931,62 +3006,72 @@ Loop {
 
         if(heartBeat)
             if((A_Index = 1 || (Mod(A_Index, (heartBeatDelay // 0.5)) = 0))) {
-                onlineAHK := ""
-                offlineAHK := ""
-                Online := []
+                ; Check if a heartbeat was already sent in this cycle
+                IniRead, lastHeartbeatTime, HeartBeat.ini, HeartBeatControl, LastSentTime, 0
+                currentTime := A_TickCount
+                ; Only send heartbeat if at least 15 seconds have passed since last one
+                if ((currentTime - lastHeartbeatTime) > 15000) {
+                    onlineAHK := ""
+                    offlineAHK := ""
+                    Online := []
 
-                Loop %Instances% {
-                    IniRead, value, HeartBeat.ini, HeartBeat, Instance%A_Index%
-                    if(value)
-                        Online.Push(1)
-                    else
-                        Online.Push(0)
-                    IniWrite, 0, HeartBeat.ini, HeartBeat, Instance%A_Index%
-                }
-
-                for index, value in Online {
-                    if(index = Online.MaxIndex())
-                        commaSeparate := ""
-                    else
-                        commaSeparate := ", "
-                    if(value)
-                        onlineAHK .= A_Index . commaSeparate
-                    else
-                        offlineAHK .= A_Index . commaSeparate
-                }
-
-                if(runMain) {
-                    IniRead, value, HeartBeat.ini, HeartBeat, Main
-                    if(value) {
-                        if (onlineAHK)
-                            onlineAHK := "Main, " . onlineAHK
+                    Loop %Instances% {
+                        IniRead, value, HeartBeat.ini, HeartBeat, Instance%A_Index%
+                        if(value)
+                            Online.Push(1)
                         else
-                            onlineAHK := "Main"
+                            Online.Push(0)
+                        IniWrite, 0, HeartBeat.ini, HeartBeat, Instance%A_Index%
                     }
-                    else {
-                        if (offlineAHK)
-                            offlineAHK := "Main, " . offlineAHK
+
+                    for index, value in Online {
+                        if(index = Online.MaxIndex())
+                            commaSeparate := ""
                         else
-                            offlineAHK := "Main"
+                            commaSeparate := ", "
+                        if(value)
+                            onlineAHK .= A_Index . commaSeparate
+                        else
+                            offlineAHK .= A_Index . commaSeparate
                     }
-                    IniWrite, 0, HeartBeat.ini, HeartBeat, Main
+
+                    if(runMain) {
+                        IniRead, value, HeartBeat.ini, HeartBeat, Main
+                        if(value) {
+                            if (onlineAHK)
+                                onlineAHK := "Main, " . onlineAHK
+                            else
+                                onlineAHK := "Main"
+                        }
+                        else {
+                            if (offlineAHK)
+                                offlineAHK := "Main, " . offlineAHK
+                            else
+                                offlineAHK := "Main"
+                        }
+                        IniWrite, 0, HeartBeat.ini, HeartBeat, Main
+                    }
+
+                    if(offlineAHK = "")
+                        offlineAHK := "Offline: none"
+                    else
+                        offlineAHK := "Offline: " . RTrim(offlineAHK, ", ")
+                    if(onlineAHK = "")
+                        onlineAHK := "Online: none"
+                    else
+                        onlineAHK := "Online: " . RTrim(onlineAHK, ", ")
+
+                    discMessage := heartBeatName ? "\n" . heartBeatName : ""
+                    discMessage .= "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
+                    discMessage .= typeMsg
+                    discMessage .= selectMsg
+
+                    ; Send the heartbeat message to Discord
+                    LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
+                    
+                    ; Record the time when this heartbeat was sent
+                    IniWrite, %currentTime%, HeartBeat.ini, HeartBeatControl, LastSentTime
                 }
-
-                if(offlineAHK = "")
-                    offlineAHK := "Offline: none"
-                else
-                    offlineAHK := "Offline: " . RTrim(offlineAHK, ", ")
-                if(onlineAHK = "")
-                    onlineAHK := "Online: none"
-                else
-                    onlineAHK := "Online: " . RTrim(onlineAHK, ", ")
-
-                discMessage := heartBeatName ? "\n" . heartBeatName : ""
-                discMessage .= "\n" . onlineAHK . "\n" . offlineAHK . "\n" . packStatus . "\nVersion: " . RegExReplace(githubUser, "-.*$") . "-" . localVersion
-                discMessage .= typeMsg
-                discMessage .= selectMsg
-
-                LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
             }
     }
 Return
