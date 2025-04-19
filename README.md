@@ -1,48 +1,104 @@
-# Hoytdj's Pokemon Trading Card Game Pocket Bot
-This bot is an extension (AKA fork) of [Arturo's PTCGP Bot](https://github.com/Arturo-1212/PTCGPB). _Thanks for all the hard work Arturo!_ After any new releases of the main bot, this bot will be updated as soon as possible.
+# 🧠 Gfrcr's Enhanced PTCGP Bot
 
-Check the wiki for instructions on how to install: https://github.com/Arturo-1212/PTCGPB/wiki/Pokemon-TCG-Pocket-Bot
+This is a heavily improved extension of [Arturo's PTCGP Bot](https://github.com/Arturo-1212/PTCGPB), originally forked by [Hoytdj](https://github.com/hoytdj/PTCGPB) and now upgraded with additional features by **Gfrcr**.
 
-**IMPORTANT:** Tesseract OCR is required for this to work.
-* Download/install Tesseract OCR from here: [Tesseract OCR Github Link](https://github.com/UB-Mannheim/tesseract/wiki) 
-* I recommend you install Tesseract OCR under `C:\Program Files\Tesseract-OCR`. If you install it elsewhere, you **must** manually open your `Settings.ini` file and add the full path to your Tesseract executable. For example: `tesseractPath=C:\Program Files\Tesseract-OCR\tesseract.exe`
+> 💡 This fork focuses on smarter automation, enhanced logging, a cleaner UI, better friend filtering, and optimized workflow during GP testing — while remaining true to the core functionality developed by Arturo and enhanced by Hoytdj.
 
-### What features does this add?
-A new "**GP Test**" mode has been added to the Main account script. When toggled on, the bot will automatically remove all non-VIP friends (i.e., friends that may have pulled a live GP). When all non-VIP friends have been removed, the bot will pause, giving you the opportunity to nagivate to Wonder Picks and look for God Packs. When you're ready to continue, simply toggle "**GP Test**" mode off.
-VIP friends are specified in the `vip_ids.txt` file. List friend codes each on their own line.
+---
 
-#### Why would you want this?
-**Managing your friend list is as easy as one click!** The bot will automatically take care of removing dead accounts, dud accounts, or simply accounts that just haven't finished rolling.
+## 📦 Main Features
 
-[YouTube Demo & Brief Tutorial](https://youtu.be/EHEwbdloBjM)
+### 🎯 Intelligent Friend List Filtering
 
-- A new setting "**VIP ID URL**" has been added. You can add specify a downloadable text file for your `vip_ids.txt` file (just like you can for ids.txt)
- `vip_ids.txt` also supports FC, IGN, and star count. Including the IGN can improve account matching accuracy. Including the star count will apply additional filtering. For example, if your min 2 star setting is 3, accounts with a GP not meeting the minimum will be ignored (not counted as a VIP).
+- Instances **automatically add/remove `friendIDs`** based on the type of booster being opened.
+- Uses `id.txt` to identify interested users.
+- If the booster is a **Godpack**, all users stay on the Friend List.
+- For other types (e.g., **Double Two Stars**, **Trainers**, etc.), uninterested users are removed from the FL before opening begins.
 
-Example file contents:
-```
-0735520049083732 | Nate0562 | 0/5
-8076495483324199 | CheryS6334 | 3/5
-2666277563052062 | CCdarumaka | 3/5
-```
-or
-```
-0735520049083732
-8076495483324199
-2666277563052062
-```
+### 🧪 GP Test Automation
 
-## Bonus features:
-* _Rayer_3's Scale100_ - Adds support for 100% scale in addition to the standard 125% scale.
-* _DietPepperPhD's 5 Pack Method_ - The "5 Pack No Remove" method skips the remove/add friends step between the 3rd and 4th pack. This means you may have to test 5P GPs, but your effective packs per minute will be faster.
-* New Heartbeat **Delay** option. Use this option to send heartbeat messages more or less frequently. _You should not reduce this below your average rerolling run time._
-* New "**Send Account XML**" option. When enabled the Discord alert message for found packs will attach the account XML file. *I recommend enabling this option if you are using "5 Pack No Remove" and rolling in a group, so that others can inject the account to check for WP Thanks.*
+- On GP Test start:
+  - A **heartbeat** is sent to mark the instance as **Offline**.
+  - UI is **cleared** for better visibility.
+- On GP Test end:
+  - A new **heartbeat** marks the **Main as Online** again.
+  - Status messages return to normal.
 
-## License
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0), which allows you to use, modify, and share the software only for **non-commercial** purposes.
-**Commercial use, including using the software to provide paid services or selling it (even if donations are involved), is not allowed under this license.**
+### 📡 Webhook Improvements
 
-------------------------------------------
+- More accurate webhook messages for Main.
+- Sends a notification when **GP Test is ready**.
+
+### 🧼 Minimal UI Enhancements
+
+- Cleaner status labels above each instance.
+- No more `failtimes`.
+- Pressing the status bar now results in a **blank display**.
+
+### ⌨️ Manual Heartbeat Trigger
+
+- **Shift + F7** sends a heartbeat to mark **Main and all instances as Offline**.
+
+### 📄 Improved Logging System
+
+- Cleaner, more transparent logs.
+- Individual logs per instance.
+- Separate logs for **errors**, **restarts**, and other key actions.
+
+### 🧩 Shared Function File
+
+- Common functions have been centralized into a **single shared file**, reducing redundancy and simplifying maintenance.
+
+---
+
+## 🔧 Base Enhancements from Hoytdj's Fork (Nizuya Mod)
+
+- "**GP Test**" mode: removes all non-VIP friends to help find Wonder Picks.
+- VIP management via `vip_ids.txt`, supporting FCs, IGNs, and star ratings.
+- Optional **VIP ID URL** to auto-update VIP list from an external file.
+- Support for:
+  - **100% UI scale** (via _Rayer_3's Scale100_)
+  - **5 Pack No Remove** method (via _DietPepperPhD_)
+- New options:
+  - **Heartbeat Delay**
+  - **Send Account XML** (attach .xml file to Discord alerts)
+
+---
+
+## 📘 Getting Started
+
+Follow the instructions in the [original wiki](https://github.com/Arturo-1212/PTCGPB/wiki/Pokemon-TCG-Pocket-Bot).
+
+> 🔧 **Tesseract OCR is required**  
+> Download: [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)  
+> Recommended path: `C:\Program Files\Tesseract-OCR`  
+> If installed elsewhere, update `Settings.ini`:  
+> `tesseractPath=C:\path\to\your\tesseract.exe`
+
+---
+
+## 🧾 License
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.  
+**Commercial use is strictly prohibited**, even with donations.
+
+---
+
+## ☕ Credits
+
+- 💻 Original bot: [Arturo-1212](https://github.com/Arturo-1212/PTCGPB)
+- 🔄 Base fork and mod: [Hoytdj](https://github.com/hoytdj/PTCGPB)
+- 🚀 Additional improvements: **Gfrcr**
+
+---
+
+> _“The bot will always be free and I will update it as long as this method is viable. If it’s helped you complete your collection, consider buying me a coffee!”_  
+> — [Arturo](https://buymeacoffee.com/aarturoo)
+
+---
+
+---
+
 _A note from Arturo (which I echo):_
 
 _The bot will always be free and I will update it as long as this method is viable. I've spent many hours creating the PTCGPB, and if it’s helped you complete your collection, consider buying me a coffee to keep me going and adding new features!_

@@ -7,6 +7,9 @@ Logs/*
 !Logs/1.txt
 Screenshots/*
 !Screenshots/1.txt
+Screenshots/Trades/**
+!Screenshots/Trades/
+!Screenshots/Trades/.gitignore
 Scripts/*.ahk
 Scripts/*.ini
 !Scripts/1.ahk
@@ -16,6 +19,9 @@ Scripts/temp/*
 HeartBeat.ini
 Settings.ini
 /Scripts/sample
-usernames.txt
-vip_ids.txt
+*.txt
 *.bak
+*.ini
+!.gitkeep
+.DS_Store
+temp/*

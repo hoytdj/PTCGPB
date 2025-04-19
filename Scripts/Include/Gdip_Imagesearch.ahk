@@ -123,7 +123,7 @@ Gdip_ImageSearch(pBitmapHaystack,pBitmapNeedle,ByRef OutputList=""
         Gdip_UnlockBits(pBitmapHaystack,hBitmapData)
         Return -1005
     }
-    
+
     ; Careful! From this point on, we must do the following before returning:
     ; - unlock haystack bits
     ; - unlock needle bits
