@@ -2980,9 +2980,9 @@ Loop {
             
             ; Add special note about Main's test mode status
             if (mainTestMode == "1")
-                discMessage .= "\n\nMain entered GP Test Mode ✕" ;We can change this later
+                discMessage .= "\n\nMain entered GP Test Mode ✕ " ;We can change this later
             else
-                discMessage .= "\n\nMain exited GP Test Mode ✓" ;We can change this later
+                discMessage .= "\n\nMain exited GP Test Mode ✓ " ;We can change this later
                 
             ; Send the message
             LogToDiscord(discMessage,, false,,, heartBeatWebhookURL)
