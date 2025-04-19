@@ -122,14 +122,15 @@ if(heartBeat)
 
 ; connect adb
 Sleep, % scriptName * 1000
-; Attempt to connect to ADB
-ConnectAdb(folderPath)
 
 if (InStr(defaultLanguage, "100")) {
     scaleParam := 287
 } else {
     scaleParam := 277
 }
+
+; Attempt to connect to ADB
+ConnectAdb(folderPath)
 
 resetWindows()
 

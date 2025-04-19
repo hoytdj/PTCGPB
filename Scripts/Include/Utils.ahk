@@ -40,7 +40,7 @@ CachedWindowCapture() {
 ; Add this function to the Utils.ahk file
 
 CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enableThrottling := true, updateInterval := 0.5) {
-    global scriptName, winTitle, StatusText, showStatus
+    global scriptName, winTitle, StatusText, showStatus, scaleParam
     static statusLastMessage := {}, statusLastUpdateTime := {}, hwnds := {}
     static statusUpdateInterval := updateInterval
     
@@ -83,7 +83,11 @@ CreateStatusMessage(Message, GuiName := "StatusMessage", X := 0, Y := 80, enable
             ; Create a new GUI with the given name, position, and message
             Gui, %uniqueGuiName%:New, -AlwaysOnTop +ToolWindow -Caption
             Gui, %uniqueGuiName%:Margin, 2, 2  ; Set margin for the GUI
-            Gui, %uniqueGuiName%:Font, s8  ; Set the font size to 8 (adjust as needed)
+            if (scaleParam = 287) {
+            Gui, %uniqueGuiName%:Font, s8  ; Set the font size to 8 
+            } else {
+            Gui, %uniqueGuiName%:Font, s6  ; Set the font size to 6 
+            }
             Gui, %uniqueGuiName%:Add, Text, hwndhCtrl vStatusText,
             hwnds[uniqueGuiName] := hCtrl
             OwnerWND := WinExist(winTitle)
@@ -170,7 +174,6 @@ CreateToolbarGUI(targetWindow, scaleParam) {
     RetryCount := 0
     
     CreateStatusMessage("Creating toolbar for " . targetWindow . "...")
-    LogInfo("Creating toolbar for " . targetWindow . "...")
     
     ; Check if this is a Main window
     isMainWindow := InStr(targetWindow, "Main") = 1
@@ -194,18 +197,20 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Number of buttons to display
             numButtons := isMainWindow ? 6 : 5
             
-            ; Available width for buttons (considering margins)
-            availableWidth := Width - 10 ; 5px margin on each side
+            ; Use different margins for different scales
+            toolbarWidth := (scaleParam = 287) ? (scaleParam - 10) : (scaleParam - 58)
             
-            ; Calculate button width to fill the available space
-            buttonWidth := Floor(availableWidth / numButtons)
+            ; STEP 2: Calculate button width to ensure they fit within the toolbar
+            ; Account for button spacing and margins (8px total toolbar margins, 1px between buttons)
+            availableButtonSpace := toolbarWidth - (numButtons - 1)
+            buttonWidth := Floor(availableButtonSpace / numButtons)
             
-            ; Ensure minimum button width
-            minimumWidth := (scaleParam = 287) ? 44 : 38
-            if (buttonWidth < minimumWidth) {
-                buttonWidth := minimumWidth
+            ; Ensure buttons aren't too small
+            minButtonWidth := (scaleParam = 287) ? 46 : 36
+            if (buttonWidth < minButtonWidth) {
+                buttonWidth := minButtonWidth
             }
-            
+
             ; Get window handle
             OwnerWND := WinExist(targetWindow)
             
@@ -219,8 +224,13 @@ CreateToolbarGUI(targetWindow, scaleParam) {
             ; Use reduced vertical margins (4,2) - more space at top, less at bottom
             Gui, %toolbarName%: New, +Owner%OwnerWND% +ToolWindow -Caption +LastFound
             Gui, %toolbarName%: Default
-            Gui, %toolbarName%: Margin, 4, 2
-            Gui, %toolbarName%: Font, s6 cGray Norm Bold, Segoe UI
+            if (scaleParam = 287) {
+                Gui, %toolbarName%: Margin, 4, 2
+                Gui, %toolbarName%: Font, s6 cGray Norm Bold, Segoe UI
+            } else {
+                Gui, %toolbarName%: Margin, 2, 1
+                Gui, %toolbarName%: Font, s5 cGray Norm Bold, Segoe UI
+            }
             
             ; Always add these buttons with calculated width
             Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 0) . " y0 w" . buttonWidth . " h29 gReloadScript", Reload (Shift+F5)
@@ -234,12 +244,8 @@ CreateToolbarGUI(targetWindow, scaleParam) {
                 Gui, %toolbarName%: Add, Button, % "x" . (buttonWidth * 5) . " y0 w" . buttonWidth . " h29 gTestScript", GP Test (Shift+F9)
             }
             
-            ; Calculate the width for the toolbar to ensure it fits exactly inside the window
-            toolbarWidth := Width - 10
-            
             ; Show the toolbar with specific width and reduced height (30 instead of 33)
             Gui, %toolbarName%: Show, NoActivate x%x4% y%y4% w%toolbarWidth% h30
-            
             ; Set window position (bottom layer)
             DllCall("SetWindowPos", "Ptr", WinExist(), "Ptr", 1
                     , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x13)

@@ -64,15 +64,13 @@ InitLogger()
 ; connect adb
 instanceSleep := scriptName * 1000
 Sleep, %instanceSleep%
-
-; Attempt to connect to ADB
-ConnectAdb(folderPath)
-
 if (InStr(defaultLanguage, "100")) {
     scaleParam := 287
 } else {
     scaleParam := 277
 }
+; Attempt to connect to ADB
+ConnectAdb(folderPath)
 
 resetWindows()
 

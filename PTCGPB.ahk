@@ -25,7 +25,7 @@ global g_ButtonColors := {}  ; Store button colors by hwnd
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.4.6"
+localVersion := "v1.4.6.1"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
