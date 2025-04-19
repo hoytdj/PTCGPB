@@ -49,6 +49,7 @@ global Pack_Divider1, Pack_Divider2, Pack_Divider3
 global SaveForTradeDivider_1, SaveForTradeDivider_2
 global Discord_Divider3
 global tesseractPath, applyRoleFilters, debugMode
+global tesseractOption
 
 if not A_IsAdmin
 {
@@ -343,6 +344,7 @@ SetAllTextColors(textColor) {
     
     ; Extra Settings
     GuiControl, +c%textColor%, ExtraSettingsHeading
+    GuiControl, +c%textColor%, tesseractOption
     GuiControl, +c%textColor%, Txt_TesseractPath
     GuiControl, +c%textColor%, applyRoleFilters
     GuiControl, +c%textColor%, debugMode
@@ -741,6 +743,7 @@ HideAllSections() {
     
     ; hide Extra Settings section
     GuiControl, Hide, ExtraSettingsHeading
+    GuiControl, Hide, tesseractOption
     GuiControl, Hide, Txt_TesseractPath
     GuiControl, Hide, tesseractPath
     GuiControl, Hide, applyRoleFilters
@@ -966,6 +969,48 @@ ShowSystemSettingsSection() {
         GuiControl, +c%LIGHT_TEXT%, applyRoleFilters
         GuiControl, +c%LIGHT_TEXT%, debugMode
         GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+    }
+    SetHeaderFont()
+    GuiControl, Show, ExtraSettingsHeading
+    if (isDarkTheme) {
+        GuiControl, +c%sectionColor%, ExtraSettingsHeading
+    } else {
+        GuiControl, +c%sectionColor%, ExtraSettingsHeading
+    }
+
+    SetNormalFont()
+    ; Show the tesseract option checkbox
+    GuiControl, Show, tesseractOption
+    
+    ; Show tesseract path controls conditionally based on checkbox state
+    GuiControlGet, tesseractOption
+    if (tesseractOption) {
+        GuiControl, Show, Txt_TesseractPath
+        GuiControl, Show, tesseractPath
+    } else {
+        GuiControl, Hide, Txt_TesseractPath
+        GuiControl, Hide, tesseractPath
+    }
+    
+    GuiControl, Show, applyRoleFilters
+    GuiControl, Show, debugMode
+
+    if (isDarkTheme) {
+        GuiControl, +c%DARK_TEXT%, tesseractOption
+        if (tesseractOption) {
+            GuiControl, +c%DARK_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%DARK_INPUT_BG% +c%DARK_INPUT_TEXT%, tesseractPath
+        }
+        GuiControl, +c%DARK_TEXT%, applyRoleFilters
+        GuiControl, +c%DARK_TEXT%, debugMode
+    } else {
+        GuiControl, +c%LIGHT_TEXT%, tesseractOption
+        if (tesseractOption) {
+            GuiControl, +c%LIGHT_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+        }
+        GuiControl, +c%LIGHT_TEXT%, applyRoleFilters
+        GuiControl, +c%LIGHT_TEXT%, debugMode
     }
 
     ; Update section headers with appropriate colors
@@ -1579,7 +1624,7 @@ LoadSettingsFromIni() {
         IniRead, tesseractPath, Settings.ini, UserSettings, tesseractPath, C:\Program Files\Tesseract-OCR\tesseract.exe
         IniRead, applyRoleFilters, Settings.ini, UserSettings, applyRoleFilters, 0
         IniRead, debugMode, Settings.ini, UserSettings, debugMode, 0
-
+        IniRead, tesseractOption, Settings.ini, UserSettings, tesseractOption, 0
         ; Validate numeric values
         if (!IsNumeric(Instances) || Instances < 1)
             Instances := 1
@@ -1854,10 +1899,19 @@ Gui, Add, Checkbox, % (autoLaunchMonitor ? "Checked" : "") " vautoLaunchMonitor 
 SetHeaderFont()
 Gui, Add, Text, x170 y+30 Hidden vExtraSettingsHeading, Extra Settings
 SetNormalFont()
+
+; First add Role-Based Filters
+Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x170 y+10 Hidden", Use Role-Based Filters
+
+; Then add Debug Mode
+Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x170 y+10 Hidden", Debug Mode
+
+; Then add the Use Tesseract checkbox
+Gui, Add, Checkbox, % (tesseractOption ? "Checked" : "") " vtesseractOption gTesseractOptionSettings x170 y+10 Hidden", Use Tesseract
+
+; Keep Tesseract Path at the end
 Gui, Add, Text, x170 y+20 Hidden vTxt_TesseractPath, Tesseract Path:
 Gui, Add, Edit, vtesseractPath w290 x170 y+5 h25 Hidden, %tesseractPath%
-Gui, Add, Checkbox, % (applyRoleFilters ? "Checked" : "") " vapplyRoleFilters x170 y+10 Hidden", Use Role-Based Filters
-Gui, Add, Checkbox, % (debugMode ? "Checked" : "") " vdebugMode x170 y+10 Hidden", Debug Mode
 
 ; ========== Pack Settings Section (Merged God Pack, Pack Selection and Card Detection) ==========
 SetHeaderFont()
@@ -2418,6 +2472,28 @@ s4tWPSettings:
     }
 return
 
+TesseractOptionSettings:
+    Gui, Submit, NoHide
+    global isDarkTheme, DARK_TEXT, LIGHT_TEXT, DARK_INPUT_BG, DARK_INPUT_TEXT, LIGHT_INPUT_BG, LIGHT_INPUT_TEXT
+    
+    if (tesseractOption) {
+        GuiControl, Show, Txt_TesseractPath
+        GuiControl, Show, tesseractPath
+        
+        ; Apply theme-specific styling
+        if (isDarkTheme) {
+            GuiControl, +c%DARK_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%DARK_INPUT_BG% +c%DARK_INPUT_TEXT%, tesseractPath
+        } else {
+            GuiControl, +c%LIGHT_TEXT%, Txt_TesseractPath
+            GuiControl, +Background%LIGHT_INPUT_BG% +c%LIGHT_INPUT_TEXT%, tesseractPath
+        }
+    } else {
+        GuiControl, Hide, Txt_TesseractPath
+        GuiControl, Hide, tesseractPath
+    }
+return
+
 deleteSettings:
     Gui, Submit, NoHide
     global isDarkTheme, DARK_TEXT, LIGHT_TEXT
@@ -2598,6 +2674,7 @@ SaveReload:
     IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
     IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
     IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
+    IniWrite, %tesseractOption%, Settings.ini, UserSettings, tesseractOption
 
     ; Save theme setting
     IniWrite, %isDarkTheme%, Settings.ini, UserSettings, isDarkTheme
@@ -2699,7 +2776,8 @@ StartBot:
     IniWrite, %tesseractPath%, Settings.ini, UserSettings, tesseractPath
     IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
     IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
-    
+    IniWrite, %tesseractOption%, Settings.ini, UserSettings, tesseractOption
+        
     IniWrite, %isDarkTheme%, Settings.ini, UserSettings, isDarkTheme
     IniWrite, %useBackgroundImage%, Settings.ini, UserSettings, useBackgroundImage
 
