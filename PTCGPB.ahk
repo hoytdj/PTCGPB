@@ -25,7 +25,7 @@ global g_ButtonColors := {}  ; Store button colors by hwnd
 
 githubUser := "gfrcr"
 repoName := "PTCGPB"
-localVersion := "v1.4.5.9"
+localVersion := "v1.4.6"
 scriptFolder := A_ScriptDir
 zipPath := A_Temp . "\update.zip"
 extractPath := A_Temp . "\update"
@@ -2777,7 +2777,7 @@ StartBot:
     IniWrite, %applyRoleFilters%, Settings.ini, UserSettings, applyRoleFilters
     IniWrite, %debugMode%, Settings.ini, UserSettings, debugMode
     IniWrite, %tesseractOption%, Settings.ini, UserSettings, tesseractOption
-        
+
     IniWrite, %isDarkTheme%, Settings.ini, UserSettings, isDarkTheme
     IniWrite, %useBackgroundImage%, Settings.ini, UserSettings, useBackgroundImage
 
