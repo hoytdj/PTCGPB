@@ -711,8 +711,6 @@ LogToDiscord(message, screenshotFile := "", ping := false, xmlFile := "", screen
                 ; Add the webhook
                 curlCommand := curlCommand . webhookURL
 
-                LogToFile(curlCommand, "Discord.txt")
-
                 ; Send the message using curl
                 RunWait, %curlCommand%,, Hide
                 break
