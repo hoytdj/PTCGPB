@@ -409,19 +409,6 @@ restartGameInstance(reason, RL := true) {
 	}
 }
 
-
-RandomUsername() {
-    FileRead, content, %A_ScriptDir%\..\usernames.txt
-
-    values := StrSplit(content, "`r`n") ; Use `n if the file uses Unix line endings
-
-    ; Get a random index from the array
-    Random, randomIndex, 1, values.MaxIndex()
-
-    ; Return the random value
-    return values[randomIndex]
-}
-
 ; Pause Script
 PauseScript:
 	CreateStatusMessage("Pausing...")
